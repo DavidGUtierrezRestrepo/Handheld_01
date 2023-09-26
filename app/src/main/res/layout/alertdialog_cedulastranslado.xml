@@ -28,15 +28,21 @@
     </LinearLayout>
 
     <LinearLayout
-        android:layout_width="match_parent"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:orientation="horizontal">
+        android:layout_marginTop="10dp"
+        android:orientation="horizontal"
+        android:layout_gravity="center_horizontal">
 
         <TextView
-            android:id="@+id/txtMrollos"
-            android:layout_width="match_parent"
+            android:id="@+id/tCedulaEntrega"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:text="TextView"
+            android:layout_marginLeft="10dp"
+            android:layout_marginRight="10dp"
+            android:layout_weight="1"
+            android:background="#C6C6C6"
+            android:text="Ingrese la cedula persona entrega"
             android:textAlignment="center"
             android:textSize="16sp"
             android:textStyle="bold" />
@@ -47,79 +53,15 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal">
 
-        <Space
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_weight="1" />
-
-        <TextView
-            android:id="@+id/txtTraccion"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Tracción: "
-            android:textAlignment="textEnd"
-            android:textColor="#000000"
-            android:textSize="20sp"
-            android:textStyle="bold" />
-
-        <Space
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_weight="1" />
-
-
         <EditText
-            android:id="@+id/editTraccion"
-            android:layout_width="100sp"
+            android:id="@+id/txtCedulaEntrega"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_weight="1"
             android:ems="10"
-            android:inputType="none" />
-
-        <Space
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_weight="1" />
-
-    </LinearLayout>
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal">
-
-        <Space
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_weight="1" />
-
-        <TextView
-            android:id="@+id/txtDiametro"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Diametro: "
-            android:textAlignment="textEnd"
-            android:textColor="#000000"
-            android:textSize="20sp"
-            android:textStyle="bold" />
-
-        <Space
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_weight="1" />
-
-
-        <EditText
-            android:id="@+id/editDiametro"
-            android:layout_width="100sp"
-            android:layout_height="wrap_content"
-            android:ems="10"
-            android:inputType="none" />
-
-        <Space
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_weight="1" />
-
+            android:hint="(Almacen, lider o coordinador)"
+            android:inputType="number"
+            android:textAlignment="center" />
     </LinearLayout>
 
     <LinearLayout
@@ -130,14 +72,14 @@
         android:layout_gravity="center_horizontal">
 
         <TextView
-            android:id="@+id/textView6"
+            android:id="@+id/tCedulaRecibe"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginLeft="10dp"
             android:layout_marginRight="10dp"
             android:layout_weight="1"
             android:background="#C6C6C6"
-            android:text="Ingrese la cedula persona logistica"
+            android:text="Ingrese la cedula persona recibe"
             android:textAlignment="center"
             android:textSize="16sp"
             android:textStyle="bold" />
@@ -149,28 +91,14 @@
         android:orientation="horizontal">
 
         <EditText
-            android:id="@+id/txtCedulaLogistica"
+            android:id="@+id/txtCedulaRecibe"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:ems="10"
-            android:hint="Cedula Logistica"
+            android:hint="Cedula Montacarguista"
             android:inputType="number"
             android:textAlignment="center" />
-    </LinearLayout>
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:orientation="horizontal"
-        android:gravity="center">
-
-        <ProgressBar
-            android:id="@+id/progress_bar"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:visibility="gone" />
-
     </LinearLayout>
 
     <LinearLayout

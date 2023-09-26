@@ -5,6 +5,7 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.graphics.drawable.GradientDrawable;
 import android.media.AudioManager;
 import android.media.SoundPool;
 import android.os.Bundle;
@@ -19,6 +20,7 @@ import android.view.inputmethod.InputMethodManager;
 import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.LinearLayout;
 import android.widget.ListAdapter;
 import android.widget.ListView;
 import android.widget.ProgressBar;
@@ -64,8 +66,8 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
 
     //Se inicializa variables necesarias en la clase
     int yaentre = 0;
-    String consecutivo;
-    Integer numero_transaccion;
+    String consecutivo, error;
+    Integer numero_transaccion, repeticiones;
     String centro = "";
 
     Boolean incompleta = false;
@@ -73,6 +75,10 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
     ObjTraslado_bodLn objTraslado_bodLn = new ObjTraslado_bodLn();
     Ing_prod_ad ing_prod_ad = new Ing_prod_ad();
     List<GalvRecepcionadoRollosModelo> ListarefeRecepcionados= new ArrayList<>();
+
+    //Lista para relacionar rollos con la transacción.
+    List<Object> listTransactionTrb1 = new ArrayList<>();
+    List<Object> listTransactionGal;
 
     //Se inicializa los varibles para el sonido de error
     SoundPool sp;
@@ -302,13 +308,13 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
     //Una TRB1 en el sistema de bodega 2 a bodega 3 con los rollos leidos
     private void realizarTransaccion() {
         //Creamos una lista para almacenar todas las consultas que se realizaran en la base de datos
-        List<Object> listTransactionGal = new ArrayList<>();
+        listTransactionGal = new ArrayList<>();
         //Creamos una lista para almacenar todas las consultas que se realizaran en la base de datos
         List<Object> listTransaccionBodega;
         //Lista donde revertimos la primer consulta si el segundo proceso no se realiza bien
         //List<Object> listTransactionError = new ArrayList<>(); se comenta porque se decide no revertir la primera consulta sino terminar las incompletas
         //Lista donde agregamos las consultas que agrearan el campo trb1
-        List<Object> listTransactionTrb1 = new ArrayList<>();
+
 
         // Obtén la fecha y hora actual
         Date fechaActual = new Date();
@@ -342,12 +348,15 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
 
         if (listTransactionGal.size()>0){
             //Ejecutamos la consultas que llenan los campos de recepción
-            if (ing_prod_ad.ExecuteSqlTransaction(listTransactionGal, "JJVPRGPRODUCCION", EscanerInventario.this)){
+            repeticiones = 0;
+            error = ciclo1();
+            if (error.equals("")){
                 ListarefeRecepcionados = conexion.galvRefeRecepcionados(EscanerInventario.this,fechaActualString, monthActualString, yearActualString);
                 numero_transaccion = Integer.valueOf(Obj_ordenprodLn.mover_consecutivo("TRB1", EscanerInventario.this));
                 listTransaccionBodega = traslado_bodega(ListarefeRecepcionados, calendar);
                 //Ejecutamos la lista de consultas para hacer la TRB1
-                if (ing_prod_ad.ExecuteSqlTransaction(listTransaccionBodega, "JJVDMSCIERREAGOSTO", EscanerInventario.this)){
+                error = ing_prod_ad.ExecuteSqlTransaction(listTransaccionBodega, "CORSAN", EscanerInventario.this);
+                if (error.equals("")){
                     for(int u=0;u<ListaGalvRollosRecep.size();u++){
                         String nro_orden = ListaGalvRollosRecep.get(u).getNro_orden();
                         String nro_rollo = ListaGalvRollosRecep.get(u).getNro_rollo();
@@ -359,14 +368,8 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
                             Toast.makeText(EscanerInventario.this, e.getMessage(), Toast.LENGTH_SHORT).show();
                         }
                     }
-                    if(ing_prod_ad.ExecuteSqlTransaction(listTransactionTrb1, "JJVPRGPRODUCCION", EscanerInventario.this)){
-                        consultarGalvTerminado();
-                        incompleta = false;
-                        toastAcierto("Transaccion Realizada con Exito! --" + numero_transaccion);
-                    }else{
-                        toastError("Problemas, No se realizó correctamente la transacción!");
-                        incompleta =  true;
-                    }
+                    repeticiones = 0;
+                    ciclo3();
                 }else{
                     //Si la consulta falla revertimos la llenada de campos de recepcion en la base de datos
                     /*
@@ -385,8 +388,23 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
                         ing_prod_ad.ExecuteSqlTransaction(listTransactionError,"JJVPRGPRODUCCION",EscanerInventario.this);
                     }*/
                     incompleta =  true;
-                    toastError("Error al realizar la transacción!" +
-                            "Intentelo de nuevo");
+                    AlertDialog.Builder builder = new AlertDialog.Builder(EscanerInventario.this);
+                    View mView = getLayoutInflater().inflate(R.layout.alertdialog_aceptar,null);
+                    TextView alertMensaje = mView.findViewById(R.id.alertMensaje);
+                    alertMensaje.setText(error);
+                    Button btnAceptar = mView.findViewById(R.id.btnAceptar);
+                    builder.setView(mView);
+                    AlertDialog alertDialog = builder.create();
+                    btnAceptar.setOnClickListener(new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) {
+                            repeticiones = 0;
+                            reanudarTransacion();
+                            alertDialog.dismiss();
+                        }
+                    });
+                    alertDialog.setCancelable(false);
+                    alertDialog.show();
                 }
             }else{
                 /*
@@ -405,10 +423,79 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
                     ing_prod_ad.ExecuteSqlTransaction(listTransactionError,"JJVPRGPRODUCCION",EscanerInventario.this);
                 }*/
                 incompleta =  true;
-                toastError("Error al realizar la transacción! \n" +
-                        "Intentelo de nuevo");
+                toastError(error);
             }
         }
+    }
+
+    private String ciclo1() {
+        repeticiones = repeticiones + 1;
+        if(repeticiones<=5){
+            error = ing_prod_ad.ExecuteSqlTransaction(listTransactionGal, "PRGPRODUCCION", EscanerInventario.this);
+            if(error.equals("")){
+                return error;
+            }else{
+                ciclo1();
+            }
+        }else{
+            return error;
+        }
+        return error;
+    }
+
+    private void reanudarTransacion(){
+        if (repeticiones<=4){
+            List<Object> listReanudarTransa = new ArrayList<>();
+            for(int i=0;i<ListaGalvRollosRecep.size();i++){
+                String nro_orden = ListaGalvRollosRecep.get(i).getNro_orden();
+                String nro_rollo = ListaGalvRollosRecep.get(i).getNro_rollo();
+
+                String sql_rollo= "UPDATE D_rollo_galvanizado_f SET recepcionado=null, nit_recepcionado=null, fecha_recepcion=null, nit_entrega=null WHERE nro_orden='"+ nro_orden +"' AND consecutivo_rollo='"+nro_rollo+"'";
+
+                try {
+                    //Se añade el sql a la lista - esto es un
+                    listReanudarTransa.add(sql_rollo);
+                }catch (Exception e){
+                    Toast.makeText(EscanerInventario.this, e.getMessage(), Toast.LENGTH_SHORT).show();
+                }
+            }
+            error = ing_prod_ad.ExecuteSqlTransaction(listReanudarTransa,"PRGPRODUCCION",EscanerInventario.this);
+            repeticiones = repeticiones + 1;
+            if (error.equals("")){
+                toastAcierto("Transacción Cancelada correctamente");
+
+                incompleta = false;
+                consultarGalvTerminado();
+            }else{
+                incompleta =  true;
+                toastActualizado("Cargando");
+                reanudarTransacion();
+            }
+        }else{
+            incompleta =  true;
+            toastError("No se pudo cancelar la transacción \n" +
+                    "Por favor comunicarse con Sistemas");
+        }
+        }
+
+    private void ciclo3() {
+        repeticiones = repeticiones + 1;
+        if(repeticiones<=5){
+            if(ing_prod_ad.ExecuteSqlTransaction(listTransactionTrb1, "PRGPRODUCCION", EscanerInventario.this).equals("")){
+                consultarGalvTerminado();
+                incompleta = false;
+                toastAcierto("Transaccion Realizada con Exito! -- " + numero_transaccion);
+            }else{
+                incompleta =  true;
+                toastActualizado("Cargando");
+                ciclo3();
+            }
+        }else{
+            incompleta =  true;
+            toastError("No se pudo terminar la transacción \n" +
+                    "Por favor comunicarse con Sistemas");
+        }
+
     }
 
     /////////////////////////////////////////////////////////////////////////////////////////////
@@ -664,6 +751,20 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
         Toast toast = new Toast(getApplicationContext());
         toast.setGravity(Gravity.CENTER_VERTICAL | Gravity.CENTER,0,200);
         toast.setDuration(Toast.LENGTH_LONG);
+        toast.setView(view);
+        toast.show();
+    }
+
+    //METODO DE TOAST PERSONALIZADO : ACTUALIZADO
+    public void toastActualizado(String msg){
+        LayoutInflater layoutInflater = getLayoutInflater();
+        View view = layoutInflater.inflate(R.layout.custom_toast_actualizado, findViewById(R.id.ll_custom_toast_actualizado));
+        @SuppressLint({"MissingInflatedId", "LocalSuppress"}) TextView txtMensaje = view.findViewById(R.id.txtMsgToast);
+        txtMensaje.setText(msg);
+
+        Toast toast = new Toast(getApplicationContext());
+        toast.setGravity(Gravity.CENTER_VERTICAL | Gravity.BOTTOM,0,200);
+        toast.setDuration(Toast.LENGTH_SHORT);
         toast.setView(view);
         toast.show();
     }

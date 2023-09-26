@@ -328,12 +328,12 @@ public class RecepcionTerminadoTrefilacion extends AppCompatActivity implements 
 
         if (listTransactionTrefi.size()>0){
             //Ejecutamos la consultas que llenan los campos de recepción
-            if (ing_prod_ad.ExecuteSqlTransaction(listTransactionTrefi, "JJVPRGPRODUCCION", RecepcionTerminadoTrefilacion.this)){
+            if (ing_prod_ad.ExecuteSqlTransaction(listTransactionTrefi, "JJVPRGPRODUCCION", RecepcionTerminadoTrefilacion.this).equals("")){
                 ListarefeRecepcionados = conexion.trefiRefeRecepcionados(RecepcionTerminadoTrefilacion.this,fechaActualString, monthActualString, yearActualString);
                 numero_transaccion = Integer.valueOf(Obj_ordenprodLn.mover_consecutivo("TRB1", RecepcionTerminadoTrefilacion.this));
                 listTransaccionBodega = traslado_bodega(ListarefeRecepcionados, calendar);
                 //Ejecutamos la lista de consultas para hacer la TRB1
-                if (ing_prod_ad.ExecuteSqlTransaction(listTransaccionBodega, "JJVDMSCIERREAGOSTO", RecepcionTerminadoTrefilacion.this)){
+                if (ing_prod_ad.ExecuteSqlTransaction(listTransaccionBodega, "JJVDMSCIERREAGOSTO", RecepcionTerminadoTrefilacion.this).equals("")){
                     for(int u=0;u<ListaTrefiRollosRecep.size();u++){
                         String cod_orden = ListaTrefiRollosRecep.get(u).getCod_orden();
                         String id_detalle = ListaTrefiRollosRecep.get(u).getId_detalle();
@@ -346,7 +346,7 @@ public class RecepcionTerminadoTrefilacion extends AppCompatActivity implements 
                             Toast.makeText(RecepcionTerminadoTrefilacion.this, e.getMessage(), Toast.LENGTH_SHORT).show();
                         }
                     }
-                    if(ing_prod_ad.ExecuteSqlTransaction(listTransactionTrb1, "JJVPRGPRODUCCION", RecepcionTerminadoTrefilacion.this)){
+                    if(ing_prod_ad.ExecuteSqlTransaction(listTransactionTrb1, "JJVPRGPRODUCCION", RecepcionTerminadoTrefilacion.this).equals("")){
                         consultarTrefiTerminado();
                         toastAcierto("Transaccion Realizada con Exito! --" + numero_transaccion);
                     }else{

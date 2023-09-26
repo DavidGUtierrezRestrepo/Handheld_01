@@ -4,11 +4,16 @@ public class PersonaModelo {
     String nombres;
     String nit;
     String centro;
+    String cargo;
 
-    public PersonaModelo(String nombres, String nit, String centro) {
+    public PersonaModelo(String nombres, String nit, String centro, String cargo) {
         this.nombres = nombres;
         this.nit = nit;
         this.centro = centro;
+        this.cargo = cargo;
+    }
+
+    public PersonaModelo() {
     }
 
     public String getNombres() {
@@ -33,5 +38,13 @@ public class PersonaModelo {
 
     public void setCentro(String centro) {
         this.centro = centro;
+    }
+
+    public String getCargo() {
+        return cargo;
+    }
+
+    public void setCargo(String cargo) {
+        this.cargo = cargo;
     }
 }

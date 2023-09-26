@@ -253,7 +253,7 @@ public class MainActivity extends AppCompatActivity {
         TreeNode subChild4_2 = new TreeNode(subChildItem4_2).setViewHolder(new MyHolder(getApplicationContext(), false, R.layout.child, 100));
 
         //Agregamos subgrupo1"Gestion Puntilleria".
-        child4.addChild(subChild4_1);
+        //child4.addChild(subChild4_1);
 
         //Agregamos subgrupo2"Gestion Puntilleria".
         //child4.addChild(subChild4_2);
@@ -311,7 +311,7 @@ public class MainActivity extends AppCompatActivity {
         //child5.addChild(subChild5_1); Todavia no hay desarrollado un modulo de calidad para galvanizado
 
         //Agregamos subgrupo2"Revisión - Calidad: Trefilación".
-        child5.addChild(subChild5_2);
+        //child5.addChild(subChild5_2);
 
         //Agregamos subgrupo2"Revisión - Calidad: Mesas Empaque".
         //child5.addChild(subChild5_3); Todavia no hay desarrollado un modulo de calidad para empaque
@@ -367,7 +367,7 @@ public class MainActivity extends AppCompatActivity {
         child6.addChild(subChild6_1);
 
         //Agregamos subgrupo2"Logistica - Recepción: Trefilación".
-        child6.addChild(subChild6_2);
+        //child6.addChild(subChild6_2);
 
         //Agregamos subgrupo2"Mesas Empaque".
         //child6.addChild(subChild6_3);
@@ -412,7 +412,7 @@ public class MainActivity extends AppCompatActivity {
 
         //Agregamos subgrupo1"Otros".
         //child6.addChild(subChild7_1); No mostramos el subgrupo de otros
-        child7.addChild(subChild7_2);
+        //child7.addChild(subChild7_2);
 
         //Agregamos Grupo"Otros".
         //parent.addChildren(child1);

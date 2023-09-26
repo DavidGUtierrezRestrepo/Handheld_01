@@ -14,6 +14,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class Ing_prod_ad {
     /* Se comenta el codigo original sin limite de tiempo
@@ -42,6 +44,55 @@ public class Ing_prod_ad {
 
     }*/
     //Transaccion con limite de tiempo - 1 minuto
+    public String ExecuteSqlTransaction(List<Object> listSql, String db, Context context) {
+        AtomicBoolean isError = new AtomicBoolean(false); // Usamos AtomicBoolean para manejar la bandera isError
+        AtomicReference<String> errorMessage = new AtomicReference<>(null); // Almacenar el mensaje de error específico
+
+        String ip = "10.10.10.246", port = "1433", username = "Practicante.sistemas", password = "+Psis.*";
+        String connectionUrl = "jdbc:jtds:sqlserver://" + ip + ":" + port + ";databasename=" + db + ";User=" + username + ";password=" + password + ";";
+
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        Future<String> future = executor.submit(() -> {
+            try (Connection con = DriverManager.getConnection(connectionUrl)) {
+                con.setAutoCommit(false);
+
+                try (Statement stmt = con.createStatement()) {
+                    for (Object consultaSQL : listSql) {
+                        stmt.executeUpdate((String) consultaSQL);
+                    }
+                    con.commit();
+                } catch (SQLException ex) {
+                    con.rollback();
+                    isError.set(true); // Establecer isError en true si ocurre algún error
+                    errorMessage.set(ex.getMessage()); // Almacenar el mensaje de error específico
+                }
+            } catch (SQLException ex) {
+                isError.set(true); // Establecer isError en true si ocurre algún error
+                errorMessage.set(ex.getMessage()); // Almacenar el mensaje de error específico
+            }
+            return ""; // Retornar un string vacío sin importar si hubo errores o no
+        });
+
+        int timeoutSeconds = 60; // Establecer el tiempo de espera en 1 minuto (60 segundos)
+        try {
+            future.get(timeoutSeconds, TimeUnit.SECONDS);
+        } catch (TimeoutException e) {
+            future.cancel(true);
+            return "La transacción ha excedido el tiempo límite.";
+        } catch (InterruptedException | ExecutionException e) {
+            e.printStackTrace();
+        } finally {
+            executor.shutdownNow();
+        }
+
+        if (isError.get()) {
+            return errorMessage.get(); // Retornar el mensaje de error específico si isError es true
+        } else {
+            return ""; // Retornar un string vacío si isError es false (sin errores)
+        }
+    }
+
+    /*
     public Boolean ExecuteSqlTransaction(List<Object> listSql , String db, Context context) {
         boolean resp = false;
         String ip="10.10.10.246", port="1433", username = "Practicante.sistemas", password = "+Psis.*";
@@ -82,7 +133,8 @@ public class Ing_prod_ad {
 
         return resp;
 
-    }
+    }*/
+
     /* Se comenta el codigo que se utilizo para hacer que se genere el error y hacer la prueba
     public Boolean ExecuteSqlTransaction(List<Object> listSql, String db, Context context) {
         boolean resp = false;

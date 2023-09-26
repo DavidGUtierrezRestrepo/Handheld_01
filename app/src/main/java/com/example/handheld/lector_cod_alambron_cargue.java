@@ -766,9 +766,9 @@ public class lector_cod_alambron_cargue extends AppCompatActivity implements Ada
                 listTransaccionProd.add(sqlPesoRollo);
             }
         }
-        if (ing_prod_ad.ExecuteSqlTransaction(listTransaccionCorsan, "JJVDMSCIERREAGOSTO",lector_cod_alambron_cargue.this)) {
+        if (ing_prod_ad.ExecuteSqlTransaction(listTransaccionCorsan, "CORSAN",lector_cod_alambron_cargue.this).equals("")) {
             Toast.makeText(this, "Transacción realizada con éxito!\n" + nombreProveedor + "\n" + tipo + ": " + numero_transaccion, Toast.LENGTH_LONG).show();
-            if (!ing_prod_ad.ExecuteSqlTransaction(listTransaccionProd, "JJVPRGPRODUCCION",lector_cod_alambron_cargue.this)) {
+            if (!ing_prod_ad.ExecuteSqlTransaction(listTransaccionProd, "PRGPRODUCCION",lector_cod_alambron_cargue.this).equals("")) {
                 toastError("Error al actualizar los Códigos de barra, comuníquese con sistemas!");
                 //Toast.makeText(this, "Error al actualizar los Códigos de barra, comuníquese con sistemas!", Toast.LENGTH_LONG).show();
                 resp = false;

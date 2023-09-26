@@ -2,7 +2,10 @@ package com.example.handheld;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.content.Intent;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
@@ -14,6 +17,7 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ListAdapter;
 import android.widget.ListView;
+import android.widget.ProgressBar;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -32,6 +36,7 @@ import com.example.handheld.atv.holder.adapters.listescanerAdapter;
 import com.example.handheld.conexionDB.Conexion;
 import com.example.handheld.databinding.ActivityEscanerBinding;
 import com.example.handheld.modelos.DetalleTranModelo;
+import com.example.handheld.modelos.PersonaModelo;
 import com.example.handheld.modelos.TipotransModelo;
 import com.journeyapps.barcodescanner.ScanContract;
 import com.journeyapps.barcodescanner.ScanOptions;
@@ -40,6 +45,7 @@ import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.List;
 
 public class Escaner extends AppCompatActivity implements AdapterView.OnItemClickListener {
@@ -61,6 +67,8 @@ public class Escaner extends AppCompatActivity implements AdapterView.OnItemClic
     ArrayList<String> listaTipos;
     ArrayList<String> listaTp;
     ArrayList<TipotransModelo> tiposLista = new ArrayList<>();
+    List<Object> listTransaccion_corsan;
+    List<Object> listTransaccion_prod;
 
     //Se inicializa un objeto conexion
     Conexion conexion;
@@ -72,13 +80,16 @@ public class Escaner extends AppCompatActivity implements AdapterView.OnItemClic
     Ing_prod_ad ing_prod_ad = new Ing_prod_ad();
 
     //se declaran las variables donde estaran los datos que vienen de la anterior clase
-    Integer pNumero, pIdDetalle, bod_origen, bod_destino;
+    Integer pNumero, pIdDetalle, bod_origen, bod_destino, repeticiones;
     String pfecha, pcodigo, pPendiente, pDescripcion, nit_usuario, modelo;
 
     //Se inicializa variables necesarias en la clase
     boolean yaentre = false;
-    String consecutivo, nit_proveedor,num_importacion,id_detalle,numero_rollo;
+    String consecutivo, nit_proveedor,num_importacion,id_detalle,numero_rollo, error;
     Integer numero_transaccion;
+
+    PersonaModelo personaEntrega;
+    PersonaModelo personaRecibe;
 
     //Metodo que activa el escaner por medio de la camara del movil
     private final ActivityResultLauncher<ScanOptions> barcodeLauncher = registerForActivityResult(new ScanContract(), result -> {
@@ -158,9 +169,17 @@ public class Escaner extends AppCompatActivity implements AdapterView.OnItemClic
 
         //Se programa el boton de transacción
         btnTransaccion.setOnClickListener(view -> {
+            AlertDialog.Builder builder = new AlertDialog.Builder(Escaner.this);
+            View mView = getLayoutInflater().inflate(R.layout.alertdialog_cargando,null);
+            builder.setView(mView);
+            AlertDialog alertDialogCargando = builder.create();
+            alertDialogCargando.setCancelable(false);
+            alertDialogCargando.show();
+
             if (validarFrm()){
                 try {
                     guardar();
+                    alertDialogCargando.dismiss();
                 } catch (SQLException e) {
                     e.printStackTrace();
                 }
@@ -205,6 +224,47 @@ public class Escaner extends AppCompatActivity implements AdapterView.OnItemClic
             }
             return false;
         });
+
+        ingresarCedulas();
+    }
+
+    private void ingresarCedulas() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(Escaner.this);
+        View mView = getLayoutInflater().inflate(R.layout.alertdialog_cedulastranslado,null);
+        final EditText txtCedulaEntrega = mView.findViewById(R.id.txtCedulaEntrega);
+        final EditText txtCedulaRecibe = mView.findViewById(R.id.txtCedulaRecibe);
+        Button btnAceptar = mView.findViewById(R.id.btnAceptar);
+        Button btnCancelar = mView.findViewById(R.id.btnCancelar);
+        builder.setView(mView);
+        AlertDialog alertDialog = builder.create();
+        btnAceptar.setOnClickListener(v12 -> {
+            String CeEntrega = txtCedulaEntrega.getText().toString().trim();
+            String CeRecibe= txtCedulaRecibe.getText().toString().trim();
+
+            if (CeEntrega.equals("") || CeRecibe.equals("")){
+                toastError("Por favor ingresar ambas cedulas");
+            }else{
+                personaEntrega = conexion.obtenerPersona(Escaner.this,CeEntrega );
+                personaRecibe = conexion.obtenerPersona(Escaner.this,CeRecibe );
+                String cargEntrega = personaEntrega.getCargo().trim();
+                String cargRecibe = personaRecibe.getCargo().trim();
+                if(cargEntrega.equals("AUXILIAR ALMACEN") || cargEntrega.equals("AUXILIAR DE TREFILACION") || cargEntrega.equals("COORDINADOR TREFILACION") || cargEntrega.equals("COORDINADOR ALAMBRE GALVANIZADO Y PUAS")){
+                    if(cargRecibe.equals("OPERARIO MONTACARGA")){
+                        alertDialog.dismiss();
+                    }else{
+                        toastError("La cedula de la persona que recibe no corresponde a un montacarguista");
+                    }
+                }else{
+                    toastError("La cedula de la persona que entrega no corresponde a una de las permitidas");
+                }
+            }
+        });
+        btnCancelar.setOnClickListener(v -> {
+            Intent i = new Intent(Escaner.this,MainActivity.class);
+            startActivity(i);
+        });
+        alertDialog.setCancelable(false);
+        alertDialog.show();
     }
 
     public void consultarTipos(){
@@ -455,19 +515,38 @@ public class Escaner extends AppCompatActivity implements AdapterView.OnItemClic
     //Metodo donde se agregan las consultas sql a una lista y se envian a otro metodo para ejecutarlas
     public Boolean realizar_transaccion(String gCodigo, Double gPeso, Double gNit_prov, Double gNum_importa, String gTipo, Double gDeta, Double gNum_rollo, Double gCosto_unit) throws SQLException {
         boolean resp = true;
-        List<Object> listTransaccion_prod = new ArrayList<>();
-        List<Object> listTransaccion_corsan;
+        listTransaccion_prod = new ArrayList<>();
         String sql_rollo;
         String consecutivo = etCodigo.getText().toString();
         String sql_solicitud;
+        String sql_detalle_salida;
         String sql_devuelto;
         listTransaccion_corsan = traslado_bodega(gCodigo, gPeso, gTipo, gCosto_unit);
         sql_solicitud = "INSERT INTO J_salida_alambron_transaccion (numero,id_detalle,tipo,num_transaccion) " +
                 "VALUES (" + pNumero + "," + pIdDetalle + ",'" + gTipo + "'," + numero_transaccion + ") ";
 
+
+        // Obtén la fecha y hora actual
+        Date fechaActual = new Date();
+        // Define el formato de la fecha y hora que deseas obtener
+        @SuppressLint("SimpleDateFormat")
+        SimpleDateFormat formatoFecha = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        // Convierte la fecha actual en un String con el formato definido
+        String fechaActualString = formatoFecha.format(fechaActual);
+
+        sql_detalle_salida = "INSERT INTO jd_detalle_salida_alambron (nit_entrega,nit_recibe,fecha_transaccion,trb1) " +
+                "VALUES (" + personaEntrega.getNit() + "," + personaRecibe.getNit() + ",'" + fechaActualString + "'," + numero_transaccion + ") ";
+
         try {
             //Se añade el sql a la lista
             listTransaccion_prod.add(sql_solicitud);
+        }catch (Exception e){
+            Toast.makeText(Escaner.this, e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+
+        try {
+            //Se añade el sql a la lista
+            listTransaccion_prod.add(sql_detalle_salida);
         }catch (Exception e){
             Toast.makeText(Escaner.this, e.getMessage(), Toast.LENGTH_SHORT).show();
         }
@@ -497,9 +576,12 @@ public class Escaner extends AppCompatActivity implements AdapterView.OnItemClic
         }catch (Exception e){
             Toast.makeText(Escaner.this, e.getMessage(), Toast.LENGTH_SHORT).show();
         }
-
-        if (ing_prod_ad.ExecuteSqlTransaction(listTransaccion_corsan, "JJVDMSCIERREAGOSTO", Escaner.this)){
-            if (ing_prod_ad.ExecuteSqlTransaction(listTransaccion_prod, "JJVPRGPRODUCCION", Escaner.this)){
+        repeticiones = 0;
+        error = transaccion();
+        if (error.equals("")){
+            repeticiones = 0;
+            error = tabla_produccion();
+            if (error.equals("")){
                 addRollo(num_importacion, consecutivo, gPeso, gNum_rollo, gDeta, gNit_prov, gTipo);
                 etCodigo.setEnabled(true);
                 leer_nuevo();
@@ -507,19 +589,49 @@ public class Escaner extends AppCompatActivity implements AdapterView.OnItemClic
 
                 toastAcierto("Transaccion Realizada con Exito! - "+ gTipo +": " + numero_transaccion);
             }else{
-                toastError("Problemas, No se realizó correctamente la transacción!");
+                toastError(error);
                 etCodigo.setEnabled(true);
                 leer_nuevo();
                 resp = false;
             }
 
         }else{
-            toastError("Error al realizar la transacción! Intentelo de nuevo");
+            toastError(error);
             etCodigo.setEnabled(true);
             leer_nuevo();
             resp = false;
         }
         return  resp;
+    }
+
+    private String transaccion() {
+        repeticiones = repeticiones + 1;
+        if(repeticiones<=5){
+            error = ing_prod_ad.ExecuteSqlTransaction(listTransaccion_corsan, "CORSAN", Escaner.this);
+            if(error.equals("")){
+                return error;
+            }else{
+                transaccion();
+            }
+        }else{
+            return error;
+        }
+        return error;
+    }
+
+    private String tabla_produccion() {
+        repeticiones = repeticiones + 1;
+        if(repeticiones<=5){
+            error = ing_prod_ad.ExecuteSqlTransaction(listTransaccion_prod, "PRGPRODUCCION", Escaner.this);
+            if(error.equals("")){
+                return error;
+            }else{
+                transaccion();
+            }
+        }else{
+            return error;
+        }
+        return error;
     }
 
     //Solo para 'TRB1' modelo 08 traslado de la 1 a la 2
