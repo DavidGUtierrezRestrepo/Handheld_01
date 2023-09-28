@@ -36,6 +36,7 @@ import com.example.handheld.atv.holder.adapters.listescanerAdapter;
 import com.example.handheld.conexionDB.Conexion;
 import com.example.handheld.databinding.ActivityEscanerBinding;
 import com.example.handheld.modelos.DetalleTranModelo;
+import com.example.handheld.modelos.PermisoTrasladoModelo;
 import com.example.handheld.modelos.PersonaModelo;
 import com.example.handheld.modelos.TipotransModelo;
 import com.journeyapps.barcodescanner.ScanContract;
@@ -54,7 +55,7 @@ public class Escaner extends AppCompatActivity implements AdapterView.OnItemClic
 
     //Se declaran los elementos del layout
     EditText etCodigo;
-    TextView txtTransaccion, txtKilosRollo, txtIngMovimientos, lblCodigo, lblDescripcion;
+    TextView txtTransaccion, txtKilosRollo, txtIngMovimientos, lblCodigo, lblDescripcion, mensajeCargando;
     Button btnLeerCodigo, btnSalida, btnCancelar, btnTransaccion;
     Spinner spinner;
 
@@ -88,8 +89,9 @@ public class Escaner extends AppCompatActivity implements AdapterView.OnItemClic
     String consecutivo, nit_proveedor,num_importacion,id_detalle,numero_rollo, error;
     Integer numero_transaccion;
 
-    PersonaModelo personaEntrega;
-    PersonaModelo personaRecibe;
+    PermisoTrasladoModelo personaEntrega, personaRecibe;
+
+    ProgressBar cargando;
 
     //Metodo que activa el escaner por medio de la camara del movil
     private final ActivityResultLauncher<ScanOptions> barcodeLauncher = registerForActivityResult(new ScanContract(), result -> {
@@ -121,6 +123,8 @@ public class Escaner extends AppCompatActivity implements AdapterView.OnItemClic
         btnCancelar = findViewById(R.id.btnCancelar);
         btnTransaccion = findViewById(R.id.btnTransaccion);
         spinner = findViewById(R.id.spinner);
+        cargando = findViewById(R.id.cargando);
+        mensajeCargando = findViewById(R.id.mensajeCargando);
 
         //Se definen las herramientas para el listView
         listviewEscaner = findViewById(R.id.listviewEscaner);
@@ -169,21 +173,17 @@ public class Escaner extends AppCompatActivity implements AdapterView.OnItemClic
 
         //Se programa el boton de transacción
         btnTransaccion.setOnClickListener(view -> {
-            AlertDialog.Builder builder = new AlertDialog.Builder(Escaner.this);
-            View mView = getLayoutInflater().inflate(R.layout.alertdialog_cargando,null);
-            builder.setView(mView);
-            AlertDialog alertDialogCargando = builder.create();
-            alertDialogCargando.setCancelable(false);
-            alertDialogCargando.show();
-
+            cargando.setVisibility(View.VISIBLE);
             if (validarFrm()){
                 try {
                     guardar();
-                    alertDialogCargando.dismiss();
                 } catch (SQLException e) {
                     e.printStackTrace();
                 }
+                cargando.setVisibility(View.INVISIBLE);
             }
+            cargando.setVisibility(View.INVISIBLE);
+
         });
 
         //Se programa el boton cancelar
@@ -244,18 +244,22 @@ public class Escaner extends AppCompatActivity implements AdapterView.OnItemClic
             if (CeEntrega.equals("") || CeRecibe.equals("")){
                 toastError("Por favor ingresar ambas cedulas");
             }else{
-                personaEntrega = conexion.obtenerPersona(Escaner.this,CeEntrega );
-                personaRecibe = conexion.obtenerPersona(Escaner.this,CeRecibe );
-                String cargEntrega = personaEntrega.getCargo().trim();
-                String cargRecibe = personaRecibe.getCargo().trim();
-                if(cargEntrega.equals("AUXILIAR ALMACEN") || cargEntrega.equals("AUXILIAR DE TREFILACION") || cargEntrega.equals("COORDINADOR TREFILACION") || cargEntrega.equals("COORDINADOR ALAMBRE GALVANIZADO Y PUAS")){
-                    if(cargRecibe.equals("OPERARIO MONTACARGA")){
-                        alertDialog.dismiss();
-                    }else{
-                        toastError("La cedula de la persona que recibe no corresponde a un montacarguista");
-                    }
+                if (CeEntrega.equals(CeRecibe)){
+                    toastError("Ambas cedulas no pueden ser iguales");
                 }else{
-                    toastError("La cedula de la persona que entrega no corresponde a una de las permitidas");
+                    personaEntrega = conexion.obtenerPermisoPersonaAlambron(Escaner.this,CeEntrega,"entrega" );
+                    personaRecibe = conexion.obtenerPermisoPersonaAlambron(Escaner.this,CeRecibe,"recibe" );
+                    String permisoEntrega = personaEntrega.getPermiso();
+                    String permisoRecibe = personaRecibe.getPermiso();
+                    if(permisoEntrega.equals("E")){
+                        if(permisoRecibe.equals("R")){
+                            alertDialog.dismiss();
+                        }else{
+                            toastError("La cedula de la persona que recibe no corresponde a un montacarguista");
+                        }
+                    }else{
+                        toastError("La cedula de la persona que entrega no corresponde a una de las permitidas");
+                    }
                 }
             }
         });
@@ -607,8 +611,10 @@ public class Escaner extends AppCompatActivity implements AdapterView.OnItemClic
     private String transaccion() {
         repeticiones = repeticiones + 1;
         if(repeticiones<=5){
+            mensajeCargando.setText("Intento transacción " + repeticiones + "/5");
             error = ing_prod_ad.ExecuteSqlTransaction(listTransaccion_corsan, "CORSAN", Escaner.this);
             if(error.equals("")){
+                mensajeCargando.setText("");
                 return error;
             }else{
                 transaccion();
@@ -622,8 +628,10 @@ public class Escaner extends AppCompatActivity implements AdapterView.OnItemClic
     private String tabla_produccion() {
         repeticiones = repeticiones + 1;
         if(repeticiones<=5){
+            mensajeCargando.setText("Intento producción " + repeticiones + "/5");
             error = ing_prod_ad.ExecuteSqlTransaction(listTransaccion_prod, "PRGPRODUCCION", Escaner.this);
             if(error.equals("")){
+                mensajeCargando.setText("");
                 return error;
             }else{
                 transaccion();
@@ -641,10 +649,10 @@ public class Escaner extends AppCompatActivity implements AdapterView.OnItemClic
 
         Calendar calendar = Calendar.getInstance();
         @SuppressLint("SimpleDateFormat")
-        SimpleDateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy");
+        SimpleDateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy hh:mm:ss a");
         String fecha = dateFormat.format(calendar.getTime());
 
-        String usuario = nit_usuario;
+        String usuario = personaEntrega.getNit();
         String notas = "MOVIL fecha:" + fecha + " usuario:" + usuario;
         numero_transaccion = Integer.valueOf(Obj_ordenprodLn.mover_consecutivo(tipo, Escaner.this));
         listSql = objTraslado_bodLn.listaTransaccionDatable_traslado_bodega(numero_transaccion, codigo, bod_origen, bod_destino, calendar, notas, usuario, cantidad, tipo, modelo, costo_unit,Escaner.this);

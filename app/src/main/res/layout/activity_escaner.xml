@@ -308,13 +308,36 @@
     <LinearLayout
         android:id="@+id/ll_listview"
         android:layout_width="match_parent"
-        android:layout_height="237dp"
+        android:layout_height="215dp"
         android:orientation="horizontal">
 
         <ListView
             android:id="@+id/listviewEscaner"
             android:layout_width="match_parent"
-            android:layout_height="234dp" />
+            android:layout_height="213dp" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <ProgressBar
+            android:id="@+id/cargando"
+            style="?android:attr/progressBarStyle"
+            android:layout_width="0dp"
+            android:layout_height="30dp"
+            android:layout_weight="1"
+            android:visibility="invisible" />
+
+        <TextView
+            android:id="@+id/mensajeCargando"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textSize="20sp"
+            android:textStyle="bold" />
     </LinearLayout>
 
     <LinearLayout

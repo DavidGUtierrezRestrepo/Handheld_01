@@ -17,6 +17,7 @@ import com.example.handheld.modelos.InventarioModelo;
 import com.example.handheld.modelos.LectorCodCargueModelo;
 import com.example.handheld.modelos.MesasModelo;
 import com.example.handheld.modelos.PedidoModelo;
+import com.example.handheld.modelos.PermisoTrasladoModelo;
 import com.example.handheld.modelos.PersonaModelo;
 import com.example.handheld.modelos.RolloterminadoModelo;
 import com.example.handheld.modelos.TipotransModelo;
@@ -62,6 +63,34 @@ public class Conexion {
                 persona = new PersonaModelo(rs.getString("nombres"), rs.getString("nit"), rs.getString("centro"), rs.getString("cargo"));
             }else{
                 persona = new PersonaModelo("", "","", "");
+            }
+        }catch (Exception e){
+            Toast.makeText(context, e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+        return persona;
+    }
+
+    //Obtiene datos de una persona en la BD
+    public PermisoTrasladoModelo obtenerPermisoPersonaAlambron(Context context, String cedula, String permiso){
+        PermisoTrasladoModelo persona = null;
+        ResultSet rs;
+
+        try {
+            Statement st = conexionBD("PRGPRODUCCION", context).createStatement();
+            if (permiso.equals("entrega")){
+                rs = st.executeQuery("SELECT p.nit, p.permiso \n" +
+                        "FROM jd_permisos_traslado_alambron p inner join CORSAN.dbo.V_nom_personal_Activo_con_maquila c on p.nit = c.nit\n" +
+                        "where p.permiso = 'E' and p.nit = '" + cedula + "'");
+            }else{
+                rs = st.executeQuery("SELECT p.nit, p.permiso \n" +
+                        "FROM jd_permisos_traslado_alambron p inner join CORSAN.dbo.V_nom_personal_Activo_con_maquila c on p.nit = c.nit\n" +
+                        "where p.permiso = 'R' and p.nit = '" + cedula + "'");
+            }
+
+            if (rs.next()){
+                persona = new PermisoTrasladoModelo(rs.getString("nit"), rs.getString("permiso"));
+            }else{
+                persona = new PermisoTrasladoModelo("", "");
             }
         }catch (Exception e){
             Toast.makeText(context, e.getMessage(), Toast.LENGTH_SHORT).show();
