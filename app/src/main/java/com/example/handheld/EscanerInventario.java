@@ -371,22 +371,6 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
                     repeticiones = 0;
                     ciclo3();
                 }else{
-                    //Si la consulta falla revertimos la llenada de campos de recepcion en la base de datos
-                    /*
-                    for(int i=0;i<ListaGalvRollosRecep.size();i++){
-                        String nro_orden = ListaGalvRollosRecep.get(i).getNro_orden();
-                        String nro_rollo = ListaGalvRollosRecep.get(i).getNro_rollo();
-
-                        String sql_rollo= "UPDATE D_rollo_galvanizado_f SET recepcionado=null, nit_recepcionado=null, fecha_recepcion=null, nit_entrega=null WHERE nro_orden='"+ nro_orden +"' AND consecutivo_rollo='"+nro_rollo+"'";
-
-                        try {
-                            //Se añade el sql a la lista - esto es un
-                            listTransactionError.add(sql_rollo);
-                        }catch (Exception e){
-                            Toast.makeText(EscanerInventario.this, e.getMessage(), Toast.LENGTH_SHORT).show();
-                        }
-                        ing_prod_ad.ExecuteSqlTransaction(listTransactionError,"JJVPRGPRODUCCION",EscanerInventario.this);
-                    }*/
                     incompleta =  true;
                     AlertDialog.Builder builder = new AlertDialog.Builder(EscanerInventario.this);
                     View mView = getLayoutInflater().inflate(R.layout.alertdialog_aceptar,null);
@@ -407,21 +391,6 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
                     alertDialog.show();
                 }
             }else{
-                /*
-                for(int i=0;i<ListaGalvRollosRecep.size();i++){
-                    String nro_orden = ListaGalvRollosRecep.get(i).getNro_orden();
-                    String nro_rollo = ListaGalvRollosRecep.get(i).getNro_rollo();
-
-                    String sql_rollo= "UPDATE D_rollo_galvanizado_f SET recepcionado=null, nit_recepcionado=null, fecha_recepcion=null, nit_entrega=null WHERE nro_orden='"+ nro_orden +"' AND consecutivo_rollo='"+nro_rollo+"'";
-
-                    try {
-                        //Se añade el sql a la lista - esto es un
-                        listTransactionError.add(sql_rollo);
-                    }catch (Exception e){
-                        Toast.makeText(EscanerInventario.this, e.getMessage(), Toast.LENGTH_SHORT).show();
-                    }
-                    ing_prod_ad.ExecuteSqlTransaction(listTransactionError,"JJVPRGPRODUCCION",EscanerInventario.this);
-                }*/
                 incompleta =  true;
                 toastError(error);
             }

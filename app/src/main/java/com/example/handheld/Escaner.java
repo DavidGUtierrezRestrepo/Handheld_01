@@ -3,9 +3,12 @@ package com.example.handheld;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
+import android.media.AudioManager;
+import android.media.SoundPool;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.Vibrator;
 import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
@@ -93,6 +96,13 @@ public class Escaner extends AppCompatActivity implements AdapterView.OnItemClic
 
     ProgressBar cargando;
 
+    //Se inicializa los varibles para el sonido de error
+    SoundPool sp;
+    int sonido_de_Reproduccion;
+
+    //Se inicializa una instancia para hacer vibrar el celular
+    Vibrator vibrator;
+
     //Metodo que activa el escaner por medio de la camara del movil
     private final ActivityResultLauncher<ScanOptions> barcodeLauncher = registerForActivityResult(new ScanContract(), result -> {
         if (result.getContents() == null){
@@ -110,6 +120,12 @@ public class Escaner extends AppCompatActivity implements AdapterView.OnItemClic
         super.onCreate(savedInstanceState);
         binding = ActivityEscanerBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
+
+        //Se Define los varibles para el sonido de error
+        sp = new SoundPool(2, AudioManager.STREAM_MUSIC,1);
+        sonido_de_Reproduccion = sp.load(this, R.raw.sonido_error_2,1);
+
+        vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
 
         //Se Definen los elementos de layout
         etCodigo = findViewById(R.id.etCodigo);
@@ -366,6 +382,7 @@ public class Escaner extends AppCompatActivity implements AdapterView.OnItemClic
                                             toastAcierto("El rollo se desactivo en forma correcta!");
                                         }else{
                                             toastError("!Error al desactivar el rollo");
+                                            AudioError();
                                         }
                                     }).
                                     setNegativeButton("Cancelar", (dialogInterface, i) -> toastError("Se cancelo la eliminacion"));
@@ -373,15 +390,18 @@ public class Escaner extends AppCompatActivity implements AdapterView.OnItemClic
                             alertDialog.show();
                         }else{
                             toastError("Ya se le hizo una salida al rollo");
+                            AudioError();
                             leer_nuevo();
                         }
                     }
                 }else{
                     toastError("El código de alambrón no pertenece al pedido");
+                    AudioError();
                     leer_nuevo();
                 }
             }else{
                 toastError("El codigo de barras no se encuentra asignado");
+                AudioError();
                 leer_nuevo();
             }
         }
@@ -751,6 +771,12 @@ public class Escaner extends AppCompatActivity implements AdapterView.OnItemClic
         toast.show();
     }
 
+    /////////////////////////////////////////////////////////////////////////////////////////////
+    //Metodo que reproduce sonido y hace vibrar el dispositivo
+    public void AudioError(){
+        sp.play(sonido_de_Reproduccion,100,100,1,0,0);
+        vibrator.vibrate(2000);
+    }
 
     @Override
     public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
