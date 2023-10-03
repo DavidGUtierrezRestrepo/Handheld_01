@@ -9,6 +9,7 @@ import com.example.handheld.modelos.BodegasModelo;
 import com.example.handheld.modelos.CajasReceModelo;
 import com.example.handheld.modelos.CajasRefeModelo;
 import com.example.handheld.modelos.CentrosModelo;
+import com.example.handheld.modelos.CodigoGalvModelo;
 import com.example.handheld.modelos.CuentasModelo;
 import com.example.handheld.modelos.EmpRecepcionadoCajasModelo;
 import com.example.handheld.modelos.GalvRecepcionModelo;
@@ -18,6 +19,7 @@ import com.example.handheld.modelos.LectorCodCargueModelo;
 import com.example.handheld.modelos.MesasModelo;
 import com.example.handheld.modelos.PedidoModelo;
 import com.example.handheld.modelos.PermisoTrasladoModelo;
+import com.example.handheld.modelos.Persona;
 import com.example.handheld.modelos.PersonaModelo;
 import com.example.handheld.modelos.RolloterminadoModelo;
 import com.example.handheld.modelos.TipotransModelo;
@@ -49,6 +51,79 @@ public class Conexion {
         }
 
         return cnn;
+    }
+// obtiene la lista de muestras tomadas en galvanizado para ajustar traccion y zaba
+    public List<Persona> obtenerListaMuestreo(Context context, String nit){
+        List<Persona> persona = new ArrayList<>();
+        Persona modelo;
+
+        try {
+            Statement st = conexionBD("PRGPRODUCCION", context).createStatement();
+            ResultSet rs = st.executeQuery("SELECT Codigo, Diametro_inicial, Nro_bobina, Velocidad_bobina, Longitud,traccion, recubrimiento_zinc FROM F_det_muestreo_galvanizado WHERE nit = " + nit + " \n" +
+                    "  AND CAST(fecha_hora AS DATE) = CAST(GETDATE() AS DATE)\n" +
+                    "ORDER BY fecha_hora DESC; ");
+            while (rs.next()){
+                modelo = new Persona();
+                modelo.setCodigo(rs.getString(1));
+                modelo.setDiametro(rs.getDouble(2));
+                modelo.setBobina(rs.getInt(3));
+                modelo.setVelocidad_bobina(rs.getDouble(4));
+                modelo.setLongitud(rs.getDouble(5));
+                // Verificar si traccion es nulo o vacío y establecerlo en 0 si es así
+                if (rs.getString(6) == null || rs.getString(6).isEmpty()) {
+                    modelo.setTraccion(0);
+                } else {
+                    modelo.setTraccion(rs.getDouble(6));
+                }
+
+                // Verificar si recubrimiento_zinc es nulo o vacío y establecerlo en 0 si es así
+                if (rs.getString(7) == null || rs.getString(7).isEmpty()) {
+                    modelo.setZaba(0);
+                } else {
+                    modelo.setZaba(rs.getDouble(7));
+                }
+                persona.add(modelo);
+            }
+        }catch (Exception e){
+            Toast.makeText(context, e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+        return persona;
+    }
+    //metodo para obtener todos los datos de la bd y especificar 1
+    public String valorTodo(Context context, String sql){
+        String valor = "";
+        try {
+            Statement st = conexionBD("PRGPRODUCCION", context).createStatement();
+            ResultSet rs = st.executeQuery(sql);
+            if (rs.next()){
+                valor = rs.getString(1);
+            }
+        }catch (Exception e){
+            Toast.makeText(context, e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+        return valor;
+    }
+
+    //obtener codigos y descripcion de la bd
+    public ArrayList<CodigoGalvModelo> obtenerCodigos(Context context){
+        ArrayList<CodigoGalvModelo> tipos = new ArrayList<>();
+        CodigoGalvModelo Tipo;
+
+        try {
+            Statement st = conexionBD("PRGPRODUCCION", context).createStatement();
+            ResultSet rs = st.executeQuery("select r.descripcion,c.*\n" +
+                    "from F_galv_longitud_codigo C INNER JOIN CORSAN.dbo.referencias r on r.codigo = c.codigo");
+            while (rs.next()){
+                Tipo = new CodigoGalvModelo();
+                Tipo.setDescripcion(rs.getString("descripcion"));
+                Tipo.setCodigo(rs.getString("codigo"));
+                Tipo.setLongitud(rs.getString("longitud"));
+                tipos.add(Tipo);
+            }
+        }catch (Exception e){
+            Toast.makeText(context, e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+        return tipos;
     }
 
     //Obtiene datos de una persona en la BD

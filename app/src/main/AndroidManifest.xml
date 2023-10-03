@@ -25,6 +25,12 @@
             android:name=".PruebaSpinner"
             android:exported="false" />
         <activity
+            android:name=".Muestreo_galvanizado"
+            android:exported="false" />
+        <activity
+            android:name=".ListPersonaActivity"
+            android:exported="false" />
+        <activity
             android:name=".RevisionTerminadoTrefilacion"
             android:exported="false" />
         <activity

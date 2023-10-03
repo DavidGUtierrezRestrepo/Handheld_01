@@ -274,13 +274,13 @@ public class MainActivity extends AppCompatActivity {
         TreeNode subChild5_1 = new TreeNode(subChildItem5_1).setViewHolder(new MyHolder(getApplicationContext(), false, R.layout.child, 100));
 
         //Al darle clic a este elemento en el treeview se abrira una nueva pantalla y se enviaran unos datos
-        /* Todavia no se ha estructurado un modulo de calidad para galvanizado
+
         subChild5_1.setClickListener((node, value) -> {
-            Intent intent = new Intent(MainActivity.this, EscanerInventario.class);
+            Intent intent = new Intent(MainActivity.this, Muestreo_galvanizado.class);
             intent.putExtra("nit_usuario", cd);
             startActivity(intent);
         });
-        */
+
 
         //SubGrupo2"Revisión - Calidad"
         //Enviamos el icono y el texto para el SubGrupo
@@ -308,10 +308,10 @@ public class MainActivity extends AppCompatActivity {
         });
 
         //Agregamos subgrupo1"Revisión - Calidad: Galvanizado".
-        //child5.addChild(subChild5_1); Todavia no hay desarrollado un modulo de calidad para galvanizado
+        child5.addChild(subChild5_1);
 
         //Agregamos subgrupo2"Revisión - Calidad: Trefilación".
-        //child5.addChild(subChild5_2);
+        child5.addChild(subChild5_2);
 
         //Agregamos subgrupo2"Revisión - Calidad: Mesas Empaque".
         //child5.addChild(subChild5_3); Todavia no hay desarrollado un modulo de calidad para empaque
