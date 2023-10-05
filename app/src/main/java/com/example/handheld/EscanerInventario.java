@@ -5,7 +5,6 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
-import android.graphics.drawable.GradientDrawable;
 import android.media.AudioManager;
 import android.media.SoundPool;
 import android.os.Bundle;
@@ -20,7 +19,6 @@ import android.view.inputmethod.InputMethodManager;
 import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.LinearLayout;
 import android.widget.ListAdapter;
 import android.widget.ListView;
 import android.widget.ProgressBar;
@@ -52,7 +50,6 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
 
     //se declaran las variables donde estaran los datos que vienen de la anterior clase
     String nit_usuario;
-    //fecha_inicio,fecha_final; YA NO SE RECIBEN FECHAS DE CORTES
 
     //Se declaran los elementos necesarios para el list view
     ListView listviewGalvTerminado;
@@ -65,7 +62,7 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
     Conexion conexion;
 
     //Se inicializa variables necesarias en la clase
-    int yaentre = 0;
+    int yaentre = 0, leidos;
     String consecutivo, error;
     Integer numero_transaccion, repeticiones;
     String centro = "";
@@ -131,11 +128,12 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
             if (keyCode == KeyEvent.KEYCODE_ENTER) {
                 if (incompleta){
                     codigoGalva.setText("");
-                    toastAtencion("No se pueden leer más tiquetes \n" +
-                            "Por favor terminar transacción pendiente");
+                    AudioError();
+                    toastAtencion("No se pueden leer más tiquetes");
                 }else{
                     if(yaentre == 0){
                         if(codigoGalva.getText().toString().equals("")){
+                            AudioError();
                             toastError("Por favor escribir o escanear el codigo de barras");
                         }else{
                             //Ocultamos el teclado de la pantalla
@@ -166,7 +164,7 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
         btnTransaGalv.setOnClickListener(v -> {
             int sleer = Integer.parseInt(txtTotalSinLeer.getText().toString());
             int total = Integer.parseInt(txtTotal.getText().toString());
-            int leidos = (total - sleer);
+            leidos = (total - sleer);
             //Verificamos que la cantidad de rollos sin leer sea 0 y si hubiera produccion en
             //galvanizado que leer
             if(sleer==0 && total>0){
@@ -185,10 +183,12 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
                 btnAceptar.setOnClickListener(v12 -> {
                     String CeLog = txtCedulaLogistica.getText().toString().trim();
                     if (CeLog.equals("")){
+                        AudioError();
                         toastError("Ingresar la cedula de la persona que recepciona");
                     }else{
                         if(CeLog.equals(nit_usuario)){
                             txtCedulaLogistica.setText("");
+                            AudioError();
                             toastError("La Cedula de la persona que recepciona no puede ser igual al de la persona que entrega");
                         }else{
                             //Verificamos el numero de documentos de la persona en la base da datos
@@ -208,6 +208,7 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
                                         });
                                     } catch (Exception e) {
                                         handler.post(() -> {
+                                            AudioError();
                                             toastError(e.getMessage());
                                             Barraprogreso.setVisibility(View.GONE);
                                         });
@@ -217,9 +218,11 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
                             }else{
                                 if (centro.equals("")){
                                     txtCedulaLogistica.setText("");
+                                    AudioError();
                                     toastError("Persona no encontrada");
                                 }else{
                                     txtCedulaLogistica.setText("");
+                                    AudioError();
                                     toastError("La cedula ingresada no pertenece a logistica!");
                                 }
                             }
@@ -253,10 +256,12 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
                         btnAceptar.setOnClickListener(v12 -> {
                             String CeLog = txtCedulaLogistica.getText().toString().trim();
                             if (CeLog.equals("")){
+                                AudioError();
                                 toastError("Ingresar la cedula de la persona que recepciona");
                             }else{
                                 if(CeLog.equals(nit_usuario)){
                                     txtCedulaLogistica.setText("");
+                                    AudioError();
                                     toastError("La Cedula de la persona que recepciona no puede ser igual al de la persona que entrega");
                                 }else{
                                     personaLogistica = conexion.obtenerPersona(EscanerInventario.this,CeLog );
@@ -275,6 +280,7 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
                                                 });
                                             } catch (Exception e) {
                                                 handler.post(() -> {
+                                                    AudioError();
                                                     toastError(e.getMessage());
                                                     Barraprogreso.setVisibility(View.GONE);
                                                 });
@@ -284,9 +290,11 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
                                     }else{
                                         if (centro.equals("")){
                                             txtCedulaLogistica.setText("");
+                                            AudioError();
                                             toastError("Persona no encontrada");
                                         }else{
                                             txtCedulaLogistica.setText("");
+                                            AudioError();
                                             toastError("La cedula ingresada no pertenece a logistica!");
                                         }
                                     }
@@ -322,7 +330,7 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
 
         // Define el formato de la fecha y hora que deseas obtener
         @SuppressLint("SimpleDateFormat")
-        SimpleDateFormat formatoFecha = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        SimpleDateFormat formatoFecha = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss a");
         @SuppressLint("SimpleDateFormat") SimpleDateFormat formatoMonth = new SimpleDateFormat("MM");
         @SuppressLint("SimpleDateFormat") SimpleDateFormat formatoYear = new SimpleDateFormat("yyyy");
 
@@ -372,6 +380,7 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
                     ciclo3();
                 }else{
                     incompleta =  true;
+                    AudioError();
                     AlertDialog.Builder builder = new AlertDialog.Builder(EscanerInventario.this);
                     View mView = getLayoutInflater().inflate(R.layout.alertdialog_aceptar,null);
                     TextView alertMensaje = mView.findViewById(R.id.alertMensaje);
@@ -392,6 +401,7 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
                 }
             }else{
                 incompleta =  true;
+                AudioError();
                 toastError(error);
             }
         }
@@ -412,6 +422,7 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
         return error;
     }
 
+    @SuppressLint("SetTextI18n")
     private void reanudarTransacion(){
         if (repeticiones<=4){
             List<Object> listReanudarTransa = new ArrayList<>();
@@ -442,11 +453,24 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
             }
         }else{
             incompleta =  true;
-            toastError("No se pudo cancelar la transacción \n" +
-                    "Por favor comunicarse con Sistemas");
+            btnTransaGalv.setEnabled(false);
+            btnCancelarTrans.setEnabled(false);
+            AudioError();
+            AlertDialog.Builder builder = new AlertDialog.Builder(EscanerInventario.this);
+            View mView = getLayoutInflater().inflate(R.layout.alertdialog_aceptar,null);
+            TextView alertMensaje = mView.findViewById(R.id.alertMensaje);
+            alertMensaje.setText("No se pudo cancelar la transacción, \n Por favor comunicarse inmediatamente con el área de sistemas, \n para poder continuar con las transacciones, de lo \n contrario no se le permitira continuar");
+            Button btnAceptar = mView.findViewById(R.id.btnAceptar);
+            btnAceptar.setText("Aceptar");
+            builder.setView(mView);
+            AlertDialog alertDialog = builder.create();
+            btnAceptar.setOnClickListener(v -> alertDialog.dismiss());
+            alertDialog.setCancelable(false);
+            alertDialog.show();
         }
         }
 
+    @SuppressLint("SetTextI18n")
     private void ciclo3() {
         repeticiones = repeticiones + 1;
         if(repeticiones<=5){
@@ -461,8 +485,20 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
             }
         }else{
             incompleta =  true;
-            toastError("No se pudo terminar la transacción \n" +
-                    "Por favor comunicarse con Sistemas");
+            btnTransaGalv.setEnabled(false);
+            btnCancelarTrans.setEnabled(false);
+            AudioError();
+            AlertDialog.Builder builder = new AlertDialog.Builder(EscanerInventario.this);
+            View mView = getLayoutInflater().inflate(R.layout.alertdialog_aceptar,null);
+            TextView alertMensaje = mView.findViewById(R.id.alertMensaje);
+            alertMensaje.setText("Hubo un problema en el paso 3 de la transacción de los " + leidos + " Rollos leidos, \n Por favor comunicarse inmediatamente con el área de sistemas, \n para poder continuar con las transacciones, de lo \n contrario no se le permitira continuar");
+            Button btnAceptar = mView.findViewById(R.id.btnAceptar);
+            btnAceptar.setText("Aceptar");
+            builder.setView(mView);
+            AlertDialog alertDialog = builder.create();
+            btnAceptar.setOnClickListener(v -> alertDialog.dismiss());
+            alertDialog.setCancelable(false);
+            alertDialog.show();
         }
 
     }
@@ -482,6 +518,7 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
         return listSql;
     }
 
+    @SuppressLint("SetTextI18n")
     private void consultarTransIncompleta(){
         conexion = new Conexion();
         //Inicializamos la lista de los rollos escaneados
@@ -495,9 +532,21 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
             //Llamamos al metodo para consultar los rollos de galvanizados listos para recoger
             consultarGalvTerminado();
         }else{
-            toastAtencion("Transacción incompleta \n" +
-                    "Por favor terminarla");
             incompleta = true;
+            btnTransaGalv.setEnabled(false);
+            btnCancelarTrans.setEnabled(false);
+            AlertDialog.Builder builder = new AlertDialog.Builder(EscanerInventario.this);
+            View mView = getLayoutInflater().inflate(R.layout.alertdialog_aceptar,null);
+            TextView alertMensaje = mView.findViewById(R.id.alertMensaje);
+            alertMensaje.setText("Hay una transaccion anterior incompleta , \n Por favor comunicarse inmediatamente con el área de sistemas, \n para poder continuar con las transacciones, de lo \n contrario no se le permitira continuar");
+            Button btnAceptar = mView.findViewById(R.id.btnAceptar);
+            btnAceptar.setText("Aceptar");
+            builder.setView(mView);
+            AlertDialog alertDialog = builder.create();
+            btnAceptar.setOnClickListener(v -> alertDialog.dismiss());
+            alertDialog.setCancelable(false);
+            alertDialog.show();
+
             //Consultamos los rollos de producción que no se han recepcionado en la base de datos
             ListaGalvTerminado = conexion.obtenerGalvTerminado(getApplication());
 
