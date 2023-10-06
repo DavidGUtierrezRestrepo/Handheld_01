@@ -515,6 +515,7 @@ public class Escaner extends AppCompatActivity implements AdapterView.OnItemClic
     //Metodo donde se obtienen todos los datos del rollo obtenidos por su codigo de barras
     //Y se envian al metodo realizar_transacción
     private void guardar() throws SQLException {
+        cargando.setVisibility(View.VISIBLE);
         String gTipo = spinner.getSelectedItem().toString();
         Double gPeso = Double.parseDouble(txtKilosRollo.getText().toString());
         String gCodigo = lblCodigo.getText().toString().trim();
@@ -537,7 +538,9 @@ public class Escaner extends AppCompatActivity implements AdapterView.OnItemClic
     }
 
     //Metodo donde se agregan las consultas sql a una lista y se envian a otro metodo para ejecutarlas
+    @SuppressLint("SetTextI18n")
     public Boolean realizar_transaccion(String gCodigo, Double gPeso, Double gNit_prov, Double gNum_importa, String gTipo, Double gDeta, Double gNum_rollo, Double gCosto_unit) throws SQLException {
+        cargando.setVisibility(View.VISIBLE);
         boolean resp = true;
         listTransaccion_prod = new ArrayList<>();
         String sql_rollo;
@@ -610,17 +613,39 @@ public class Escaner extends AppCompatActivity implements AdapterView.OnItemClic
                 etCodigo.setEnabled(true);
                 leer_nuevo();
                 contar_movimientos();
-
+                cargando.setVisibility(View.INVISIBLE);
                 toastAcierto("Transaccion Realizada con Exito! - "+ gTipo +": " + numero_transaccion);
             }else{
-                toastError(error);
+                AudioError();
+                AlertDialog.Builder builder = new AlertDialog.Builder(Escaner.this);
+                View mView = getLayoutInflater().inflate(R.layout.alertdialog_aceptar,null);
+                TextView alertMensaje = mView.findViewById(R.id.alertMensaje);
+                alertMensaje.setText(error);
+                Button btnAceptar = mView.findViewById(R.id.btnAceptar);
+                btnAceptar.setText("Aceptar");
+                builder.setView(mView);
+                AlertDialog alertDialog = builder.create();
+                btnAceptar.setOnClickListener(v -> alertDialog.dismiss());
+                alertDialog.setCancelable(false);
+                alertDialog.show();
                 etCodigo.setEnabled(true);
                 leer_nuevo();
                 resp = false;
             }
 
         }else{
-            toastError(error);
+            AudioError();
+            AlertDialog.Builder builder = new AlertDialog.Builder(Escaner.this);
+            View mView = getLayoutInflater().inflate(R.layout.alertdialog_aceptar,null);
+            TextView alertMensaje = mView.findViewById(R.id.alertMensaje);
+            alertMensaje.setText(error);
+            Button btnAceptar = mView.findViewById(R.id.btnAceptar);
+            btnAceptar.setText("Aceptar");
+            builder.setView(mView);
+            AlertDialog alertDialog = builder.create();
+            btnAceptar.setOnClickListener(v -> alertDialog.dismiss());
+            alertDialog.setCancelable(false);
+            alertDialog.show();
             etCodigo.setEnabled(true);
             leer_nuevo();
             resp = false;
@@ -631,6 +656,7 @@ public class Escaner extends AppCompatActivity implements AdapterView.OnItemClic
     private String transaccion() {
         repeticiones = repeticiones + 1;
         if(repeticiones<=5){
+            cargando.setVisibility(View.VISIBLE);
             mensajeCargando.setText("Intento transacción " + repeticiones + "/5");
             error = ing_prod_ad.ExecuteSqlTransaction(listTransaccion_corsan, "CORSAN", Escaner.this);
             if(error.equals("")){
@@ -640,12 +666,14 @@ public class Escaner extends AppCompatActivity implements AdapterView.OnItemClic
                 transaccion();
             }
         }else{
+            cargando.setVisibility(View.INVISIBLE);
             return error;
         }
         return error;
     }
 
     private String tabla_produccion() {
+        cargando.setVisibility(View.VISIBLE);
         repeticiones = repeticiones + 1;
         if(repeticiones<=5){
             mensajeCargando.setText("Intento producción " + repeticiones + "/5");
@@ -657,6 +685,8 @@ public class Escaner extends AppCompatActivity implements AdapterView.OnItemClic
                 transaccion();
             }
         }else{
+            cargando.setVisibility(View.INVISIBLE);
+            mensajeCargando.setText("");
             return error;
         }
         return error;
