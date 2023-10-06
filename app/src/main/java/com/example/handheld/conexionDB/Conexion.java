@@ -777,7 +777,7 @@ public class Conexion {
         TrefiRecepcionModelo modelo;
 
         try {
-            Statement st = conexionBD("PRGPRODUCCION", context).createStatement();
+            Statement st = conexionBD("PRGPRODUCCIOn ", context).createStatement();
             ResultSet rs = st.executeQuery("select R.cod_orden,R.id_detalle,R.id_rollo, O.prod_final,Ref.descripcion, R.peso\n" +
                     "from J_rollos_tref R inner join J_orden_prod_tef O on R.cod_orden = O.consecutivo inner join CORSAN.dbo.referencias Ref on O.prod_final = Ref.codigo\n" +
                     "where O.prod_final like '33%' and R.recepcionado is null and R.id_revision = " + id_revision + " and R.anulado is null and R.no_conforme is null  and R.motivo is null and R.traslado is null and\n" +
@@ -804,7 +804,7 @@ public class Conexion {
         TrefiRecepcionModelo modelo;
 
         try {
-            Statement st = conexionBD("PRGPRODUCCION", context).createStatement();
+            Statement st = conexionBD("PRGPRODUCCIOn ", context).createStatement();
             ResultSet rs = st.executeQuery("select R.cod_orden,R.id_detalle,R.id_rollo, O.prod_final,Ref.descripcion, R.peso\n" +
                     "from J_rollos_tref R inner join J_orden_prod_tef O on R.cod_orden = O.consecutivo inner join CORSAN.dbo.referencias Ref on O.prod_final = Ref.codigo inner join jd_revision_calidad Rev on R.id_revision = Rev.id_revision\n" +
                     "where O.prod_final like '33%' and R.recepcionado is null and R.id_revision is not null and R.anulado is null and R.no_conforme is null  and R.motivo is null and R.traslado is null and\n" +
@@ -831,7 +831,7 @@ public class Conexion {
         CajasRefeModelo modelo;
 
         try {
-            Statement st = conexionBD("PRGPRODUCCION", context).createStatement();
+            Statement st = conexionBD("PRGPRODUCCIOn ", context).createStatement();
             ResultSet rs = st.executeQuery("select FECHA,REFERENCIA,MESA,CANTIDAD from F_Recepcion_puntilleria where MESA = '"+ mesa +"' and REFERENCIA='"+ referencia +"' and RECEPCIONADO is null order by cantidad desc");
             while (rs.next()){
                 modelo = new CajasRefeModelo();
@@ -852,7 +852,7 @@ public class Conexion {
         GalvRecepcionModelo modelo;
 
         try {
-            Statement st = conexionBD("PRGPRODUCCION", context).createStatement();
+            Statement st = conexionBD("PRGPRODUCCIOn ", context).createStatement();
             ResultSet rs = st.executeQuery("SELECT R.nro_orden,R.consecutivo_rollo as nro_rollo,S.final_galv,ref.descripcion,R.peso  \n" +
                     "FROM D_rollo_galvanizado_f R, D_orden_pro_galv_enc S,CORSAN.dbo.referencias ref,CORSAN.dbo.V_nom_personal_Activo_con_maquila ter \n" +
                     "where R.nro_orden = S.consecutivo_orden_G And ref.codigo = S.final_galv and ter.nit=R.nit_operario AND R.fecha_hora >= '"+ fecha_inicio +"' AND  R.fecha_hora  <= '"+ fecha_final +"' and R.no_conforme is null and R.anular is null and R.recepcionado is null and S.final_galv LIKE '33G%'\n" +
@@ -878,7 +878,7 @@ public class Conexion {
         CajasReceModelo modelo;
 
         try {
-            Statement st = conexionBD("PRGPRODUCCION", context).createStatement();
+            Statement st = conexionBD("PRGPRODUCCIOn ", context).createStatement();
             ResultSet rs = st.executeQuery(sql);
             while (rs.next()){
                 modelo = new CajasReceModelo();
@@ -899,7 +899,7 @@ public class Conexion {
         GalvRecepcionadoRollosModelo modelo;
 
         try {
-            Statement st = conexionBD("PRGPRODUCCION", context).createStatement();
+            Statement st = conexionBD("PRGPRODUCCION ", context).createStatement();
             ResultSet rs = st.executeQuery("select sum(R.peso) as peso, (SELECT p.promedio from corsan.dbo.v_promedio p where codigo = O.final_galv and P.ano = "+ year +" and P.mes = "+ month +")  as promedio, (select costo_unitario from CORSAN.dbo.referencias R where codigo = O.final_galv) as costo_unitario , O.final_galv " +
                     "from D_rollo_galvanizado_f R inner join D_orden_pro_galv_enc O on O.consecutivo_orden_G = R.nro_orden " +
                     "where R.recepcionado is not null and R.fecha_recepcion = '"+ fecha_recepcion +"' and R.no_conforme is null and O.final_galv like '33%' " +
@@ -923,7 +923,7 @@ public class Conexion {
         TrefiRecepcionadoRollosModelo modelo;
 
         try {
-            Statement st = conexionBD("PRGPRODUCCION", context).createStatement();
+            Statement st = conexionBD("PRGPRODUCCION ", context).createStatement();
             ResultSet rs = st.executeQuery("select sum(R.peso) as peso, (SELECT p.promedio from corsan.dbo.v_promedio p where codigo = O.prod_final and P.ano = "+ year +" and P.mes = "+ month +")  as promedio, (select costo_unitario from CORSAN.dbo.referencias R where codigo = O.prod_final) as costo_unitario , O.prod_final " +
                     "from J_rollos_tref R inner join J_orden_prod_tef O on O.consecutivo = R.cod_orden " +
                     "where R.recepcionado is not null and R.fecha_recepcion = '"+ fecha_recepcion +"' and R.no_conforme is null and O.prod_final like '33%' " +
@@ -948,7 +948,7 @@ public class Conexion {
         TrefiRecepcionadoRollosModelo modelo;
 
         try {
-            Statement st = conexionBD("PRGPRODUCCION", context).createStatement();
+            Statement st = conexionBD("PRGPRODUCCION ", context).createStatement();
             ResultSet rs = st.executeQuery("select sum(R.peso) as peso, (SELECT p.promedio from corsan.dbo.v_promedio p where codigo = O.prod_final and P.ano = "+ year +" and P.mes = "+ month +")  as promedio, (select costo_unitario from CORSAN.dbo.referencias R where codigo = O.prod_final) as costo_unitario , O.prod_final " +
                     "from J_rollos_tref R inner join J_orden_prod_tef O on O.consecutivo = R.cod_orden " +
                     "where R.recepcionado is null and R.id_revision = '"+ numero_revision.toString() +"' and R.no_conforme is null and O.prod_final like '33%' " +

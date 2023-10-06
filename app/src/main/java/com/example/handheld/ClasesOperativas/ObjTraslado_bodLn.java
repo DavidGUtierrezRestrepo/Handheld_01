@@ -891,7 +891,7 @@ public class ObjTraslado_bodLn {
             seq = i;
             sql = "INSERT INTO documentos_lin(sw,tipo,numero,codigo,seq,fec,nit,cantidad,porcentaje_iva,valor_unitario,porcentaje_descuento " +
                     ",costo_unitario,adicional,vendedor,bodega,und,cantidad_und,cantidad_pedida,maneja_inventario,costo_unitario_sin,cantidad_dos) " +
-                    "VALUES(" + swDoc_lin + ",'" + tipo + "'," + numero + ",'" + ((TextView) tableRow.getChildAt(0)).getText().toString() + "'," + seq + ",'" + sFecha + "'," + nit + "," + ((TextView) tableRow.getChildAt(2)).getText().toString() + ",16," + valorUnitario + ",0," +
+                    "VALUES(" + swDoc_lin + ",'" + tipo + "'," + numero + ",'" + ((TextView) tableRow.getChildAt(0)).getText().toString() + "'," + seq + ",'" + sFecha + "'," + nit + "," + ((TextView) tableRow.getChildAt(1)).getText().toString() + ",16," + valorUnitario + ",0," +
                     "" + costo_kilo + ",'" + notas + "',0," + bodega + ",'UND',1,0,'S',0.0000000000000000,1) ";
             listSql.add(sql);
             //Script para ingresar a referencias_sto (STOCK)

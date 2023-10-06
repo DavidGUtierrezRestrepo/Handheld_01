@@ -35,7 +35,7 @@ public class objOperacionesDb {
 
     public Integer ejecutarInsertJjprgproduccion(String Sql, Context context) throws SQLException {
         int resp = 0;
-        Connection cnn = new Conexion().conexionBD("PRGPRODUCCION",context);
+        Connection cnn = new Conexion().conexionBD("PRGPRODUCCION  ",context);
         try {
             if (cnn != null){
                 PreparedStatement stm = cnn.prepareStatement(Sql);
@@ -54,7 +54,7 @@ public class objOperacionesDb {
 
     public Integer ejecutarUpdateDbProduccion(String Sql, Context context) throws SQLException {
         int resp = 0;
-        Connection cnn = new Conexion().conexionBD("PRGPRODUCCION",context);
+        Connection cnn = new Conexion().conexionBD("PRGPRODUCCION  ",context);
         try {
             if (cnn != null){
                 PreparedStatement stm = cnn.prepareStatement(Sql);
@@ -93,7 +93,7 @@ public class objOperacionesDb {
 
     public ArrayList<HashMap<String, Object>> listadoDatosProduccionHasp(String Sql, Context context) throws SQLException {
         ArrayList<HashMap<String, Object>> resultados = new ArrayList<>();
-        Connection cnn = new Conexion().conexionBD("PRGPRODUCCION",context);
+        Connection cnn = new Conexion().conexionBD("PRGPRODUCCION  ",context);
         try {
             if (cnn != null){
                 PreparedStatement stm = cnn.prepareStatement(Sql);

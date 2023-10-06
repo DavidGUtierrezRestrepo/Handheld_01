@@ -83,7 +83,7 @@ public class lector_cod_alambron_cargue extends AppCompatActivity implements Ada
     int eCantRollos;
     int cant;
     boolean yaentre = false;
-
+    String error;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -548,13 +548,14 @@ public class lector_cod_alambron_cargue extends AppCompatActivity implements Ada
                                             throw new RuntimeException(e);
                                         }
                                     } else {
-                                        toastError("La cantidad de rollos leídos no coincide con la ingresada en la planilla: "+eCantRollos+ "En la lista hay: "+ mAdapterCodAlambron.getCount());
+                                        toastError("Primero La cantidad de rollos leídos no coincide con la ingresada en la planilla: "+eCantRollos+ "En la lista hay: "+ mAdapterCodAlambron.getCount());
+
                                     }
                                 } catch (SQLException e) {
                                     throw new RuntimeException(e);
                                 }
                             } else {
-                                toastError( "La cantidad de rollos registrados no coincide con la planilla"+eCantRollos + "En la lista hay "+ mAdapterCodAlambron.getCount());
+                                toastError( "Segundo La cantidad de rollos registrados no coincide con la planilla"+eCantRollos + "En la lista hay "+ mAdapterCodAlambron.getCount());
                             }
                         }
                     })
@@ -594,7 +595,7 @@ public class lector_cod_alambron_cargue extends AppCompatActivity implements Ada
                     tl_codigos_valores.removeAllViews();
                   //  toastAlert("Se inicia creacion del TableLayout");
                     tl_codigos_valores = get_datos(nit_proveedor);
-                    //  toastAcierto("Se construyo el TableLayout");
+                      toastAcierto("Se construyo el TableLayout");
                     // printTableLayout(tl_codigos_valores);
                   //  toastAcierto("Se llama y se crea el TableLayout del metodo get_datos correctamente");
 
@@ -766,7 +767,9 @@ public class lector_cod_alambron_cargue extends AppCompatActivity implements Ada
                 listTransaccionProd.add(sqlPesoRollo);
             }
         }
-        if (ing_prod_ad.ExecuteSqlTransaction(listTransaccionCorsan, "CORSAN",lector_cod_alambron_cargue.this).equals("")) {
+        //if (ing_prod_ad.ExecuteSqlTransaction(listTransaccionCorsan, "CORSAN",lector_cod_alambron_cargue.this).equals("")) {
+           error=ing_prod_ad.ExecuteSqlTransaction(listTransaccionCorsan, "CORSAN",lector_cod_alambron_cargue.this);
+            if (error.equals("")) {
             Toast.makeText(this, "Transacción realizada con éxito!\n" + nombreProveedor + "\n" + tipo + ": " + numero_transaccion, Toast.LENGTH_LONG).show();
             if (!ing_prod_ad.ExecuteSqlTransaction(listTransaccionProd, "PRGPRODUCCION",lector_cod_alambron_cargue.this).equals("")) {
                 toastError("Error al actualizar los Códigos de barra, comuníquese con sistemas!");
@@ -774,8 +777,20 @@ public class lector_cod_alambron_cargue extends AppCompatActivity implements Ada
                 resp = false;
             }
         } else {
-            toastError("Error al realizar la transacción!");
+            //toastError("Error al realizar la transacción!");
             //Toast.makeText(this, "Error al realizar la transacción!", Toast.LENGTH_LONG).show();
+                AlertDialog.Builder builder = new AlertDialog.Builder(lector_cod_alambron_cargue.this);
+                View mView = getLayoutInflater().inflate(R.layout.alertdialog_aceptar,null);
+                TextView alertMensaje = mView.findViewById(R.id.alertMensaje);
+                alertMensaje.setText(error);
+                Button btnAceptar = mView.findViewById(R.id.btnAceptar);
+                btnAceptar.setText("Aceptar");
+                builder.setView(mView);
+                AlertDialog alertDialog = builder.create();
+                btnAceptar.setOnClickListener(v -> alertDialog.dismiss());
+                alertDialog.setCancelable(false);
+                alertDialog.show();
+
             resp = false;
         }
         return resp;
@@ -791,7 +806,7 @@ public class lector_cod_alambron_cargue extends AppCompatActivity implements Ada
         String Fec = dateFormat.format(calendar.getTime());
         Date dFec = new Date();
         String usuario = nit_usuario;
-        String notas = "SP No." + num_imp + ". " + Fec + " usr:" + usuario;
+        String notas = "MV No." + num_imp + ". " + Fec + " usr:" + usuario;
         //String notas = "SP No." + num_imp + ". " + dFec.getYear() + "-" + dFec.getMonth() + "-" + dFec.getDay() + " usr:" + usuario;
         numero_transacc = Obj_ordenprodLn.mover_consecutivo(tipo, lector_cod_alambron_cargue.this);
         //toastAcierto("Pasamos el metodo mover consecutivo y entramos al metodo listaTransaccionTableLayout_importaciones"+ numero_transacc);
