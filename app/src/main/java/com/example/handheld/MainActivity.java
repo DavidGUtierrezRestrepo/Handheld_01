@@ -367,7 +367,7 @@ public class MainActivity extends AppCompatActivity {
         child6.addChild(subChild6_1);
 
         //Agregamos subgrupo2"Logistica - Recepción: Trefilación".
-        //child6.addChild(subChild6_2);
+        child6.addChild(subChild6_2);
 
         //Agregamos subgrupo2"Mesas Empaque".
         //child6.addChild(subChild6_3);

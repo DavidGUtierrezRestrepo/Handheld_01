@@ -119,6 +119,7 @@
             android:layout_height="wrap_content"
             android:background="@drawable/background_green"
             android:backgroundTint="#33C100"
+            style="@style/BotonSinColorPrimary"
             android:text="ACEPTAR"
             android:textColor="#FFFFFF"
             android:textStyle="bold" />

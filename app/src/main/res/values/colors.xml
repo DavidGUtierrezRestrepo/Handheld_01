@@ -12,6 +12,6 @@
     <color name="colorAccent">#A2A1A1</color>
     <color name="gray">#CCCCCC</color>
     <color name="lavender">#8692f7</color>
-    <color name="green">#50c878</color>
-    <color name="redGalva">#FB6868</color>
+    <color name="green">#00FF55</color>
+    <color name="redGalva">#FF0000</color>
 </resources>

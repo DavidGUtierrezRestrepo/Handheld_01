@@ -6,8 +6,6 @@ import android.content.Intent;
 import android.media.AudioManager;
 import android.media.SoundPool;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Looper;
 import android.os.Vibrator;
 import android.view.Gravity;
 import android.view.KeyEvent;
@@ -39,8 +37,7 @@ import com.example.handheld.atv.holder.adapters.listescanerAdapter;
 import com.example.handheld.conexionDB.Conexion;
 import com.example.handheld.databinding.ActivityEscanerBinding;
 import com.example.handheld.modelos.DetalleTranModelo;
-import com.example.handheld.modelos.PermisoTrasladoModelo;
-import com.example.handheld.modelos.PersonaModelo;
+import com.example.handheld.modelos.PermisoPersonaModelo;
 import com.example.handheld.modelos.TipotransModelo;
 import com.journeyapps.barcodescanner.ScanContract;
 import com.journeyapps.barcodescanner.ScanOptions;
@@ -92,7 +89,7 @@ public class Escaner extends AppCompatActivity implements AdapterView.OnItemClic
     String consecutivo, nit_proveedor,num_importacion,id_detalle,numero_rollo, error;
     Integer numero_transaccion;
 
-    PermisoTrasladoModelo personaEntrega, personaRecibe;
+    PermisoPersonaModelo personaEntrega, personaRecibe;
 
     ProgressBar cargando;
 

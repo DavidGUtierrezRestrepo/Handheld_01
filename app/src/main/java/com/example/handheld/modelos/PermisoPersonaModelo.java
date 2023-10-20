@@ -1,13 +1,13 @@
 package com.example.handheld.modelos;
 
-public class PermisoTrasladoModelo {
+public class PermisoPersonaModelo {
     String nit;
     String permiso;
 
-    public PermisoTrasladoModelo() {
+    public PermisoPersonaModelo() {
     }
 
-    public PermisoTrasladoModelo(String nit, String permiso) {
+    public PermisoPersonaModelo(String nit, String permiso) {
         this.nit = nit;
         this.permiso = permiso;
     }

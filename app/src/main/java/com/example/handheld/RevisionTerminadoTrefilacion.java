@@ -30,13 +30,15 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.example.handheld.ClasesOperativas.Gestion_alambronLn;
 import com.example.handheld.ClasesOperativas.Ing_prod_ad;
 import com.example.handheld.ClasesOperativas.ObjTraslado_bodLn;
 import com.example.handheld.ClasesOperativas.Obj_ordenprodLn;
 import com.example.handheld.ClasesOperativas.objOperacionesDb;
 import com.example.handheld.atv.holder.adapters.listTrefiTerminadoAdapter;
 import com.example.handheld.conexionDB.Conexion;
-import com.example.handheld.modelos.PersonaModelo;
+import com.example.handheld.modelos.PermisoPersonaModelo;
+import com.example.handheld.modelos.RolloTrefiRevisionModelo;
 import com.example.handheld.modelos.TrefiRecepcionModelo;
 import com.example.handheld.modelos.TrefiRecepcionadoRollosModelo;
 
@@ -68,13 +70,17 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
     Conexion conexion;
 
     //Se inicializa variables necesarias en la clase
-    String consecutivo, motivo, traccion, diametro, centro = "", error, fechaActualString, monthActualString, yearActualString;
+    String consecutivo, motivo, traccion, diametro, permiso = "", error, fechaActualString, monthActualString, yearActualString;
     Integer numero_transaccion, numero_revision, repeticiones, paso = 0, yaentre = 0, id_revision;
 
     Calendar calendar;
 
     Boolean incompleta = false;
-    PersonaModelo personaCalidad;
+    PermisoPersonaModelo personaCalidad;
+
+    RolloTrefiRevisionModelo revisionRollo;
+
+    Gestion_alambronLn obj_gestion_alambronLn = new Gestion_alambronLn();
     ObjTraslado_bodLn objTraslado_bodLn = new ObjTraslado_bodLn();
     objOperacionesDb objOperacionesDb = new objOperacionesDb();
     Ing_prod_ad ing_prod_ad = new Ing_prod_ad();
@@ -219,19 +225,22 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
         btnAceptar.setOnClickListener(v12 -> {
             String CeLog = txtCedulaCalidad.getText().toString().trim();
             if (editTraccion.getText().toString().equals("")){
+                AudioError();
                 toastError("Por favor ingresar Tracción");
             }else{
                 if(editDiametro.getText().toString().equals("")){
+                    AudioError();
                     toastError("Por favor ingresar Diametro");
                 }else{
                     if (CeLog.equals("")){
-                        toastError("Ingresar la cedula de la persona que recepciona");
+                        AudioError();
+                        toastError("Ingresar la cedula de la persona que inspecciona");
                     }else{
                         //Verificamos el numero de documentos de la persona en la base da datos
-                        personaCalidad = conexion.obtenerPersona(RevisionTerminadoTrefilacion.this,CeLog );
-                        centro = personaCalidad.getCentro();
+                        personaCalidad = conexion.obtenerPermisoPersona(RevisionTerminadoTrefilacion.this,CeLog,"mod_revision_calidad_trefilacion" );
+                        permiso = personaCalidad.getNit();
                         //Verificamos que la persona sea de calidad
-                        if (centro.equals("4110")){
+                        if (!permiso.equals("")){
                             traccion = editTraccion.getText().toString();
                             diametro = editDiametro.getText().toString();
                             Barraprogreso.setVisibility(View.VISIBLE);
@@ -263,13 +272,9 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
                             }).start();
                             closeTecladoMovil();
                         }else{
-                            if (centro.equals("")){
-                                txtCedulaCalidad.setText("");
-                                toastError("Persona no encontrada");
-                            }else{
-                                txtCedulaCalidad.setText("");
-                                toastError("La cedula ingresada no pertenece a calidad!");
-                            }
+                            txtCedulaCalidad.setText("");
+                            AudioError();
+                            toastError("La cedula ingresada no tiene permiso para hacer revisiones de calidad!");
                         }
                     }
                 }
@@ -291,12 +296,12 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
 
             // Define el formato de la fecha y hora que deseas obtener
             @SuppressLint("SimpleDateFormat")
-            SimpleDateFormat formatoFecha = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss a");
+            SimpleDateFormat formatoFecha = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
             // Convierte la fecha actual en un String con el formato definido
             fechaActualString = formatoFecha.format(fechaActual);
 
-            String sql_revision= "INSERT INTO jd_revision_calidad(fecha_hora,revisor,estado,traccion,diametro)VALUES('" + fechaActualString + "','" + personaCalidad.getNit() + "','A','" + traccion + "','" + diametro + "')";
+            String sql_revision= "INSERT INTO jd_revision_calidad_trefilacion(fecha_hora,revisor,estado,traccion,diametro)VALUES('" + fechaActualString + "','" + personaCalidad.getNit() + "','A','" + traccion + "','" + diametro + "')";
 
             try {
                 //Se ejecuta el sql_revision en la base de datos
@@ -308,7 +313,7 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
 
         if (paso==1){
             //se adicionan los campos recepcionado, nit_recepcionado y fecha_recepcionado a la tabla.
-            String obtenerId = "select id_revision from jd_revision_calidad where fecha_hora='" + fechaActualString + "'";
+            String obtenerId = "select id_revision from jd_revision_calidad_trefilacion where fecha_hora='" + fechaActualString + "'";
             numero_revision = conexion.obtenerIdRevision(RevisionTerminadoTrefilacion.this, obtenerId );
             for(int i=0;i<ListaTrefiRollosRecep.size();i++){
                 String cod_orden = ListaTrefiRollosRecep.get(i).getCod_orden();
@@ -351,6 +356,7 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
         }
     }
 
+    @SuppressLint("SetTextI18n")
     private String revision() {
         repeticiones = repeticiones + 1;
         if(repeticiones<=5){
@@ -387,6 +393,7 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
     /////////////////////////////////////////////////////////////////////////////////////////////
     //Funcion que genera todas las listas de consultas en la base de datos, las ejecuta generando
     //Una TRB1 en el sistema de bodega 2 a bodega 3 con los rollos leidos
+    @SuppressLint("SetTextI18n")
     private void realizarTransaccion(Integer m) {
         //Creamos una lista para almacenar todas las consultas que se realizaran en la base de datos
         listTransaccionBodega = new ArrayList<>();
@@ -403,7 +410,7 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
 
             // Define el formato de la fecha y hora que deseas obtener
             @SuppressLint("SimpleDateFormat")
-            SimpleDateFormat formatoFecha = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss a");
+            SimpleDateFormat formatoFecha = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
             @SuppressLint("SimpleDateFormat") SimpleDateFormat formatoMonth = new SimpleDateFormat("MM");
             @SuppressLint("SimpleDateFormat") SimpleDateFormat formatoYear = new SimpleDateFormat("yyyy");
 
@@ -416,13 +423,13 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
 
             switch (m){
                 case 1:
-                    sql_revisionTransa= "INSERT INTO jd_revision_calidad(fecha_hora,revisor,estado,defecto,traccion,tipo_transa)VALUES('" + fechaActualString + "','" + personaCalidad.getNit() + "','R','" + motivo + "','" + traccion + "','TRB1')";
+                    sql_revisionTransa= "INSERT INTO jd_revision_calidad_trefilacion(fecha_hora,revisor,estado,defecto,traccion,tipo_transa)VALUES('" + fechaActualString + "','" + personaCalidad.getNit() + "','R','" + motivo + "','" + traccion + "','TRB1')";
                     break;
                 case 2:
-                    sql_revisionTransa= "INSERT INTO jd_revision_calidad(fecha_hora,revisor,estado,defecto,diametro,tipo_transa)VALUES('" + fechaActualString + "','" + personaCalidad.getNit() + "','R','" + motivo + "',''" + diametro + ",'TRB1')";
+                    sql_revisionTransa= "INSERT INTO jd_revision_calidad_trefilacion(fecha_hora,revisor,estado,defecto,diametro,tipo_transa)VALUES('" + fechaActualString + "','" + personaCalidad.getNit() + "','R','" + motivo + "','" + diametro + "','TRB1')";
                     break;
                 default:
-                    sql_revisionTransa= "INSERT INTO jd_revision_calidad(fecha_hora,revisor,estado,defecto,tipo_transa)VALUES('" + fechaActualString + "','" + personaCalidad.getNit() + "','R','" + motivo + "','TRB1')";
+                    sql_revisionTransa= "INSERT INTO jd_revision_calidad_trefilacion(fecha_hora,revisor,estado,defecto,tipo_transa)VALUES('" + fechaActualString + "','" + personaCalidad.getNit() + "','R','" + motivo + "','TRB1')";
                     break;
             }
 
@@ -438,7 +445,7 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
         if (paso==1){
             //se adicionan los campos recepcionado, nit_recepcionado y fecha_recepcionado a la tabla
             String obtenerId;
-            obtenerId = "select id_revision from jd_revision_calidad where fecha_hora='" + fechaActualString + "'";
+            obtenerId = "select id_revision from jd_revision_calidad_trefilacion where fecha_hora='" + fechaActualString + "'";
             numero_revision = conexion.obtenerIdRevision(RevisionTerminadoTrefilacion.this, obtenerId );
             for(int i=0;i<ListaTrefiRollosRecep.size();i++){
                 String cod_orden = ListaTrefiRollosRecep.get(i).getCod_orden();
@@ -486,7 +493,7 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
             error = transaccion();
             if (error.equals("")){
 
-                String sql_trb1= "UPDATE jd_revision_calidad SET num_transa="+ numero_transaccion +" WHERE id_revision='"+ numero_revision +"'";
+                String sql_trb1= "UPDATE jd_revision_calidad_trefilacion SET num_transa="+ numero_transaccion +" WHERE id_revision='"+ numero_revision +"'";
                 try {
                     //Se añade el sql a la lista
                     listTransactionTrb1.add(sql_trb1);
@@ -501,12 +508,22 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
                 btnAprobado.setEnabled(false);
                 incompleta =  true;
                 AudioError();
-                toastError("Error al realizar la transacción!" +
-                        "Intentelo de nuevo");
+                AlertDialog.Builder builder = new AlertDialog.Builder(RevisionTerminadoTrefilacion.this);
+                View mView = getLayoutInflater().inflate(R.layout.alertdialog_aceptar,null);
+                TextView alertMensaje = mView.findViewById(R.id.alertMensaje);
+                alertMensaje.setText(error + ",\n Intenta de nuevo!!");
+                Button btnAceptar = mView.findViewById(R.id.btnAceptar);
+                btnAceptar.setText("Aceptar");
+                builder.setView(mView);
+                AlertDialog alertDialog = builder.create();
+                btnAceptar.setOnClickListener(v -> alertDialog.dismiss());
+                alertDialog.setCancelable(false);
+                alertDialog.show();
             }
         }
     }
 
+    @SuppressLint("SetTextI18n")
     private String produccion1() {
         repeticiones = repeticiones + 1;
         if(repeticiones<=5){
@@ -524,6 +541,7 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
         return error;
     }
 
+    @SuppressLint("SetTextI18n")
     private String transaccion() {
         repeticiones = repeticiones + 1;
         if(repeticiones<=5){
@@ -552,6 +570,8 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
                 consultarTrefiTerminado();
                 incompleta = false;
                 btnAprobado.setEnabled(true);
+                btnRechazado.setEnabled(true);
+                btnCancelarTrans.setEnabled(true);
                 paso=0;
                 toastAcierto("Transaccion Realizada con Exito! --" + numero_transaccion);
             }else{
@@ -593,6 +613,7 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
         return listSql;
     }
 
+    @SuppressLint("SetTextI18n")
     private void consultarTransIncompleta(){
         conexion = new Conexion();
         //Inicializamos la lista de los rollos escaneados
@@ -609,6 +630,8 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
         }else{
             incompleta = true;
             btnAprobado.setEnabled(false);
+            btnRechazado.setEnabled(false);
+            btnCancelarTrans.setEnabled(false);
 
             ListaTrefiRollosRecep = conexion.obtenerReviTrefiTerminado(RevisionTerminadoTrefilacion.this, id_revision);
 
@@ -627,8 +650,18 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
             contarSinLeer();
             contarLeidos();
 
-            toastAtencion("Transacción incompleta \n" +
-                    "Por favor terminarla");
+            AudioError();
+            AlertDialog.Builder builder = new AlertDialog.Builder(RevisionTerminadoTrefilacion.this);
+            View mView = getLayoutInflater().inflate(R.layout.alertdialog_aceptar,null);
+            TextView alertMensaje = mView.findViewById(R.id.alertMensaje);
+            alertMensaje.setText("Hay una Transacción incompleta, \n Por favor comunicarse inmediatamente con el área de sistemas, \n para poder continuar con las transacciones, de lo \n contrario no se le permitira continuar");
+            Button btnAceptar = mView.findViewById(R.id.btnAceptar);
+            btnAceptar.setText("Aceptar");
+            builder.setView(mView);
+            AlertDialog alertDialog = builder.create();
+            btnAceptar.setOnClickListener(v -> alertDialog.dismiss());
+            alertDialog.setCancelable(false);
+            alertDialog.show();
         }
     }
 
@@ -703,9 +736,25 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
                 cargarNuevo();
             }
         }else{
-            toastError("Rollo no encontrado");
-            AudioError();
-            cargarNuevo();
+            String cod_orden = obj_gestion_alambronLn.extraerDatoCodigoBarrasTrefilacion("cod_orden",consecutivo);
+            String id_detalle = obj_gestion_alambronLn.extraerDatoCodigoBarrasTrefilacion("id_detalle",consecutivo);
+            String id_rollo = obj_gestion_alambronLn.extraerDatoCodigoBarrasTrefilacion("id_rollo",consecutivo);
+
+            revisionRollo = conexion.obtenerRolloRevision(RevisionTerminadoTrefilacion.this,cod_orden,id_detalle,id_rollo);
+
+            if (revisionRollo.getId_revision().equals("")){
+                toastError("Rollo no encontrado");
+                AudioError();
+                cargarNuevo();
+            } else if (revisionRollo.getEstado().equals("A")) {
+                toastError("Este rollo ya fue autorizado");
+                AudioError();
+                cargarNuevo();
+            } else if (revisionRollo.getEstado().equals("R")) {
+                toastError("Este rollo ya fue rechazado");
+                AudioError();
+                cargarNuevo();
+            }
         }
     }
 
@@ -846,6 +895,7 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
         }
     }
 
+    @SuppressLint("SetTextI18n")
     private void alertDialogTransaccion(int leidos) {
         AlertDialog.Builder builder = new AlertDialog.Builder(RevisionTerminadoTrefilacion.this);
         View mView = getLayoutInflater().inflate(R.layout.alertdialog_rechazado, null);
@@ -882,15 +932,17 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
                 switch (motivo) {
                     case "Baja/Alta tracción":
                         if(editTraccion.getText().toString().equals("")) {
+                            AudioError();
                             toastError("Por favor ingresar tracción");
                         }else{
                             if (CeLog.equals("")) {
-                                toastError("Ingresar la cedula de la persona que recepciona");
+                                AudioError();
+                                toastError("Ingresar la cedula de la persona que inspecciona");
                             }else{
-                                personaCalidad = conexion.obtenerPersona(RevisionTerminadoTrefilacion.this, CeLog);
-                                centro = personaCalidad.getCentro();
+                                personaCalidad = conexion.obtenerPermisoPersona(RevisionTerminadoTrefilacion.this, CeLog,"mod_revision_calidad_trefilacion");
+                                permiso = personaCalidad.getNit();
                                 //Verificamos que la persona pertenezca al centro de logistica
-                                if (centro.equals("4110")){
+                                if (!permiso.equals("")){
                                     traccion = editTraccion.getText().toString();
                                     Barraprogreso.setVisibility(View.VISIBLE);
                                     cargandoAlertDialogTransaccion.setVisibility(View.VISIBLE);
@@ -915,28 +967,26 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
                                     }).start();
                                     closeTecladoMovil();
                                 }else{
-                                    if (centro.equals("")) {
-                                        txtCedulaLogistica.setText("");
-                                        toastError("Persona no encontrada");
-                                    } else {
-                                        txtCedulaLogistica.setText("");
-                                        toastError("La cedula ingresada no pertenece a calidad!");
-                                    }
+                                    txtCedulaLogistica.setText("");
+                                    AudioError();
+                                    toastError("La cedula ingresada no tiene permiso para hacer revisiones de calidad!");
                                 }
                             }
                         }
                         break;
                     case "Fuera de Medida":
                         if(editTraccion.getText().toString().equals("")) {
+                            AudioError();
                             toastError("Por favor ingresar Diametro");
                         }else{
                             if (CeLog.equals("")) {
-                                toastError("Ingresar la cedula de la persona que recepciona");
+                                AudioError();
+                                toastError("Ingresar la cedula de la persona que inspecciona");
                             }else{
-                                personaCalidad = conexion.obtenerPersona(RevisionTerminadoTrefilacion.this, CeLog);
-                                centro = personaCalidad.getCentro();
+                                personaCalidad = conexion.obtenerPermisoPersona(RevisionTerminadoTrefilacion.this, CeLog,"mod_revision_calidad_trefilacion");
+                                permiso = personaCalidad.getNit();
                                 //Verificamos que la persona pertenezca al centro de logistica
-                                if (centro.equals("4110")){
+                                if (!permiso.equals("")){
                                     diametro = editTraccion.getText().toString();
                                     Barraprogreso.setVisibility(View.VISIBLE);
                                     cargandoAlertDialogTransaccion.setVisibility(View.VISIBLE);
@@ -961,25 +1011,22 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
                                     }).start();
                                     closeTecladoMovil();
                                 }else{
-                                    if (centro.equals("")) {
-                                        txtCedulaLogistica.setText("");
-                                        toastError("Persona no encontrada");
-                                    } else {
-                                        txtCedulaLogistica.setText("");
-                                        toastError("La cedula ingresada no pertenece a calidad!");
-                                    }
+                                    txtCedulaLogistica.setText("");
+                                    AudioError();
+                                    toastError("La cedula ingresada no tiene permiso para hacer revisiones de calidad!");
                                 }
                             }
                         }
                         break;
                     default:
                         if (CeLog.equals("")) {
-                            toastError("Ingresar la cedula de la persona que recepciona");
+                            AudioError();
+                            toastError("Ingresar la cedula de la persona que inspecciona");
                         } else {
-                            personaCalidad = conexion.obtenerPersona(RevisionTerminadoTrefilacion.this, CeLog);
-                            centro = personaCalidad.getCentro();
+                            personaCalidad = conexion.obtenerPermisoPersona(RevisionTerminadoTrefilacion.this, CeLog,"mod_revision_calidad_trefilacion");
+                            permiso = personaCalidad.getNit();
                             //Verificamos que la persona pertenezca al centro de logistica
-                            if (centro.equals("4110")) {
+                            if (!permiso.equals("")) {
                                 Barraprogreso.setVisibility(View.VISIBLE);
                                 cargandoAlertDialogTransaccion.setVisibility(View.VISIBLE);
                                 Handler handler = new Handler(Looper.getMainLooper());
@@ -1003,18 +1050,15 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
                                 }).start();
                                 closeTecladoMovil();
                             } else {
-                                if (centro.equals("")) {
-                                    txtCedulaLogistica.setText("");
-                                    toastError("Persona no encontrada");
-                                } else {
-                                    txtCedulaLogistica.setText("");
-                                    toastError("La cedula ingresada no pertenece a calidad!");
-                                }
+                                txtCedulaLogistica.setText("");
+                                AudioError();
+                                toastError("La cedula ingresada no tiene permiso para hacer revisiones de calidad!");
                             }
                         }
                         break;
                 }
             } else {
+                AudioError();
                 toastError("Seleccione motivo rechazo");
             }
         });
@@ -1023,6 +1067,7 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
         alertDialogTransaccion.show();
     }
 
+    @SuppressLint("SetTextI18n")
     private void actualizarAlertDialog(String selectedOption, View mView){
         TextView txtTraccion = mView.findViewById(R.id.txtTraccion);
         EditText editTraccion = mView.findViewById(R.id.editTraccion);
