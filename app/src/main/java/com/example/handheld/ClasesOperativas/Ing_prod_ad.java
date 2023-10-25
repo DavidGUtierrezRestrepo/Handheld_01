@@ -70,7 +70,7 @@ public class Ing_prod_ad {
                 isError.set(true); // Establecer isError en true si ocurre algún error
                 errorMessage.set(ex.getMessage()); // Almacenar el mensaje de error específico
             }
-            return ""; // Retornar un string vacío sin importar si hubo errores o no
+            return isError.get() ? errorMessage.get() : ""; // Retorna el mensaje de error específico o cadena vacía
         });
 
         int timeoutSeconds = 60; // Establecer el tiempo de espera en 1 minuto (60 segundos)
@@ -81,6 +81,7 @@ public class Ing_prod_ad {
             return "La transacción ha excedido el tiempo límite.";
         } catch (InterruptedException | ExecutionException e) {
             e.printStackTrace();
+            return "Error inesperado.";
         } finally {
             executor.shutdownNow();
         }

@@ -242,7 +242,6 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
                         AudioError();
                     }
                     else{
-
                         AlertDialog.Builder builder = new AlertDialog.Builder(EscanerInventario.this);
                         View mView = getLayoutInflater().inflate(R.layout.alertdialog_cedularecepciona,null);
                         final EditText txtCedulaLogistica = mView.findViewById(R.id.txtCedulaLogistica);
@@ -314,6 +313,7 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
     /////////////////////////////////////////////////////////////////////////////////////////////
     //Funcion que genera todas las listas de consultas en la base de datos, las ejecuta generando
     //Una TRB1 en el sistema de bodega 2 a bodega 3 con los rollos leidos
+    @SuppressLint("SetTextI18n")
     private void realizarTransaccion() {
         //Creamos una lista para almacenar todas las consultas que se realizaran en la base de datos
         listTransactionGal = new ArrayList<>();
@@ -384,7 +384,7 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
                     AlertDialog.Builder builder = new AlertDialog.Builder(EscanerInventario.this);
                     View mView = getLayoutInflater().inflate(R.layout.alertdialog_aceptar,null);
                     TextView alertMensaje = mView.findViewById(R.id.alertMensaje);
-                    alertMensaje.setText(error);
+                    alertMensaje.setText("Hubo un error en el paso 2 de la transaccion \n" + error + "\n vuelve a intentar realizar la transacción");
                     Button btnAceptar = mView.findViewById(R.id.btnAceptar);
                     builder.setView(mView);
                     AlertDialog alertDialog = builder.create();
@@ -402,7 +402,17 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
             }else{
                 incompleta =  true;
                 AudioError();
-                toastError(error);
+                AlertDialog.Builder builder = new AlertDialog.Builder(EscanerInventario.this);
+                View mView = getLayoutInflater().inflate(R.layout.alertdialog_aceptar,null);
+                TextView alertMensaje = mView.findViewById(R.id.alertMensaje);
+                alertMensaje.setText("Hubo un error en el paso 1 de la transacción \n" + error + "\n vuelve a intentar realizar la transacción");
+                Button btnAceptar = mView.findViewById(R.id.btnAceptar);
+                btnAceptar.setText("Aceptar");
+                builder.setView(mView);
+                AlertDialog alertDialog = builder.create();
+                btnAceptar.setOnClickListener(v -> alertDialog.dismiss());
+                alertDialog.setCancelable(false);
+                alertDialog.show();
             }
         }
     }
