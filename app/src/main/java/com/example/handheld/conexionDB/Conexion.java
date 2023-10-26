@@ -10,6 +10,7 @@ import com.example.handheld.modelos.CajasReceModelo;
 import com.example.handheld.modelos.CajasRefeModelo;
 import com.example.handheld.modelos.CentrosModelo;
 import com.example.handheld.modelos.CodigoGalvModelo;
+import com.example.handheld.modelos.CorreoModelo;
 import com.example.handheld.modelos.CuentasModelo;
 import com.example.handheld.modelos.EmpRecepcionadoCajasModelo;
 import com.example.handheld.modelos.GalvRecepcionModelo;
@@ -144,6 +145,24 @@ public class Conexion {
             Toast.makeText(context, e.getMessage(), Toast.LENGTH_SHORT).show();
         }
         return persona;
+    }
+
+    //Obtiene datos del correo empresarial en la BD
+    public CorreoModelo obtenerCorreo(Context context){
+        CorreoModelo correo = null;
+
+        try {
+            Statement st = conexionBD("JJVDMSCIERREAGOSTO", context).createStatement();
+            ResultSet rs = st.executeQuery("select email, passwordApp from J_spic_servidores_correo where descripcion='EntranteG'");
+            if (rs.next()){
+                correo = new CorreoModelo(rs.getString("email"), rs.getString("passwordApp"));
+            }else{
+                correo = new CorreoModelo("", "");
+            }
+        }catch (Exception e){
+            Toast.makeText(context, e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+        return correo;
     }
 
     //Obtiene datos de una persona en la BD
@@ -776,7 +795,7 @@ public class Conexion {
             ResultSet rs = st.executeQuery("select R.cod_orden,R.id_detalle,R.id_rollo, O.prod_final,Ref.descripcion, R.peso\n" +
                     "from J_rollos_tref R inner join J_orden_prod_tef O on R.cod_orden = O.consecutivo inner join CORSAN.dbo.referencias Ref on O.prod_final = Ref.codigo\n" +
                     "where O.prod_final like '33%' and R.recepcionado is null and R.id_revision is null and R.anulado is null and R.no_conforme is null  and R.motivo is null and R.traslado is null and\n" +
-                    "R.saga is null and R.bobina is null and R.scla is null and R.destino is null and R.srec is null and R.scal is null and R.scae is null and R.sar is null and R.sav is null");
+                    "R.saga is null and R.bobina is null and R.scla is null and R.destino is null and R.srec is null and R.scal is null and R.scae is null and R.sar is null and R.sav is null and R.manuales is null");
             while (rs.next()){
                 modelo = new TrefiRecepcionModelo();
                 modelo.setCod_orden(rs.getString("cod_orden"));

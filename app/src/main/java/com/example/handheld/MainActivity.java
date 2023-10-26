@@ -3,7 +3,11 @@ package com.example.handheld;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.annotation.SuppressLint;
+import android.app.ProgressDialog;
+import android.content.Context;
 import android.content.Intent;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.Bundle;
 import android.view.Gravity;
 import android.view.LayoutInflater;
@@ -20,6 +24,12 @@ import com.example.handheld.atv.model.TreeNode;
 import com.example.handheld.atv.view.AndroidTreeView;
 import com.example.handheld.conexionDB.Conexion;
 import com.example.handheld.modelos.PersonaModelo;
+
+import java.util.Properties;
+
+import javax.mail.Authenticator;
+import javax.mail.PasswordAuthentication;
+import javax.mail.Session;
 
 
 public class MainActivity extends AppCompatActivity {
@@ -59,26 +69,38 @@ public class MainActivity extends AppCompatActivity {
             progressBar.setVisibility(View.VISIBLE);
             if(validar()){
                 cd = cedula.getText().toString();
-                persona = conexion.obtenerPersona(MainActivity.this,cd );
-                nombre_usuario = persona.getNombres();
 
-                if(nombre_usuario.equals("")){
-                    toastError("Persona no encontrada");
+                if (isNetworkAvailable()) {
+                    persona = conexion.obtenerPersona(MainActivity.this,cd );
+                    nombre_usuario = persona.getNombres();
+
+                    if(nombre_usuario.equals("")){
+                        toastError("Persona no encontrada");
+                        progressBar.setVisibility(View.GONE);
+                        cedula.setText("");
+                    }else{
+                        progressBar.setVisibility(View.GONE);
+                        mensaje.setText("Bienvenido " + nombre_usuario);
+                        agregarTreeview();
+                        consultar.setEnabled(false);
+                        cedula.setEnabled(false);
+                    }
+                } else {
+                    toastError("Problemas de conexión a Internet");
                     progressBar.setVisibility(View.GONE);
-                    cedula.setText("");
-                }else{
-                    progressBar.setVisibility(View.GONE);
-                    mensaje.setText("Bienvenido " + nombre_usuario);
-                    agregarTreeview();
-                    consultar.setEnabled(false);
-                    cedula.setEnabled(false);
                 }
-
             }else{
                 toastEscribir("Por favor escribir tu cedula");
                 progressBar.setVisibility(View.GONE);
             }
         });
+    }
+
+    //Metodo para validar la conexion de internet
+    private boolean isNetworkAvailable() {
+        ConnectivityManager connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo activeNetworkInfo = connectivityManager.getActiveNetworkInfo();
+        return activeNetworkInfo != null && activeNetworkInfo.isConnected();
     }
 
     //Metodo que valida que el campo EditText "cedula" no este vacia
@@ -139,13 +161,17 @@ public class MainActivity extends AppCompatActivity {
 
         //Al darle clic a este elemento en el treeview se abrira una nueva pantalla y se enviaran unos datos
         subChild1_1.setClickListener((node, value) -> {
-            Intent i = new Intent(MainActivity.this,Pedido.class);
-            i.putExtra("nit_usuario",cd);
-            i.putExtra("bod_origen",1);
-            i.putExtra("bod_destino",2);
-            i.putExtra("modelo","08");
+            if (isNetworkAvailable()) {
+                Intent i = new Intent(MainActivity.this,Pedido.class);
+                i.putExtra("nit_usuario",cd);
+                i.putExtra("bod_origen",1);
+                i.putExtra("bod_destino",2);
+                i.putExtra("modelo","08");
 
-            startActivity(i);
+                startActivity(i);
+            } else {
+                toastError("Problemas de conexión a Internet");
+            }
         });
 
         //Subgrupo2"Gestion de Alambron"
@@ -161,9 +187,13 @@ public class MainActivity extends AppCompatActivity {
 
         //Al darle clic a este elemento en el treeview se abrira una nueva pantalla y se enviaran unos datos
         subChild1_3.setClickListener((node, value) -> {
-            Intent i = new Intent(MainActivity.this,Lector_Cod_Alambron.class);
-            i.putExtra("nit_usuario",cd);
-            startActivity(i);
+            if (isNetworkAvailable()) {
+                Intent i = new Intent(MainActivity.this,Lector_Cod_Alambron.class);
+                i.putExtra("nit_usuario",cd);
+                startActivity(i);
+            } else {
+                toastError("Problemas de conexión a Internet");
+            }
         });
 
         //Agregamos subgrupo1"Gestion de Alambron".
@@ -274,11 +304,14 @@ public class MainActivity extends AppCompatActivity {
         TreeNode subChild5_1 = new TreeNode(subChildItem5_1).setViewHolder(new MyHolder(getApplicationContext(), false, R.layout.child, 100));
 
         //Al darle clic a este elemento en el treeview se abrira una nueva pantalla y se enviaran unos datos
-
         subChild5_1.setClickListener((node, value) -> {
-            Intent intent = new Intent(MainActivity.this, Muestreo_galvanizado.class);
-            intent.putExtra("nit_usuario", cd);
-            startActivity(intent);
+            if (isNetworkAvailable()) {
+                Intent intent = new Intent(MainActivity.this, Muestreo_galvanizado.class);
+                intent.putExtra("nit_usuario", cd);
+                startActivity(intent);
+            } else {
+                toastError("Problemas de conexión a Internet");
+            }
         });
 
 
@@ -289,9 +322,13 @@ public class MainActivity extends AppCompatActivity {
 
         //Al darle clic a este elemento en el treeview se abrira una nueva pantalla y se enviaran unos datos
         subChild5_2.setClickListener((node, value) -> {
-            Intent intent = new Intent(MainActivity.this, RevisionTerminadoTrefilacion.class);
-            intent.putExtra("nit_usuario", cd);
-            startActivity(intent);
+            if (isNetworkAvailable()) {
+                Intent intent = new Intent(MainActivity.this, RevisionTerminadoTrefilacion.class);
+                intent.putExtra("nit_usuario", cd);
+                startActivity(intent);
+            } else {
+                toastError("Problemas de conexión a Internet");
+            }
         });
 
         //SubGrupo3"Mesas Empaque"
@@ -333,9 +370,13 @@ public class MainActivity extends AppCompatActivity {
 
         //Al darle clic a este elemento en el treeview se abrira una nueva pantalla y se enviaran unos datos
         subChild6_1.setClickListener((node, value) -> {
-            Intent intent = new Intent(MainActivity.this, EscanerInventario.class);
-            intent.putExtra("nit_usuario", cd);
-            startActivity(intent);
+            if (isNetworkAvailable()) {
+                Intent intent = new Intent(MainActivity.this, EscanerInventario.class);
+                intent.putExtra("nit_usuario", cd);
+                startActivity(intent);
+            } else {
+                toastError("Problemas de conexión a Internet");
+            }
         });
 
         //SubGrupo2"Logistica - Recepción "
@@ -345,9 +386,13 @@ public class MainActivity extends AppCompatActivity {
 
         //Al darle clic a este elemento en el treeview se abrira una nueva pantalla y se enviaran unos datos
         subChild6_2.setClickListener((node, value) -> {
-            Intent intent = new Intent(MainActivity.this, RecepcionTerminadoTrefilacion.class);
-            intent.putExtra("nit_usuario", cd);
-            startActivity(intent);
+            if (isNetworkAvailable()) {
+                Intent intent = new Intent(MainActivity.this, RecepcionTerminadoTrefilacion.class);
+                intent.putExtra("nit_usuario", cd);
+                startActivity(intent);
+            } else {
+                toastError("Problemas de conexión a Internet");
+            }
         });
 
         //SubGrupo3"Mesas Empaque"

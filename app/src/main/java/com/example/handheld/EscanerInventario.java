@@ -7,6 +7,8 @@ import android.annotation.SuppressLint;
 import android.content.Context;
 import android.media.AudioManager;
 import android.media.SoundPool;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -14,6 +16,8 @@ import android.os.Vibrator;
 import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
+import android.app.ProgressDialog;
+import android.os.AsyncTask;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.AdapterView;
@@ -30,6 +34,7 @@ import com.example.handheld.ClasesOperativas.ObjTraslado_bodLn;
 import com.example.handheld.ClasesOperativas.Obj_ordenprodLn;
 import com.example.handheld.atv.holder.adapters.listGalvTerminadoAdapter;
 import com.example.handheld.conexionDB.Conexion;
+import com.example.handheld.modelos.CorreoModelo;
 import com.example.handheld.modelos.GalvRecepcionModelo;
 import com.example.handheld.modelos.GalvRecepcionadoRollosModelo;
 import com.example.handheld.modelos.PersonaModelo;
@@ -40,6 +45,16 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
+
+import java.util.Properties;
+import javax.mail.Authenticator;
+import javax.mail.Message;
+import javax.mail.MessagingException;
+import javax.mail.PasswordAuthentication;
+import javax.mail.Session;
+import javax.mail.Transport;
+import javax.mail.internet.InternetAddress;
+import javax.mail.internet.MimeMessage;
 
 public class EscanerInventario extends AppCompatActivity implements AdapterView.OnItemClickListener {
 
@@ -63,12 +78,13 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
 
     //Se inicializa variables necesarias en la clase
     int yaentre = 0, leidos;
-    String consecutivo, error;
+    String consecutivo, error, fechaTransaccion;
     Integer numero_transaccion, repeticiones;
     String centro = "";
 
     Boolean incompleta = false;
     PersonaModelo personaLogistica;
+    CorreoModelo correo;
     ObjTraslado_bodLn objTraslado_bodLn = new ObjTraslado_bodLn();
     Ing_prod_ad ing_prod_ad = new Ing_prod_ad();
     List<GalvRecepcionadoRollosModelo> ListarefeRecepcionados= new ArrayList<>();
@@ -76,6 +92,7 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
     //Lista para relacionar rollos con la transacción.
     List<Object> listTransactionTrb1 = new ArrayList<>();
     List<Object> listTransactionGal;
+    List<Object> listReanudarTransa;
 
     //Se inicializa los varibles para el sonido de error
     SoundPool sp;
@@ -84,6 +101,13 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
     //Se inicializa una instancia para hacer vibrar el celular
     Vibrator vibrator;
 
+    //Se inicializan elementos para enviar correos
+    Session session = null;
+    ProgressDialog pdialog = null;
+    Context context = null;
+
+    String[] rec;
+    String subject, textMessage;
     @SuppressLint({"MissingInflatedId", "SetTextI18n"})
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -113,6 +137,15 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
         sonido_de_Reproduccion = sp.load(this, R.raw.sonido_error_2,1);
 
         vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+
+        //Se definen elementos para enviar correos
+        context = this;
+
+        rec = new String[] {
+                "auxiliar3.TI@corsan.com.co",
+                "isabel.gomez@corsan.com.co",
+                "auditoria@corsan.com.co"
+        };
 
         /////////////////////////////////////////////////////////////////////////////////////////////
         //Llamamos al metodo para consultar si hay alguna transaccion incompleta
@@ -169,69 +202,7 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
             //galvanizado que leer
             if(sleer==0 && total>0){
                 //Mostramos el mensaje para logistica
-
-                AlertDialog.Builder builder = new AlertDialog.Builder(EscanerInventario.this);
-                View mView = getLayoutInflater().inflate(R.layout.alertdialog_cedularecepciona,null);
-                final EditText txtCedulaLogistica = mView.findViewById(R.id.txtCedulaLogistica);
-                TextView txtMrollos = mView.findViewById(R.id.txtMrollos);
-                txtMrollos.setText("Se han leido: "+ leidos +" Rollos");
-                Button btnAceptar = mView.findViewById(R.id.btnAceptar);
-                Button btnCancelar = mView.findViewById(R.id.btnCancelar);
-                ProgressBar Barraprogreso = mView.findViewById(R.id.progress_bar);
-                builder.setView(mView);
-                AlertDialog alertDialog = builder.create();
-                btnAceptar.setOnClickListener(v12 -> {
-                    String CeLog = txtCedulaLogistica.getText().toString().trim();
-                    if (CeLog.equals("")){
-                        AudioError();
-                        toastError("Ingresar la cedula de la persona que recepciona");
-                    }else{
-                        if(CeLog.equals(nit_usuario)){
-                            txtCedulaLogistica.setText("");
-                            AudioError();
-                            toastError("La Cedula de la persona que recepciona no puede ser igual al de la persona que entrega");
-                        }else{
-                            //Verificamos el numero de documentos de la persona en la base da datos
-                            personaLogistica = conexion.obtenerPersona(EscanerInventario.this,CeLog );
-                            centro = personaLogistica.getCentro();
-                            //Verificamos que la persona sea de logistica
-                            if (centro.equals("3500")){
-                                Barraprogreso.setVisibility(View.VISIBLE);
-                                Handler handler = new Handler(Looper.getMainLooper());
-                                new Thread(() -> {
-                                    try {
-                                        runOnUiThread(this::realizarTransaccion);
-                                        handler.post(() -> {
-                                            Barraprogreso.setVisibility(View.GONE);
-                                            alertDialog.dismiss();
-                                            closeTecladoMovil();
-                                        });
-                                    } catch (Exception e) {
-                                        handler.post(() -> {
-                                            AudioError();
-                                            toastError(e.getMessage());
-                                            Barraprogreso.setVisibility(View.GONE);
-                                        });
-                                    }
-                                }).start();
-                                closeTecladoMovil();
-                            }else{
-                                if (centro.equals("")){
-                                    txtCedulaLogistica.setText("");
-                                    AudioError();
-                                    toastError("Persona no encontrada");
-                                }else{
-                                    txtCedulaLogistica.setText("");
-                                    AudioError();
-                                    toastError("La cedula ingresada no pertenece a logistica!");
-                                }
-                            }
-                        }
-                    }
-                });
-                btnCancelar.setOnClickListener(v1 -> alertDialog.dismiss());
-                alertDialog.setCancelable(false);
-                alertDialog.show();
+                alertDialogTransaccion();
             }else{
                 if(sleer==0 && total==0){
                     toastError("No hay rollos por leer");
@@ -242,72 +213,81 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
                         AudioError();
                     }
                     else{
-                        AlertDialog.Builder builder = new AlertDialog.Builder(EscanerInventario.this);
-                        View mView = getLayoutInflater().inflate(R.layout.alertdialog_cedularecepciona,null);
-                        final EditText txtCedulaLogistica = mView.findViewById(R.id.txtCedulaLogistica);
-                        TextView txtMrollos = mView.findViewById(R.id.txtMrollos);
-                        txtMrollos.setText("Se han leido: "+ leidos +" Rollos");
-                        Button btnAceptar = mView.findViewById(R.id.btnAceptar);
-                        Button btnCancelar = mView.findViewById(R.id.btnCancelar);
-                        ProgressBar Barraprogreso = mView.findViewById(R.id.progress_bar);
-                        builder.setView(mView);
-                        AlertDialog alertDialog = builder.create();
-                        btnAceptar.setOnClickListener(v12 -> {
-                            String CeLog = txtCedulaLogistica.getText().toString().trim();
-                            if (CeLog.equals("")){
-                                AudioError();
-                                toastError("Ingresar la cedula de la persona que recepciona");
-                            }else{
-                                if(CeLog.equals(nit_usuario)){
-                                    txtCedulaLogistica.setText("");
-                                    AudioError();
-                                    toastError("La Cedula de la persona que recepciona no puede ser igual al de la persona que entrega");
-                                }else{
-                                    personaLogistica = conexion.obtenerPersona(EscanerInventario.this,CeLog );
-                                    centro = personaLogistica.getCentro();
-                                    //Verificamos que la persona pertenezca al centro de logistica
-                                    if (centro.equals("3500")){
-                                        Barraprogreso.setVisibility(View.VISIBLE);
-                                        Handler handler = new Handler(Looper.getMainLooper());
-                                        new Thread(() -> {
-                                            try {
-                                                runOnUiThread(this::realizarTransaccion);
-                                                handler.post(() -> {
-                                                    Barraprogreso.setVisibility(View.GONE);
-                                                    alertDialog.dismiss();
-                                                    closeTecladoMovil();
-                                                });
-                                            } catch (Exception e) {
-                                                handler.post(() -> {
-                                                    AudioError();
-                                                    toastError(e.getMessage());
-                                                    Barraprogreso.setVisibility(View.GONE);
-                                                });
-                                            }
-                                        }).start();
-                                        closeTecladoMovil();
-                                    }else{
-                                        if (centro.equals("")){
-                                            txtCedulaLogistica.setText("");
-                                            AudioError();
-                                            toastError("Persona no encontrada");
-                                        }else{
-                                            txtCedulaLogistica.setText("");
-                                            AudioError();
-                                            toastError("La cedula ingresada no pertenece a logistica!");
-                                        }
-                                    }
-                                }
-                            }
-                        });
-                        btnCancelar.setOnClickListener(v1 -> alertDialog.dismiss());
-                        alertDialog.setCancelable(false);
-                        alertDialog.show();
-
+                        alertDialogTransaccion();
                     }
                 }
             }
         });
+    }
+
+    @SuppressLint("SetTextI18n")
+    private void alertDialogTransaccion(){
+        AlertDialog.Builder builder = new AlertDialog.Builder(EscanerInventario.this);
+        View mView = getLayoutInflater().inflate(R.layout.alertdialog_cedularecepciona,null);
+        final EditText txtCedulaLogistica = mView.findViewById(R.id.txtCedulaLogistica);
+        TextView txtMrollos = mView.findViewById(R.id.txtMrollos);
+        txtMrollos.setText("Se han leido: "+ leidos +" Rollos");
+        Button btnAceptar = mView.findViewById(R.id.btnAceptar);
+        Button btnCancelar = mView.findViewById(R.id.btnCancelar);
+        ProgressBar Barraprogreso = mView.findViewById(R.id.progress_bar);
+        builder.setView(mView);
+        AlertDialog alertDialog = builder.create();
+        btnAceptar.setOnClickListener(v12 -> {
+            if (isNetworkAvailable()) {
+                String CeLog = txtCedulaLogistica.getText().toString().trim();
+                if (CeLog.equals("")){
+                    AudioError();
+                    toastError("Ingresar la cedula de la persona que recepciona");
+                }else{
+                    if(CeLog.equals(nit_usuario)){
+                        txtCedulaLogistica.setText("");
+                        AudioError();
+                        toastError("La Cedula de la persona que recepciona no puede ser igual al de la persona que entrega");
+                    }else{
+                        //Verificamos el numero de documentos de la persona en la base da datos
+                        personaLogistica = conexion.obtenerPersona(EscanerInventario.this,CeLog );
+                        centro = personaLogistica.getCentro();
+                        //Verificamos que la persona sea de logistica
+                        if (centro.equals("3500")){
+                            Barraprogreso.setVisibility(View.VISIBLE);
+                            Handler handler = new Handler(Looper.getMainLooper());
+                            new Thread(() -> {
+                                try {
+                                    runOnUiThread(this::realizarTransaccion);
+                                    handler.post(() -> {
+                                        Barraprogreso.setVisibility(View.GONE);
+                                        alertDialog.dismiss();
+                                        closeTecladoMovil();
+                                    });
+                                } catch (Exception e) {
+                                    handler.post(() -> {
+                                        AudioError();
+                                        toastError(e.getMessage());
+                                        Barraprogreso.setVisibility(View.GONE);
+                                    });
+                                }
+                            }).start();
+                            closeTecladoMovil();
+                        }else{
+                            if (centro.equals("")){
+                                txtCedulaLogistica.setText("");
+                                AudioError();
+                                toastError("Persona no encontrada");
+                            }else{
+                                txtCedulaLogistica.setText("");
+                                AudioError();
+                                toastError("La cedula ingresada no pertenece a logistica!");
+                            }
+                        }
+                    }
+                }
+            } else {
+                toastError("Problemas de conexión a Internet");
+            }
+        });
+        btnCancelar.setOnClickListener(v1 -> alertDialog.dismiss());
+        alertDialog.setCancelable(false);
+        alertDialog.show();
     }
 
     /////////////////////////////////////////////////////////////////////////////////////////////
@@ -330,12 +310,15 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
 
         // Define el formato de la fecha y hora que deseas obtener
         @SuppressLint("SimpleDateFormat")
-        SimpleDateFormat formatoFecha = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss a");
+        SimpleDateFormat formatoFecha = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        @SuppressLint("SimpleDateFormat")
+        SimpleDateFormat formatoFechaTransaccion = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss a");
         @SuppressLint("SimpleDateFormat") SimpleDateFormat formatoMonth = new SimpleDateFormat("MM");
         @SuppressLint("SimpleDateFormat") SimpleDateFormat formatoYear = new SimpleDateFormat("yyyy");
 
         // Convierte la fecha actual en un String con el formato definido
         String fechaActualString = formatoFecha.format(fechaActual);
+        fechaTransaccion = formatoFechaTransaccion.format(fechaActual);
         String monthActualString = formatoMonth.format(fechaActual);
         String yearActualString = formatoYear.format(fechaActual);
 
@@ -363,7 +346,7 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
                 numero_transaccion = Integer.valueOf(Obj_ordenprodLn.mover_consecutivo("TRB1", EscanerInventario.this));
                 listTransaccionBodega = traslado_bodega(ListarefeRecepcionados, calendar);
                 //Ejecutamos la lista de consultas para hacer la TRB1
-                error = ing_prod_ad.ExecuteSqlTransaction(listTransaccionBodega, "CORSAN", EscanerInventario.this);
+                error = ing_prod_ad.ExecuteSqlTransaction(listTransaccionBodega, "JJVDMSCIERREAGOSTO", EscanerInventario.this);
                 if (error.equals("")){
                     for(int u=0;u<ListaGalvRollosRecep.size();u++){
                         String nro_orden = ListaGalvRollosRecep.get(u).getNro_orden();
@@ -384,17 +367,14 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
                     AlertDialog.Builder builder = new AlertDialog.Builder(EscanerInventario.this);
                     View mView = getLayoutInflater().inflate(R.layout.alertdialog_aceptar,null);
                     TextView alertMensaje = mView.findViewById(R.id.alertMensaje);
-                    alertMensaje.setText("Hubo un error en el paso 2 de la transaccion \n" + error + "\n vuelve a intentar realizar la transacción");
+                    alertMensaje.setText("Hubo un error en el paso 2 de la transacción. \n'" + error + "'\n ¡Vuelve a intentar realizar la transacción!");
                     Button btnAceptar = mView.findViewById(R.id.btnAceptar);
                     builder.setView(mView);
                     AlertDialog alertDialog = builder.create();
-                    btnAceptar.setOnClickListener(new View.OnClickListener() {
-                        @Override
-                        public void onClick(View v) {
-                            repeticiones = 0;
-                            reanudarTransacion();
-                            alertDialog.dismiss();
-                        }
+                    btnAceptar.setOnClickListener(v -> {
+                        repeticiones = 0;
+                        reanudarTransacion();
+                        alertDialog.dismiss();
                     });
                     alertDialog.setCancelable(false);
                     alertDialog.show();
@@ -405,7 +385,7 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
                 AlertDialog.Builder builder = new AlertDialog.Builder(EscanerInventario.this);
                 View mView = getLayoutInflater().inflate(R.layout.alertdialog_aceptar,null);
                 TextView alertMensaje = mView.findViewById(R.id.alertMensaje);
-                alertMensaje.setText("Hubo un error en el paso 1 de la transacción \n" + error + "\n vuelve a intentar realizar la transacción");
+                alertMensaje.setText("Hubo un error en el paso 1 de la transacción. \n'" + error + "'\n ¡Vuelve a intentar realizar la transacción!");
                 Button btnAceptar = mView.findViewById(R.id.btnAceptar);
                 btnAceptar.setText("Aceptar");
                 builder.setView(mView);
@@ -420,7 +400,7 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
     private String ciclo1() {
         repeticiones = repeticiones + 1;
         if(repeticiones<=5){
-            error = ing_prod_ad.ExecuteSqlTransaction(listTransactionGal, "PRGPRODUCCION", EscanerInventario.this);
+            error = ing_prod_ad.ExecuteSqlTransaction(listTransactionGal, "JJVPRGPRODUCCION", EscanerInventario.this);
             if(error.equals("")){
                 return error;
             }else{
@@ -435,7 +415,7 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
     @SuppressLint("SetTextI18n")
     private void reanudarTransacion(){
         if (repeticiones<=4){
-            List<Object> listReanudarTransa = new ArrayList<>();
+            listReanudarTransa = new ArrayList<>();
             for(int i=0;i<ListaGalvRollosRecep.size();i++){
                 String nro_orden = ListaGalvRollosRecep.get(i).getNro_orden();
                 String nro_rollo = ListaGalvRollosRecep.get(i).getNro_rollo();
@@ -449,7 +429,7 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
                     Toast.makeText(EscanerInventario.this, e.getMessage(), Toast.LENGTH_SHORT).show();
                 }
             }
-            error = ing_prod_ad.ExecuteSqlTransaction(listReanudarTransa,"PRGPRODUCCION",EscanerInventario.this);
+            error = ing_prod_ad.ExecuteSqlTransaction(listReanudarTransa,"JJVPRGPRODUCCION",EscanerInventario.this);
             repeticiones = repeticiones + 1;
             if (error.equals("")){
                 toastAcierto("Transacción Cancelada correctamente");
@@ -458,7 +438,6 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
                 consultarGalvTerminado();
             }else{
                 incompleta =  true;
-                toastActualizado("Cargando");
                 reanudarTransacion();
             }
         }else{
@@ -469,7 +448,7 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
             AlertDialog.Builder builder = new AlertDialog.Builder(EscanerInventario.this);
             View mView = getLayoutInflater().inflate(R.layout.alertdialog_aceptar,null);
             TextView alertMensaje = mView.findViewById(R.id.alertMensaje);
-            alertMensaje.setText("No se pudo cancelar la transacción, \n Por favor comunicarse inmediatamente con el área de sistemas, \n para poder continuar con las transacciones, de lo \n contrario no se le permitira continuar");
+            alertMensaje.setText("No se pudo cancelar el paso 1 de la transacción, \n '" + error + "'\n Por favor comunicarse inmediatamente con el área de sistemas, \n para poder continuar con las transacciones, de lo \n contrario no se le permitira continuar");
             Button btnAceptar = mView.findViewById(R.id.btnAceptar);
             btnAceptar.setText("Aceptar");
             builder.setView(mView);
@@ -477,6 +456,56 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
             btnAceptar.setOnClickListener(v -> alertDialog.dismiss());
             alertDialog.setCancelable(false);
             alertDialog.show();
+
+            StringBuilder mensaje = new StringBuilder(); // Usamos StringBuilder para construir el mensaje
+
+            for (Object objeto : listReanudarTransa) {
+                // Convierte el objeto a String
+                String objetoComoString = objeto.toString();
+
+                // Agrega el objeto convertido al mensaje
+                mensaje.append(objetoComoString).append("\n");
+            }
+
+            // Muestra el mensaje
+            String mensajeFinal = mensaje.toString();
+            /////////////////////////////////////////////////////////////
+            //Correo electronico funciono la transacción
+            correo = conexion.obtenerCorreo(EscanerInventario.this);
+            String email = correo.getCorreo();
+            String pass = correo.getContrasena();
+            subject = "El paso 1 de una transacción en Control en Piso Galvanizado no se pudo cancelar";
+            textMessage = "El paso 1 de la Transacción de recepcion de producto terminado del area de Galvanizado no se pudo cancelar correctamente \n" +
+                    "Detalles de la recepción: \n" +
+                    mensajeFinal +
+                    "Numero de rollos: " + leidos + " \n" +
+                    "Nit quien entrega (Producción): " + nit_usuario + " \n" +
+                    "Nit quien recibe (Logistica): " + personaLogistica.getNit() + " \n" +
+                    "Fecha transacción: " + fechaTransaccion + "";
+
+            // Verificar la conectividad antes de intentar enviar el correo
+            if (isNetworkAvailable()) {
+                // Resto del código para enviar el correo electrónico
+                Properties props = new Properties();
+                props.put("mail.smtp.host", "smtp.gmail.com");
+                props.put("mail.smtp.socketFactory.port", "465");
+                props.put("mail.smtp.socketFactory.class","javax.net.ssl.SSLSocketFactory");
+                props.put("mail.smtp.auth","true");
+                props.put("mail.smtp.port", "465");
+
+                session = Session.getDefaultInstance(props, new Authenticator() {
+                    protected PasswordAuthentication getPasswordAuthentication() {
+                        return new PasswordAuthentication(email,pass);
+                    }
+                });
+
+                pdialog = ProgressDialog.show(context,"","Sending Mail...", true);
+
+                RetreiveFeedTask task = new RetreiveFeedTask();
+                task.execute();
+            } else {
+                toastError("Problemas de conexión a Internet");
+            }
         }
         }
 
@@ -484,13 +513,50 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
     private void ciclo3() {
         repeticiones = repeticiones + 1;
         if(repeticiones<=5){
-            if(ing_prod_ad.ExecuteSqlTransaction(listTransactionTrb1, "PRGPRODUCCION", EscanerInventario.this).equals("")){
+            error = ing_prod_ad.ExecuteSqlTransaction(listTransactionTrb1, "JJVPRGPRODUCCION", EscanerInventario.this);
+            if(error.equals("")){
                 consultarGalvTerminado();
                 incompleta = false;
+                /////////////////////////////////////////////////////////////
+                //Correo electronico funciono la transacción
+                correo = conexion.obtenerCorreo(EscanerInventario.this);
+                String email = correo.getCorreo();
+                String pass = correo.getContrasena();
+                subject = "Transacción Exitosa Control en Piso Galvanizado";
+                textMessage = "La transacción #" + numero_transaccion + " de recepcion de producto terminado del area de Galvanizado se realizó correctamente \n" +
+                        "Detalles de la transacción: \n" +
+                        "Numero de rollos: " + leidos + " \n" +
+                        "Nit quien entrega (Producción): " + nit_usuario + " \n" +
+                        "Nit quien recibe (Logistica): " + personaLogistica.getNit() + " \n" +
+                        "Fecha transacción: " + fechaTransaccion + "";
+
+                // Verificar la conectividad antes de intentar enviar el correo
+                if (isNetworkAvailable()) {
+                    // Resto del código para enviar el correo electrónico
+                    Properties props = new Properties();
+                    props.put("mail.smtp.host", "smtp.gmail.com");
+                    props.put("mail.smtp.socketFactory.port", "465");
+                    props.put("mail.smtp.socketFactory.class","javax.net.ssl.SSLSocketFactory");
+                    props.put("mail.smtp.auth","true");
+                    props.put("mail.smtp.port", "465");
+
+                    session = Session.getDefaultInstance(props, new Authenticator() {
+                        protected PasswordAuthentication getPasswordAuthentication() {
+                            return new PasswordAuthentication(email,pass);
+                        }
+                    });
+
+                    pdialog = ProgressDialog.show(context,"","Sending Mail...", true);
+
+                    RetreiveFeedTask task = new RetreiveFeedTask();
+                    task.execute();
+                } else {
+                    toastError("Problemas de conexión a Internet");
+                }
+                //////////////////////////////////////////////////////////////////////////////////
                 toastAcierto("Transaccion Realizada con Exito! -- " + numero_transaccion);
             }else{
                 incompleta =  true;
-                toastActualizado("Cargando");
                 ciclo3();
             }
         }else{
@@ -501,16 +567,106 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
             AlertDialog.Builder builder = new AlertDialog.Builder(EscanerInventario.this);
             View mView = getLayoutInflater().inflate(R.layout.alertdialog_aceptar,null);
             TextView alertMensaje = mView.findViewById(R.id.alertMensaje);
-            alertMensaje.setText("Hubo un problema en el paso 3 de la transacción de los " + leidos + " Rollos leidos, \n Por favor comunicarse inmediatamente con el área de sistemas, \n para poder continuar con las transacciones, de lo \n contrario no se le permitira continuar");
+            alertMensaje.setText("Hubo un problema en el paso 3 de la transacción #" + numero_transaccion + " de los " + leidos + " Rollos leidos, \n '" + error + "' \n Por favor comunicarse inmediatamente con el área de sistemas, \n para poder continuar con las transacciones, de lo \n contrario no se le permitira continuar");
             Button btnAceptar = mView.findViewById(R.id.btnAceptar);
             btnAceptar.setText("Aceptar");
             builder.setView(mView);
             AlertDialog alertDialog = builder.create();
-            btnAceptar.setOnClickListener(v -> alertDialog.dismiss());
+            btnAceptar.setOnClickListener(v -> {
+                StringBuilder mensaje = new StringBuilder(); // Usamos StringBuilder para construir el mensaje
+
+                for (Object objeto : listTransactionTrb1) {
+                    // Convierte el objeto a String
+                    String objetoComoString = objeto.toString();
+
+                    // Agrega el objeto convertido al mensaje
+                    mensaje.append(objetoComoString).append("\n");
+                }
+
+                // Muestra el mensaje
+                String mensajeFinal = mensaje.toString();
+                correo = conexion.obtenerCorreo(EscanerInventario.this);
+                String email = correo.getCorreo();
+                String pass = correo.getContrasena();
+                subject = "Error en el paso 3 de la transacción Control en Piso Galvanizado";
+                textMessage = "La transacción #" + numero_transaccion + " de recepcion de producto terminado del area de Galvanizado se fué incompleta \n" +
+                        "Detalles de la transacción: \n" +
+                        mensajeFinal +
+                        "Numero de rollos: " + leidos + " \n" +
+                        "Nit quien entrega (Producción): " + nit_usuario + " \n" +
+                        "Nit quien recibe (Logistica): " + personaLogistica.getNit() + " \n" +
+                        "Fecha transacción: " + fechaTransaccion + "";
+
+                // Verificar la conectividad antes de intentar enviar el correo
+                if (isNetworkAvailable()) {
+                    // Resto del código para enviar el correo electrónico
+                    Properties props = new Properties();
+                    props.put("mail.smtp.host", "smtp.gmail.com");
+                    props.put("mail.smtp.socketFactory.port", "465");
+                    props.put("mail.smtp.socketFactory.class","javax.net.ssl.SSLSocketFactory");
+                    props.put("mail.smtp.auth","true");
+                    props.put("mail.smtp.port", "465");
+
+                    session = Session.getDefaultInstance(props, new Authenticator() {
+                        protected PasswordAuthentication getPasswordAuthentication() {
+                            return new PasswordAuthentication(email,pass);
+                        }
+                    });
+
+                    pdialog = ProgressDialog.show(context,"","Sending Mail...", true);
+
+                    RetreiveFeedTask task = new RetreiveFeedTask();
+                    task.execute();
+                } else {
+                    toastError("Problemas de conexión a Internet");
+                }
+                alertDialog.dismiss();
+            });
             alertDialog.setCancelable(false);
             alertDialog.show();
         }
 
+    }
+
+    /////////////////////////////////////////////////////////////////////////////////////////////
+    //Funciones para enviar correos de error a auditoria y sistemas
+    //Evidencia
+
+    private boolean isNetworkAvailable() {
+        ConnectivityManager connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo activeNetworkInfo = connectivityManager.getActiveNetworkInfo();
+        return activeNetworkInfo != null && activeNetworkInfo.isConnected();
+    }
+
+    class RetreiveFeedTask extends AsyncTask<String, Void, String> {
+
+        @Override
+        protected String doInBackground(String... strings) {
+
+            try {
+                Message message = new MimeMessage(session);
+                message.setFrom(new InternetAddress("emailservicecorsan@gmail.com"));
+                InternetAddress [] toAddresses = new InternetAddress[rec.length];
+                for (int i = 0; i< rec.length;i++){
+                    toAddresses[i] = new InternetAddress(rec[i]);
+                }
+                message.setRecipients(Message.RecipientType.TO, toAddresses);
+                message.setSubject(subject);
+                message.setContent(textMessage, "text/html; charset=utf-8");
+                Transport.send(message);
+            }catch (MessagingException e) {
+                e.printStackTrace();
+            }catch (Exception e){
+                e.printStackTrace();
+            }
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(String result){
+            pdialog.dismiss();
+            toastAcierto("Message sent");
+        }
     }
 
     /////////////////////////////////////////////////////////////////////////////////////////////
@@ -519,7 +675,7 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
     private List<Object> traslado_bodega(List<GalvRecepcionadoRollosModelo> ListarefeRecepcionados, Calendar calendar){
         List<Object> listSql;
         @SuppressLint("SimpleDateFormat")
-        SimpleDateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
+        SimpleDateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss a");
         String fecha = dateFormat.format(calendar.getTime());
         String usuario = nit_usuario;
         String notas = "MOVIL fecha:" + fecha + " usuario:" + usuario;
