@@ -197,8 +197,8 @@ public class MainActivity extends AppCompatActivity {
         });
 
         //Agregamos subgrupo1"Gestion de Alambron".
-        child1.addChild(subChild1_1);
-        child1.addChild(subChild1_3);
+        //child1.addChild(subChild1_1);
+        //child1.addChild(subChild1_3);
 
         //Agregamos subgrupo2"Gestion de Alambron".
         //child1.addChild(subChild1_2);
@@ -345,10 +345,10 @@ public class MainActivity extends AppCompatActivity {
         });
 
         //Agregamos subgrupo1"Revisión - Calidad: Galvanizado".
-        child5.addChild(subChild5_1);
+        //child5.addChild(subChild5_1);
 
         //Agregamos subgrupo2"Revisión - Calidad: Trefilación".
-        child5.addChild(subChild5_2);
+        //child5.addChild(subChild5_2);
 
         //Agregamos subgrupo2"Revisión - Calidad: Mesas Empaque".
         //child5.addChild(subChild5_3); Todavia no hay desarrollado un modulo de calidad para empaque
@@ -412,7 +412,7 @@ public class MainActivity extends AppCompatActivity {
         child6.addChild(subChild6_1);
 
         //Agregamos subgrupo2"Logistica - Recepción: Trefilación".
-        child6.addChild(subChild6_2);
+        //child6.addChild(subChild6_2);
 
         //Agregamos subgrupo2"Mesas Empaque".
         //child6.addChild(subChild6_3);

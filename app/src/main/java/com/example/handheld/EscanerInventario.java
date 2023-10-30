@@ -346,7 +346,7 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
                 numero_transaccion = Integer.valueOf(Obj_ordenprodLn.mover_consecutivo("TRB1", EscanerInventario.this));
                 listTransaccionBodega = traslado_bodega(ListarefeRecepcionados, calendar);
                 //Ejecutamos la lista de consultas para hacer la TRB1
-                error = ing_prod_ad.ExecuteSqlTransaction(listTransaccionBodega, "JJVDMSCIERREAGOSTO", EscanerInventario.this);
+                error = ing_prod_ad.ExecuteSqlTransaction(listTransaccionBodega, "CORSAN", EscanerInventario.this);
                 if (error.equals("")){
                     for(int u=0;u<ListaGalvRollosRecep.size();u++){
                         String nro_orden = ListaGalvRollosRecep.get(u).getNro_orden();
@@ -400,7 +400,7 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
     private String ciclo1() {
         repeticiones = repeticiones + 1;
         if(repeticiones<=5){
-            error = ing_prod_ad.ExecuteSqlTransaction(listTransactionGal, "JJVPRGPRODUCCION", EscanerInventario.this);
+            error = ing_prod_ad.ExecuteSqlTransaction(listTransactionGal, "PRGPRODUCCION", EscanerInventario.this);
             if(error.equals("")){
                 return error;
             }else{
@@ -429,7 +429,7 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
                     Toast.makeText(EscanerInventario.this, e.getMessage(), Toast.LENGTH_SHORT).show();
                 }
             }
-            error = ing_prod_ad.ExecuteSqlTransaction(listReanudarTransa,"JJVPRGPRODUCCION",EscanerInventario.this);
+            error = ing_prod_ad.ExecuteSqlTransaction(listReanudarTransa,"PRGPRODUCCION",EscanerInventario.this);
             repeticiones = repeticiones + 1;
             if (error.equals("")){
                 toastAcierto("Transacción Cancelada correctamente");
@@ -478,6 +478,7 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
             textMessage = "El paso 1 de la Transacción de recepcion de producto terminado del area de Galvanizado no se pudo cancelar correctamente \n" +
                     "Detalles de la recepción: \n" +
                     mensajeFinal +
+                    "Error: '" + error + "'\n" +
                     "Numero de rollos: " + leidos + " \n" +
                     "Nit quien entrega (Producción): " + nit_usuario + " \n" +
                     "Nit quien recibe (Logistica): " + personaLogistica.getNit() + " \n" +
@@ -513,13 +514,13 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
     private void ciclo3() {
         repeticiones = repeticiones + 1;
         if(repeticiones<=5){
-            error = ing_prod_ad.ExecuteSqlTransaction(listTransactionTrb1, "JJVPRGPRODUCCION", EscanerInventario.this);
+            error = ing_prod_ad.ExecuteSqlTransaction(listTransactionTrb1, "PRGPRODUCCION", EscanerInventario.this);
             if(error.equals("")){
                 consultarGalvTerminado();
                 incompleta = false;
                 /////////////////////////////////////////////////////////////
                 //Correo electronico funciono la transacción
-                correo = conexion.obtenerCorreo(EscanerInventario.this);
+                /*correo = conexion.obtenerCorreo(EscanerInventario.this);
                 String email = correo.getCorreo();
                 String pass = correo.getContrasena();
                 subject = "Transacción Exitosa Control en Piso Galvanizado";
@@ -552,7 +553,7 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
                     task.execute();
                 } else {
                     toastError("Problemas de conexión a Internet");
-                }
+                }*/
                 //////////////////////////////////////////////////////////////////////////////////
                 toastAcierto("Transaccion Realizada con Exito! -- " + numero_transaccion);
             }else{
@@ -592,6 +593,7 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
                 textMessage = "La transacción #" + numero_transaccion + " de recepcion de producto terminado del area de Galvanizado se fué incompleta \n" +
                         "Detalles de la transacción: \n" +
                         mensajeFinal +
+                        "Error: '" + error + "'\n" +
                         "Numero de rollos: " + leidos + " \n" +
                         "Nit quien entrega (Producción): " + nit_usuario + " \n" +
                         "Nit quien recibe (Logistica): " + personaLogistica.getNit() + " \n" +
