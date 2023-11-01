@@ -4,9 +4,13 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.annotation.SuppressLint;
+import android.app.ProgressDialog;
 import android.content.Context;
 import android.media.AudioManager;
 import android.media.SoundPool;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -30,6 +34,7 @@ import com.example.handheld.ClasesOperativas.ObjTraslado_bodLn;
 import com.example.handheld.ClasesOperativas.Obj_ordenprodLn;
 import com.example.handheld.atv.holder.adapters.listTrefiTerminadoAdapter;
 import com.example.handheld.conexionDB.Conexion;
+import com.example.handheld.modelos.CorreoModelo;
 import com.example.handheld.modelos.PersonaModelo;
 import com.example.handheld.modelos.TrefiRecepcionModelo;
 import com.example.handheld.modelos.TrefiRecepcionadoRollosModelo;
@@ -40,6 +45,16 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
+import java.util.Properties;
+
+import javax.mail.Authenticator;
+import javax.mail.Message;
+import javax.mail.MessagingException;
+import javax.mail.PasswordAuthentication;
+import javax.mail.Session;
+import javax.mail.Transport;
+import javax.mail.internet.InternetAddress;
+import javax.mail.internet.MimeMessage;
 
 public class RecepcionTerminadoTrefilacion extends AppCompatActivity implements AdapterView.OnItemClickListener {
 
@@ -62,14 +77,23 @@ public class RecepcionTerminadoTrefilacion extends AppCompatActivity implements 
     Conexion conexion;
 
     //Se inicializa variables necesarias en la clase
-    int yaentre = 0;
-    String consecutivo;
-    Integer numero_transaccion;
+    int yaentre = 0, leidos;
+    String consecutivo, error, fechaTransaccion;
+    Integer numero_transaccion, repeticiones;
     String centro = "";
+
+    Boolean incompleta = false;
     PersonaModelo personaLogistica;
+
+    CorreoModelo correo;
     ObjTraslado_bodLn objTraslado_bodLn = new ObjTraslado_bodLn();
     Ing_prod_ad ing_prod_ad = new Ing_prod_ad();
     List<TrefiRecepcionadoRollosModelo> ListarefeRecepcionados= new ArrayList<>();
+
+    //Lista para relacionar rollos con la transaccion
+    List<Object> listTransactionTrb1 = new ArrayList<>(); //Lista donde agregamos las consultas que agrearan el campo trb1
+    List<Object> listTransactionTrefi;
+    List<Object> listReanudarTransa;
 
     //Se inicializa los varibles para el sonido de error
     SoundPool sp;
@@ -77,6 +101,14 @@ public class RecepcionTerminadoTrefilacion extends AppCompatActivity implements 
 
     //Se inicializa una instancia para hacer vibrar el celular
     Vibrator vibrator;
+
+    //Se inicializan elementos para enviar correos
+    Session session = null;
+    ProgressDialog pdialog = null;
+    Context context = null;
+
+    String[] rec;
+    String subject, textMessage;
 
     @SuppressLint("SetTextI18n")
     @Override
@@ -108,9 +140,18 @@ public class RecepcionTerminadoTrefilacion extends AppCompatActivity implements 
 
         vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
 
+        //Se definen elementos para enviar correos
+        context = this;
+
+        rec = new String[] {
+                "auxiliar3.TI@corsan.com.co",
+                "isabel.gomez@corsan.com.co",
+                "auditoria@corsan.com.co"
+        };
+
         /////////////////////////////////////////////////////////////////////////////////////////////
         //Llamamos al metodo para consultar los rollos de galvanizados listos para recoger
-        consultarTrefiTerminado();
+        consultarTransIncompleta();
 
         /////////////////////////////////////////////////////////////////////////////////////////////
         //Se establece el foco en el edit text
@@ -120,22 +161,29 @@ public class RecepcionTerminadoTrefilacion extends AppCompatActivity implements 
         //Se programa para que al presionar (enter) en el EditText inicie el proceso
         codigoTrefi.setOnKeyListener((v, keyCode, event) -> {
             if (keyCode == KeyEvent.KEYCODE_ENTER) {
-                if(yaentre == 0){
-                    if(codigoTrefi.getText().toString().equals("")){
-                        toastError("Por favor escribir o escanear el codigo de barras");
-                    }else{
-                        //Ocultamos el teclado de la pantalla
-                        closeTecladoMovil();
-                        try {
-                            //Verificamos el codigo
-                            codigoIngresado();
-                        } catch (SQLException e) {
-                            e.printStackTrace();
-                        }
-                    }
+                if (incompleta){
+                    codigoTrefi.setText("");
+                    AudioError();
+                    toastAtencion("No se pueden leer más tiquetes");
                 }else{
-                    //Cargamos de nuevo las varibles y cambiamos "yaentre" a 1 ó 0
-                    cargarNuevo();
+                    if(yaentre == 0){
+                        if(codigoTrefi.getText().toString().equals("")){
+                            AudioError();
+                            toastError("Por favor escribir o escanear el codigo de barras");
+                        }else{
+                            //Ocultamos el teclado de la pantalla
+                            closeTecladoMovil();
+                            try {
+                                //Verificamos el codigo
+                                codigoIngresado();
+                            } catch (SQLException e) {
+                                e.printStackTrace();
+                            }
+                        }
+                    }else{
+                        //Cargamos de nuevo las varibles y cambiamos "yaentre" a 1 ó 0
+                        cargarNuevo();
+                    }
                 }
                 return true;
             }
@@ -151,66 +199,12 @@ public class RecepcionTerminadoTrefilacion extends AppCompatActivity implements 
         btnTransaTrefi.setOnClickListener(v -> {
             int sleer = Integer.parseInt(txtTotalSinLeer.getText().toString());
             int total = Integer.parseInt(txtTotal.getText().toString());
-            int leidos = (total - sleer);
+            leidos = (total - sleer);
             //Verificamos que la cantidad de rollos sin leer sea 0 y si hubiera produccion en
             //galvanizado que leer
             if(sleer==0 && total>0){
                 //Mostramos el mensaje para logistica
-
-                AlertDialog.Builder builder = new AlertDialog.Builder(RecepcionTerminadoTrefilacion.this);
-                View mView = getLayoutInflater().inflate(R.layout.alertdialog_cedularecepciona,null);
-                final EditText txtCedulaLogistica = mView.findViewById(R.id.txtCedulaLogistica);
-                TextView txtMrollos = mView.findViewById(R.id.txtMrollos);
-                txtMrollos.setText("Se han leido: "+ leidos +" Rollos");
-                Button btnAceptar = mView.findViewById(R.id.btnAceptar);
-                Button btnCancelar = mView.findViewById(R.id.btnCancelar);
-                ProgressBar Barraprogreso = mView.findViewById(R.id.progress_bar);
-                builder.setView(mView);
-                AlertDialog alertDialog = builder.create();
-                btnAceptar.setOnClickListener(v12 -> {
-                    String CeLog = txtCedulaLogistica.getText().toString().trim();
-                    if (CeLog.equals("")){
-                        toastError("Ingresar la cedula de la persona que recepciona");
-                    }else{
-                        if(CeLog.equals(nit_usuario)){
-                            toastError("La Cedula de la persona que recepciona no puede ser igual al de la persona que entrega");
-                        }else{
-                            //Verificamos el numero de documentos de la persona en la base da datos
-                            personaLogistica = conexion.obtenerPersona(RecepcionTerminadoTrefilacion.this,CeLog );
-                            centro = personaLogistica.getCentro();
-                            //Verificamos que la persona sea de logistica
-                            if (centro.equals("3500")){
-                                Barraprogreso.setVisibility(View.VISIBLE);
-                                Handler handler = new Handler(Looper.getMainLooper());
-                                new Thread(() -> {
-                                    try {
-                                        runOnUiThread(this::realizarTransaccion);
-                                        handler.post(() -> {
-                                            Barraprogreso.setVisibility(View.GONE);
-                                            alertDialog.dismiss();
-                                            closeTecladoMovil();
-                                        });
-                                    } catch (Exception e) {
-                                        handler.post(() -> {
-                                            toastError(e.getMessage());
-                                            Barraprogreso.setVisibility(View.GONE);
-                                        });
-                                    }
-                                }).start();
-                                closeTecladoMovil();
-                            }else{
-                                if (centro.equals("")){
-                                    toastError("Persona no encontrada");
-                                }else{
-                                    toastError("La cedula ingresada no pertenece a logistica!");
-                                }
-                            }
-                        }
-                    }
-                });
-                btnCancelar.setOnClickListener(v1 -> alertDialog.dismiss());
-                alertDialog.setCancelable(false);
-                alertDialog.show();
+                alertDialogTransaccion();
             }else{
                 if(sleer==0 && total==0){
                     toastError("No hay rollos por leer");
@@ -221,92 +215,102 @@ public class RecepcionTerminadoTrefilacion extends AppCompatActivity implements 
                         AudioError();
                     }
                     else{
-
-                        AlertDialog.Builder builder = new AlertDialog.Builder(RecepcionTerminadoTrefilacion.this);
-                        View mView = getLayoutInflater().inflate(R.layout.alertdialog_cedularecepciona,null);
-                        final EditText txtCedulaLogistica = mView.findViewById(R.id.txtCedulaLogistica);
-                        TextView txtMrollos = mView.findViewById(R.id.txtMrollos);
-                        txtMrollos.setText("Se han leido: "+ leidos +" Rollos");
-                        Button btnAceptar = mView.findViewById(R.id.btnAceptar);
-                        Button btnCancelar = mView.findViewById(R.id.btnCancelar);
-                        ProgressBar Barraprogreso = mView.findViewById(R.id.progress_bar);
-                        builder.setView(mView);
-                        AlertDialog alertDialog = builder.create();
-                        btnAceptar.setOnClickListener(v12 -> {
-                            String CeLog = txtCedulaLogistica.getText().toString().trim();
-                            if (CeLog.equals("")){
-                                toastError("Ingresar la cedula de la persona que recepciona");
-                            }else{
-                                if(CeLog.equals(nit_usuario)){
-                                    toastError("La Cedula de la persona que recepciona no puede ser igual al de la persona que entrega");
-                                }else{
-                                    personaLogistica = conexion.obtenerPersona(RecepcionTerminadoTrefilacion.this,CeLog );
-                                    centro = personaLogistica.getCentro();
-                                    //Verificamos que la persona pertenezca al centro de logistica
-                                    if (centro.equals("3500")){
-                                        Barraprogreso.setVisibility(View.VISIBLE);
-                                        Handler handler = new Handler(Looper.getMainLooper());
-                                        new Thread(() -> {
-                                            try {
-                                                runOnUiThread(this::realizarTransaccion);
-                                                handler.post(() -> {
-                                                    Barraprogreso.setVisibility(View.GONE);
-                                                    alertDialog.dismiss();
-                                                    closeTecladoMovil();
-                                                });
-                                            } catch (Exception e) {
-                                                handler.post(() -> {
-                                                    toastError(e.getMessage());
-                                                    Barraprogreso.setVisibility(View.GONE);
-                                                });
-                                            }
-                                        }).start();
-                                        closeTecladoMovil();
-                                    }else{
-                                        if (centro.equals("")){
-                                            toastError("Persona no encontrada");
-                                        }else{
-                                            toastError("La cedula ingresada no pertenece a logistica!");
-                                        }
-                                    }
-                                }
-                            }
-                        });
-                        btnCancelar.setOnClickListener(v1 -> alertDialog.dismiss());
-                        alertDialog.setCancelable(false);
-                        alertDialog.show();
-
+                        alertDialogTransaccion();
                     }
                 }
             }
         });
     }
 
+    //Alert dialog Transacción
+    @SuppressLint("SetTextI18n")
+    private void alertDialogTransaccion(){
+        AlertDialog.Builder builder = new AlertDialog.Builder(RecepcionTerminadoTrefilacion.this);
+        View mView = getLayoutInflater().inflate(R.layout.alertdialog_cedularecepciona,null);
+        final EditText txtCedulaLogistica = mView.findViewById(R.id.txtCedulaLogistica);
+        TextView txtMrollos = mView.findViewById(R.id.txtMrollos);
+        txtMrollos.setText("Se han leido: "+ leidos +" Rollos");
+        Button btnAceptar = mView.findViewById(R.id.btnAceptar);
+        Button btnCancelar = mView.findViewById(R.id.btnCancelar);
+        ProgressBar Barraprogreso = mView.findViewById(R.id.progress_bar);
+        builder.setView(mView);
+        AlertDialog alertDialog = builder.create();
+        btnAceptar.setOnClickListener(v12 -> {
+            if(isNetworkAvailable()){
+                String CeLog = txtCedulaLogistica.getText().toString().trim();
+                if (CeLog.equals("")){
+                    toastError("Ingresar la cedula de la persona que recepciona");
+                }else{
+                    if(CeLog.equals(nit_usuario)){
+                        toastError("La Cedula de la persona que recepciona no puede ser igual al de la persona que entrega");
+                    }else{
+                        //Verificamos el numero de documentos de la persona en la base da datos
+                        personaLogistica = conexion.obtenerPersona(RecepcionTerminadoTrefilacion.this,CeLog );
+                        centro = personaLogistica.getCentro();
+                        //Verificamos que la persona sea de logistica
+                        if (centro.equals("3500")){
+                            Barraprogreso.setVisibility(View.VISIBLE);
+                            Handler handler = new Handler(Looper.getMainLooper());
+                            new Thread(() -> {
+                                try {
+                                    runOnUiThread(this::realizarTransaccion);
+                                    handler.post(() -> {
+                                        Barraprogreso.setVisibility(View.GONE);
+                                        alertDialog.dismiss();
+                                        closeTecladoMovil();
+                                    });
+                                } catch (Exception e) {
+                                    handler.post(() -> {
+                                        toastError(e.getMessage());
+                                        Barraprogreso.setVisibility(View.GONE);
+                                    });
+                                }
+                            }).start();
+                            closeTecladoMovil();
+                        }else{
+                            if (centro.equals("")){
+                                toastError("Persona no encontrada");
+                            }else{
+                                toastError("La cedula ingresada no pertenece a logistica!");
+                            }
+                        }
+                    }
+                }
+            }else{
+                toastError("Problemas de conexión a Internet");
+            }
+        });
+        btnCancelar.setOnClickListener(v1 -> alertDialog.dismiss());
+        alertDialog.setCancelable(false);
+        alertDialog.show();
+    }
+
     /////////////////////////////////////////////////////////////////////////////////////////////
     //Funcion que genera todas las listas de consultas en la base de datos, las ejecuta generando
     //Una TRB1 en el sistema de bodega 2 a bodega 3 con los rollos leidos
+    @SuppressLint("SetTextI18n")
     private void realizarTransaccion() {
         //Creamos una lista para almacenar todas las consultas que se realizaran en la base de datos
-        List<Object> listTransactionTrefi = new ArrayList<>();
+        listTransactionTrefi = new ArrayList<>();
         //Creamos una lista para almacenar todas las consultas que se realizaran en la base de datos
         List<Object> listTransaccionBodega;
         //Lista donde revertimos la primer consulta si el segundo proceso no se realiza bien
-        List<Object> listTransactionError = new ArrayList<>();
-        //Lista donde agregamos las consultas que agrearan el campo trb1
-        List<Object> listTransactionTrb1 = new ArrayList<>();
+        //List<Object> listTransactionError = new ArrayList<>(); se comenta porque se decide no revertir la primera consulta sino terminar las incompletas
+
 
         // Obtén la fecha y hora actual
         Date fechaActual = new Date();
         Calendar calendar = Calendar.getInstance();
 
         // Define el formato de la fecha y hora que deseas obtener
-        @SuppressLint("SimpleDateFormat")
-        SimpleDateFormat formatoFecha = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        @SuppressLint("SimpleDateFormat") SimpleDateFormat formatoFecha = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        @SuppressLint("SimpleDateFormat") SimpleDateFormat formatoFechaTransaccion = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss a");
         @SuppressLint("SimpleDateFormat") SimpleDateFormat formatoMonth = new SimpleDateFormat("MM");
         @SuppressLint("SimpleDateFormat") SimpleDateFormat formatoYear = new SimpleDateFormat("yyyy");
 
         // Convierte la fecha actual en un String con el formato definido
         String fechaActualString = formatoFecha.format(fechaActual);
+        fechaTransaccion = formatoFechaTransaccion.format(fechaActual);
         String monthActualString = formatoMonth.format(fechaActual);
         String yearActualString = formatoYear.format(fechaActual);
 
@@ -328,12 +332,15 @@ public class RecepcionTerminadoTrefilacion extends AppCompatActivity implements 
 
         if (listTransactionTrefi.size()>0){
             //Ejecutamos la consultas que llenan los campos de recepción
-            if (ing_prod_ad.ExecuteSqlTransaction(listTransactionTrefi, "JJVPRGPRODUCCION", RecepcionTerminadoTrefilacion.this).equals("")){
+            repeticiones = 0;
+            error = ciclo1();
+            if (error.equals("")){
                 ListarefeRecepcionados = conexion.trefiRefeRecepcionados(RecepcionTerminadoTrefilacion.this,fechaActualString, monthActualString, yearActualString);
                 numero_transaccion = Integer.valueOf(Obj_ordenprodLn.mover_consecutivo("TRB1", RecepcionTerminadoTrefilacion.this));
                 listTransaccionBodega = traslado_bodega(ListarefeRecepcionados, calendar);
                 //Ejecutamos la lista de consultas para hacer la TRB1
-                if (ing_prod_ad.ExecuteSqlTransaction(listTransaccionBodega, "JJVDMSCIERREAGOSTO", RecepcionTerminadoTrefilacion.this).equals("")){
+                error = ing_prod_ad.ExecuteSqlTransaction(listTransaccionBodega, "JJVDMSCIERREAGOSTO", RecepcionTerminadoTrefilacion.this);
+                if (error.equals("")){
                     for(int u=0;u<ListaTrefiRollosRecep.size();u++){
                         String cod_orden = ListaTrefiRollosRecep.get(u).getCod_orden();
                         String id_detalle = ListaTrefiRollosRecep.get(u).getId_detalle();
@@ -346,38 +353,279 @@ public class RecepcionTerminadoTrefilacion extends AppCompatActivity implements 
                             Toast.makeText(RecepcionTerminadoTrefilacion.this, e.getMessage(), Toast.LENGTH_SHORT).show();
                         }
                     }
-                    if(ing_prod_ad.ExecuteSqlTransaction(listTransactionTrb1, "JJVPRGPRODUCCION", RecepcionTerminadoTrefilacion.this).equals("")){
-                        consultarTrefiTerminado();
-                        toastAcierto("Transaccion Realizada con Exito! --" + numero_transaccion);
-                    }else{
-                        toastError("Problemas, No se realizó correctamente la transacción!");
-                    };
+                    repeticiones = 0;
+                    ciclo3();
                 }else{
-                    //Si la consulta falla revertimos la llenada de campos de recepcion en la base de datos
-                    /*
-                    for(int i=0;i<ListaTrefiRollosRecep.size();i++){
-                        String cod_orden = ListaTrefiRollosRecep.get(i).getCod_orden();
-                        String id_detalle = ListaTrefiRollosRecep.get(i).getId_detalle();
-                        String id_rollo = ListaTrefiRollosRecep.get(i).getId_rollo();
-
-                        String sql_rollo= "UPDATE J_rollos_tref SET recepcionado=null, nit_recepcionado=null, fecha_recepcion=null, nit_entrega=null WHERE cod_orden='"+ cod_orden +"' AND id_detalle='"+id_detalle+"' AND id_rollo='"+id_rollo+"'";
-
-                        try {
-                            //Se añade el sql a la lista - esto es un
-                            listTransactionError.add(sql_rollo);
-                        }catch (Exception e){
-                            Toast.makeText(RecepcionTerminadoTrefilacion.this, e.getMessage(), Toast.LENGTH_SHORT).show();
-                        }
-                        ing_prod_ad.ExecuteSqlTransaction(listTransactionError,"JJVPRGPRODUCCION",RecepcionTerminadoTrefilacion.this);
-                    }*/
-                    toastError("Error al realizar la transacción!" +
-                            "Intentelo de nuevo");
-
+                    incompleta =  true;
+                    AudioError();
+                    AlertDialog.Builder builder = new AlertDialog.Builder(RecepcionTerminadoTrefilacion.this);
+                    View mView = getLayoutInflater().inflate(R.layout.alertdialog_aceptar,null);
+                    TextView alertMensaje = mView.findViewById(R.id.alertMensaje);
+                    alertMensaje.setText("Hubo un error en el paso 2 de la transacción. \n'" + error + "'\n ¡Vuelve a intentar realizar la transacción!");
+                    Button btnAceptar = mView.findViewById(R.id.btnAceptar);
+                    builder.setView(mView);
+                    AlertDialog alertDialog = builder.create();
+                    btnAceptar.setOnClickListener(v -> {
+                        repeticiones = 0;
+                        reanudarTransacion();
+                        alertDialog.dismiss();
+                    });
+                    alertDialog.setCancelable(false);
+                    alertDialog.show();
                 }
             }else{
-                toastError("Error al realizar la transacción!" +
-                        "Intentelo de nuevo");
+                incompleta =  true;
+                AudioError();
+                AlertDialog.Builder builder = new AlertDialog.Builder(RecepcionTerminadoTrefilacion.this);
+                View mView = getLayoutInflater().inflate(R.layout.alertdialog_aceptar,null);
+                TextView alertMensaje = mView.findViewById(R.id.alertMensaje);
+                alertMensaje.setText("Hubo un error en el paso 1 de la transacción. \n'" + error + "'\n ¡Vuelve a intentar realizar la transacción!");
+                Button btnAceptar = mView.findViewById(R.id.btnAceptar);
+                btnAceptar.setText("Aceptar");
+                builder.setView(mView);
+                AlertDialog alertDialog = builder.create();
+                btnAceptar.setOnClickListener(v -> alertDialog.dismiss());
+                alertDialog.setCancelable(false);
+                alertDialog.show();
             }
+        }
+    }
+
+    private String ciclo1(){
+        repeticiones = repeticiones + 1;
+        if(repeticiones<=5){
+            error = ing_prod_ad.ExecuteSqlTransaction(listTransactionTrefi, "JJVPRGPRODUCCION", RecepcionTerminadoTrefilacion.this);
+            if(error.equals("")){
+                return error;
+            }else{
+                ciclo1();
+            }
+        }else{
+            return error;
+        }
+        return error;
+    }
+
+    @SuppressLint("SetTextI18n")
+    private void reanudarTransacion(){
+        if (repeticiones<=4){
+            listReanudarTransa = new ArrayList<>();
+            for(int i=0;i<ListaTrefiRollosRecep.size();i++) {
+                String cod_orden = ListaTrefiRollosRecep.get(i).getCod_orden();
+                String id_detalle = ListaTrefiRollosRecep.get(i).getId_detalle();
+                String id_rollo = ListaTrefiRollosRecep.get(i).getId_rollo();
+
+                String sql_rollo = "UPDATE J_rollos_tref SET recepcionado=null, nit_recepcionado=null, fecha_recepcion=null, nit_entrega=null WHERE cod_orden='" + cod_orden + "' AND id_detalle='" + id_detalle + "' AND id_rollo='" + id_rollo + "'";
+
+                try {
+                    //Se añade el sql a la lista - esto es un
+                    listReanudarTransa.add(sql_rollo);
+                } catch (Exception e) {
+                    Toast.makeText(RecepcionTerminadoTrefilacion.this, e.getMessage(), Toast.LENGTH_SHORT).show();
+                }
+            }
+            error = ing_prod_ad.ExecuteSqlTransaction(listReanudarTransa,"JJVPRGPRODUCCION",RecepcionTerminadoTrefilacion.this);
+            repeticiones = repeticiones + 1;
+            if (error.equals("")){
+                toastAcierto("Transacción Cancelada correctamente");
+
+                incompleta = false;
+                consultarTrefiTerminado();
+            }else{
+                incompleta =  true;
+                reanudarTransacion();
+            }
+        }else{
+            incompleta =  true;
+            btnTransaTrefi.setEnabled(false);
+            btnCancelarTrans.setEnabled(false);
+            AudioError();
+            AlertDialog.Builder builder = new AlertDialog.Builder(RecepcionTerminadoTrefilacion.this);
+            View mView = getLayoutInflater().inflate(R.layout.alertdialog_aceptar,null);
+            TextView alertMensaje = mView.findViewById(R.id.alertMensaje);
+            alertMensaje.setText("No se pudo cancelar el paso 1 de la transacción, \n '" + error + "'\n Por favor comunicarse inmediatamente con el área de sistemas, \n para poder continuar con las transacciones, de lo \n contrario no se le permitira continuar");
+            Button btnAceptar = mView.findViewById(R.id.btnAceptar);
+            btnAceptar.setText("Aceptar");
+            builder.setView(mView);
+            AlertDialog alertDialog = builder.create();
+            btnAceptar.setOnClickListener(v -> {
+                StringBuilder mensaje = new StringBuilder(); // Usamos StringBuilder para construir el mensaje
+
+                for (Object objeto : listReanudarTransa) {
+                    // Convierte el objeto a String
+                    String objetoComoString = objeto.toString();
+
+                    // Agrega el objeto convertido al mensaje
+                    mensaje.append(objetoComoString).append("\n");
+                }
+
+                // Muestra el mensaje
+                String mensajeFinal = mensaje.toString();
+                /////////////////////////////////////////////////////////////
+                //Correo electronico funciono la transacción
+                correo = conexion.obtenerCorreo(RecepcionTerminadoTrefilacion.this);
+                String email = correo.getCorreo();
+                String pass = correo.getContrasena();
+                subject = "El paso 1 de una transacción en Control en Piso Galvanizado no se pudo cancelar";
+                textMessage = "El paso 1 de la Transacción de recepcion de producto terminado del area de Galvanizado no se pudo cancelar correctamente \n" +
+                        "Detalles de la recepción: \n" +
+                        mensajeFinal +
+                        "Error: '" + error + "'\n" +
+                        "Numero de rollos: " + leidos + " \n" +
+                        "Nit quien entrega (Producción): " + nit_usuario + " \n" +
+                        "Nit quien recibe (Logistica): " + personaLogistica.getNit() + " \n" +
+                        "Fecha transacción: " + fechaTransaccion + "";
+
+                // Verificar la conectividad antes de intentar enviar el correo
+                if (isNetworkAvailable()) {
+                    // Resto del código para enviar el correo electrónico
+                    Properties props = new Properties();
+                    props.put("mail.smtp.host", "smtp.gmail.com");
+                    props.put("mail.smtp.socketFactory.port", "465");
+                    props.put("mail.smtp.socketFactory.class","javax.net.ssl.SSLSocketFactory");
+                    props.put("mail.smtp.auth","true");
+                    props.put("mail.smtp.port", "465");
+
+                    session = Session.getDefaultInstance(props, new Authenticator() {
+                        protected PasswordAuthentication getPasswordAuthentication() {
+                            return new PasswordAuthentication(email,pass);
+                        }
+                    });
+
+                    pdialog = ProgressDialog.show(context,"","Sending Mail...", true);
+
+                    RetreiveFeedTask task = new RetreiveFeedTask();
+                    task.execute();
+                    alertDialog.dismiss();
+                } else {
+                    toastError("Problemas de conexión a Internet");
+                }
+            });
+            alertDialog.setCancelable(false);
+            alertDialog.show();
+        }
+    }
+
+    @SuppressLint("SetTextI18n")
+    private void ciclo3(){
+        repeticiones = repeticiones + 1;
+        if(repeticiones<=5){
+            error = ing_prod_ad.ExecuteSqlTransaction(listTransactionTrb1, "JJVPRGPRODUCCION", RecepcionTerminadoTrefilacion.this);
+            if(error.equals("")){
+                consultarTrefiTerminado();
+                incompleta = false;
+                toastAcierto("Transaccion Realizada con Exito! --" + numero_transaccion);
+            }else{
+                incompleta = true;
+                ciclo3();
+            }
+        }else{
+            incompleta = true;
+            btnTransaTrefi.setEnabled(false);
+            btnCancelarTrans.setEnabled(false);
+            AudioError();
+            AlertDialog.Builder builder = new AlertDialog.Builder(RecepcionTerminadoTrefilacion.this);
+            View mView = getLayoutInflater().inflate(R.layout.alertdialog_aceptar,null);
+            TextView alertMensaje = mView.findViewById(R.id.alertMensaje);
+            alertMensaje.setText("Hubo un problema en el paso 3 de la transacción #" + numero_transaccion + " de los " + leidos + " Rollos leidos, \n '" + error + "' \n Por favor comunicarse inmediatamente con el área de sistemas, \n para poder continuar con las transacciones, de lo \n contrario no se le permitira continuar");
+            Button btnAceptar = mView.findViewById(R.id.btnAceptar);
+            btnAceptar.setText("Aceptar");
+            builder.setView(mView);
+            AlertDialog alertDialog = builder.create();
+            btnAceptar.setOnClickListener(v -> {
+                StringBuilder mensaje = new StringBuilder(); // Usamos StringBuilder para construir el mensaje
+
+                for (Object objeto : listTransactionTrb1) {
+                    // Convierte el objeto a String
+                    String objetoComoString = objeto.toString();
+
+                    // Agrega el objeto convertido al mensaje
+                    mensaje.append(objetoComoString).append("\n");
+                }
+
+                // Muestra el mensaje
+                String mensajeFinal = mensaje.toString();
+                correo = conexion.obtenerCorreo(RecepcionTerminadoTrefilacion.this);
+                String email = correo.getCorreo();
+                String pass = correo.getContrasena();
+                subject = "Error en el paso 3 de la transacción Control en Piso Galvanizado";
+                textMessage = "La transacción #" + numero_transaccion + " de recepcion de producto terminado del area de Galvanizado se fué incompleta \n" +
+                        "Detalles de la transacción: \n" +
+                        mensajeFinal +
+                        "Error: '" + error + "'\n" +
+                        "Numero de rollos: " + leidos + " \n" +
+                        "Nit quien entrega (Producción): " + nit_usuario + " \n" +
+                        "Nit quien recibe (Logistica): " + personaLogistica.getNit() + " \n" +
+                        "Fecha transacción: " + fechaTransaccion + "";
+
+                // Verificar la conectividad antes de intentar enviar el correo
+                if (isNetworkAvailable()) {
+                    // Resto del código para enviar el correo electrónico
+                    Properties props = new Properties();
+                    props.put("mail.smtp.host", "smtp.gmail.com");
+                    props.put("mail.smtp.socketFactory.port", "465");
+                    props.put("mail.smtp.socketFactory.class","javax.net.ssl.SSLSocketFactory");
+                    props.put("mail.smtp.auth","true");
+                    props.put("mail.smtp.port", "465");
+
+                    session = Session.getDefaultInstance(props, new Authenticator() {
+                        protected PasswordAuthentication getPasswordAuthentication() {
+                            return new PasswordAuthentication(email,pass);
+                        }
+                    });
+
+                    pdialog = ProgressDialog.show(context,"","Sending Mail...", true);
+
+                    RetreiveFeedTask task = new RetreiveFeedTask();
+                    task.execute();
+                    alertDialog.dismiss();
+                } else {
+                    toastError("Problemas de conexión a Internet");
+                }
+            });
+            alertDialog.setCancelable(false);
+            alertDialog.show();
+        }
+    }
+
+    /////////////////////////////////////////////////////////////////////////////////////////////
+    //Funciones para enviar correos de error a auditoria y sistemas
+    //Evidencia
+
+    private boolean isNetworkAvailable() {
+        ConnectivityManager connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo activeNetworkInfo = connectivityManager.getActiveNetworkInfo();
+        return activeNetworkInfo != null && activeNetworkInfo.isConnected();
+    }
+
+    class RetreiveFeedTask extends AsyncTask<String, Void, String> {
+
+        @Override
+        protected String doInBackground(String... strings) {
+
+            try {
+                Message message = new MimeMessage(session);
+                message.setFrom(new InternetAddress("emailservicecorsan@gmail.com"));
+                InternetAddress [] toAddresses = new InternetAddress[rec.length];
+                for (int i = 0; i< rec.length;i++){
+                    toAddresses[i] = new InternetAddress(rec[i]);
+                }
+                message.setRecipients(Message.RecipientType.TO, toAddresses);
+                message.setSubject(subject);
+                message.setContent(textMessage, "text/html; charset=utf-8");
+                Transport.send(message);
+            }catch (MessagingException e) {
+                e.printStackTrace();
+            }catch (Exception e){
+                e.printStackTrace();
+            }
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(String result){
+            pdialog.dismiss();
+            toastAcierto("Message sent");
         }
     }
 
@@ -387,13 +635,58 @@ public class RecepcionTerminadoTrefilacion extends AppCompatActivity implements 
     private List<Object> traslado_bodega(List<TrefiRecepcionadoRollosModelo> ListarefeRecepcionados, Calendar calendar){
         List<Object> listSql;
         @SuppressLint("SimpleDateFormat")
-        SimpleDateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy");
+        SimpleDateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss a");
         String fecha = dateFormat.format(calendar.getTime());
         String usuario = nit_usuario;
         String notas = "MOVIL fecha:" + fecha + " usuario:" + usuario;
 
         listSql = objTraslado_bodLn.listaTrasladoBodegaTrefi(ListarefeRecepcionados,numero_transaccion, 2, 3, calendar, notas, usuario, "TRB1", "11",RecepcionTerminadoTrefilacion.this);
         return listSql;
+    }
+
+    @SuppressLint("SetTextI18n")
+    private void consultarTransIncompleta(){
+        conexion = new Conexion();
+        //Inicializamos la lista de los rollos escaneados
+        ListaTrefiRollosRecep = new ArrayList<>();
+
+        //Consultamos si hay rollos con transacciones incompletas
+        ListaTrefiRollosRecep = conexion.consultarTrefiIncomple(getApplication());
+
+        if(ListaTrefiRollosRecep.isEmpty()){
+            /////////////////////////////////////////////////////////////////////////////////////////////
+            //Llamamos al metodo para consultar los rollos de trefilación listos para recoger
+            consultarTrefiTerminado();
+        }else{
+            incompleta = true;
+            btnTransaTrefi.setEnabled(false);
+            btnCancelarTrans.setEnabled(false);
+            AlertDialog.Builder builder = new AlertDialog.Builder(RecepcionTerminadoTrefilacion.this);
+            View mView = getLayoutInflater().inflate(R.layout.alertdialog_aceptar,null);
+            TextView alertMensaje = mView.findViewById(R.id.alertMensaje);
+            alertMensaje.setText("Hay una transaccion anterior incompleta , \n Por favor comunicarse inmediatamente con el área de sistemas, \n para poder continuar con las transacciones, de lo \n contrario no se le permitira continuar");
+            Button btnAceptar = mView.findViewById(R.id.btnAceptar);
+            btnAceptar.setText("Aceptar");
+            builder.setView(mView);
+            AlertDialog alertDialog = builder.create();
+            btnAceptar.setOnClickListener(v -> alertDialog.dismiss());
+            alertDialog.setCancelable(false);
+            alertDialog.show();
+
+            //Consultamos los rollos de producción que no se han recepcionado en la base de datos
+            ListaTrefiTerminado = conexion.obtenerTrefiTerminado(getApplication());
+            //Enviamos la lista vacia de rollos escaneados al listview
+            TrefiTerminadoAdapter = new listTrefiTerminadoAdapter(RecepcionTerminadoTrefilacion.this,R.layout.item_row_trefiterminado,ListaTrefiRollosRecep);
+            listviewTrefiTerminado.setAdapter(TrefiTerminadoAdapter);
+
+            //Enviamos la cantidad de rollos de producción que no se han recepcionado al TextView
+            String totalRollos = String.valueOf(ListaTrefiTerminado.size() + ListaTrefiRollosRecep.size());
+            txtTotal.setText(totalRollos);
+
+            //Contamos los rollos leidos y sin leer para mostrarlos en los TextView
+            contarSinLeer();
+            contarLeidos();
+        }
     }
 
     /////////////////////////////////////////////////////////////////////////////////////////////
@@ -585,6 +878,21 @@ public class RecepcionTerminadoTrefilacion extends AppCompatActivity implements 
 
         Toast toast = new Toast(getApplicationContext());
         toast.setGravity(Gravity.CENTER_VERTICAL | Gravity.BOTTOM,0,200);
+        toast.setDuration(Toast.LENGTH_LONG);
+        toast.setView(view);
+        toast.show();
+    }
+
+    //METODO DE TOAST PERSONALIZADO : ATENCION
+    public void toastAtencion(String msg){
+        LayoutInflater layoutInflater = getLayoutInflater();
+        View view = layoutInflater.inflate(R.layout.custom_toast_atencion, findViewById(R.id.ll_custom_toast_atencion));
+        @SuppressLint({"MissingInflatedId", "LocalSuppress"})
+        TextView txtMens = view.findViewById(R.id.txtMensajeToastAtencion);
+        txtMens.setText(msg);
+
+        Toast toast = new Toast(getApplicationContext());
+        toast.setGravity(Gravity.CENTER_VERTICAL | Gravity.CENTER,0,200);
         toast.setDuration(Toast.LENGTH_LONG);
         toast.setView(view);
         toast.show();

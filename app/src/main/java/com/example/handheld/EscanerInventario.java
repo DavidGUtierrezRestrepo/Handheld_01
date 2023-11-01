@@ -90,7 +90,7 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
     List<GalvRecepcionadoRollosModelo> ListarefeRecepcionados= new ArrayList<>();
 
     //Lista para relacionar rollos con la transacción.
-    List<Object> listTransactionTrb1 = new ArrayList<>();
+    List<Object> listTransactionTrb1 = new ArrayList<>(); //Lista donde agregamos las consultas que agrearan el campo trb1
     List<Object> listTransactionGal;
     List<Object> listReanudarTransa;
 
@@ -301,7 +301,6 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
         List<Object> listTransaccionBodega;
         //Lista donde revertimos la primer consulta si el segundo proceso no se realiza bien
         //List<Object> listTransactionError = new ArrayList<>(); se comenta porque se decide no revertir la primera consulta sino terminar las incompletas
-        //Lista donde agregamos las consultas que agrearan el campo trb1
 
 
         // Obtén la fecha y hora actual
@@ -309,10 +308,8 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
         Calendar calendar = Calendar.getInstance();
 
         // Define el formato de la fecha y hora que deseas obtener
-        @SuppressLint("SimpleDateFormat")
-        SimpleDateFormat formatoFecha = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        @SuppressLint("SimpleDateFormat")
-        SimpleDateFormat formatoFechaTransaccion = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss a");
+        @SuppressLint("SimpleDateFormat") SimpleDateFormat formatoFecha = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        @SuppressLint("SimpleDateFormat") SimpleDateFormat formatoFechaTransaccion = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss a");
         @SuppressLint("SimpleDateFormat") SimpleDateFormat formatoMonth = new SimpleDateFormat("MM");
         @SuppressLint("SimpleDateFormat") SimpleDateFormat formatoYear = new SimpleDateFormat("yyyy");
 
@@ -346,7 +343,7 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
                 numero_transaccion = Integer.valueOf(Obj_ordenprodLn.mover_consecutivo("TRB1", EscanerInventario.this));
                 listTransaccionBodega = traslado_bodega(ListarefeRecepcionados, calendar);
                 //Ejecutamos la lista de consultas para hacer la TRB1
-                error = ing_prod_ad.ExecuteSqlTransaction(listTransaccionBodega, "CORSAN", EscanerInventario.this);
+                error = ing_prod_ad.ExecuteSqlTransaction(listTransaccionBodega, "JJVDMSCIERREAGOSTO", EscanerInventario.this);
                 if (error.equals("")){
                     for(int u=0;u<ListaGalvRollosRecep.size();u++){
                         String nro_orden = ListaGalvRollosRecep.get(u).getNro_orden();
@@ -400,7 +397,7 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
     private String ciclo1() {
         repeticiones = repeticiones + 1;
         if(repeticiones<=5){
-            error = ing_prod_ad.ExecuteSqlTransaction(listTransactionGal, "PRGPRODUCCION", EscanerInventario.this);
+            error = ing_prod_ad.ExecuteSqlTransaction(listTransactionGal, "JJVPRGPRODUCCION", EscanerInventario.this);
             if(error.equals("")){
                 return error;
             }else{
@@ -429,7 +426,7 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
                     Toast.makeText(EscanerInventario.this, e.getMessage(), Toast.LENGTH_SHORT).show();
                 }
             }
-            error = ing_prod_ad.ExecuteSqlTransaction(listReanudarTransa,"PRGPRODUCCION",EscanerInventario.this);
+            error = ing_prod_ad.ExecuteSqlTransaction(listReanudarTransa,"JJVPRGPRODUCCION",EscanerInventario.this);
             repeticiones = repeticiones + 1;
             if (error.equals("")){
                 toastAcierto("Transacción Cancelada correctamente");
@@ -453,72 +450,73 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
             btnAceptar.setText("Aceptar");
             builder.setView(mView);
             AlertDialog alertDialog = builder.create();
-            btnAceptar.setOnClickListener(v -> alertDialog.dismiss());
+            btnAceptar.setOnClickListener(v -> {
+                StringBuilder mensaje = new StringBuilder(); // Usamos StringBuilder para construir el mensaje
+
+                for (Object objeto : listReanudarTransa) {
+                    // Convierte el objeto a String
+                    String objetoComoString = objeto.toString();
+
+                    // Agrega el objeto convertido al mensaje
+                    mensaje.append(objetoComoString).append("\n");
+                }
+
+                // Muestra el mensaje
+                String mensajeFinal = mensaje.toString();
+                /////////////////////////////////////////////////////////////
+                //Correo electronico funciono la transacción
+                correo = conexion.obtenerCorreo(EscanerInventario.this);
+                String email = correo.getCorreo();
+                String pass = correo.getContrasena();
+                subject = "El paso 1 de una transacción en Control en Piso Galvanizado no se pudo cancelar";
+                textMessage = "El paso 1 de la Transacción de recepcion de producto terminado del area de Galvanizado no se pudo cancelar correctamente \n" +
+                        "Detalles de la recepción: \n" +
+                        mensajeFinal +
+                        "Error: '" + error + "'\n" +
+                        "Numero de rollos: " + leidos + " \n" +
+                        "Nit quien entrega (Producción): " + nit_usuario + " \n" +
+                        "Nit quien recibe (Logistica): " + personaLogistica.getNit() + " \n" +
+                        "Fecha transacción: " + fechaTransaccion + "";
+
+                // Verificar la conectividad antes de intentar enviar el correo
+                if (isNetworkAvailable()) {
+                    // Resto del código para enviar el correo electrónico
+                    Properties props = new Properties();
+                    props.put("mail.smtp.host", "smtp.gmail.com");
+                    props.put("mail.smtp.socketFactory.port", "465");
+                    props.put("mail.smtp.socketFactory.class","javax.net.ssl.SSLSocketFactory");
+                    props.put("mail.smtp.auth","true");
+                    props.put("mail.smtp.port", "465");
+
+                    session = Session.getDefaultInstance(props, new Authenticator() {
+                        protected PasswordAuthentication getPasswordAuthentication() {
+                            return new PasswordAuthentication(email,pass);
+                        }
+                    });
+
+                    pdialog = ProgressDialog.show(context,"","Sending Mail...", true);
+
+                    RetreiveFeedTask task = new RetreiveFeedTask();
+                    task.execute();
+                    alertDialog.dismiss();
+                } else {
+                    toastError("Problemas de conexión a Internet");
+                }
+            });
             alertDialog.setCancelable(false);
             alertDialog.show();
-
-            StringBuilder mensaje = new StringBuilder(); // Usamos StringBuilder para construir el mensaje
-
-            for (Object objeto : listReanudarTransa) {
-                // Convierte el objeto a String
-                String objetoComoString = objeto.toString();
-
-                // Agrega el objeto convertido al mensaje
-                mensaje.append(objetoComoString).append("\n");
-            }
-
-            // Muestra el mensaje
-            String mensajeFinal = mensaje.toString();
-            /////////////////////////////////////////////////////////////
-            //Correo electronico funciono la transacción
-            correo = conexion.obtenerCorreo(EscanerInventario.this);
-            String email = correo.getCorreo();
-            String pass = correo.getContrasena();
-            subject = "El paso 1 de una transacción en Control en Piso Galvanizado no se pudo cancelar";
-            textMessage = "El paso 1 de la Transacción de recepcion de producto terminado del area de Galvanizado no se pudo cancelar correctamente \n" +
-                    "Detalles de la recepción: \n" +
-                    mensajeFinal +
-                    "Error: '" + error + "'\n" +
-                    "Numero de rollos: " + leidos + " \n" +
-                    "Nit quien entrega (Producción): " + nit_usuario + " \n" +
-                    "Nit quien recibe (Logistica): " + personaLogistica.getNit() + " \n" +
-                    "Fecha transacción: " + fechaTransaccion + "";
-
-            // Verificar la conectividad antes de intentar enviar el correo
-            if (isNetworkAvailable()) {
-                // Resto del código para enviar el correo electrónico
-                Properties props = new Properties();
-                props.put("mail.smtp.host", "smtp.gmail.com");
-                props.put("mail.smtp.socketFactory.port", "465");
-                props.put("mail.smtp.socketFactory.class","javax.net.ssl.SSLSocketFactory");
-                props.put("mail.smtp.auth","true");
-                props.put("mail.smtp.port", "465");
-
-                session = Session.getDefaultInstance(props, new Authenticator() {
-                    protected PasswordAuthentication getPasswordAuthentication() {
-                        return new PasswordAuthentication(email,pass);
-                    }
-                });
-
-                pdialog = ProgressDialog.show(context,"","Sending Mail...", true);
-
-                RetreiveFeedTask task = new RetreiveFeedTask();
-                task.execute();
-            } else {
-                toastError("Problemas de conexión a Internet");
-            }
         }
-        }
+    }
 
     @SuppressLint("SetTextI18n")
     private void ciclo3() {
         repeticiones = repeticiones + 1;
         if(repeticiones<=5){
-            error = ing_prod_ad.ExecuteSqlTransaction(listTransactionTrb1, "PRGPRODUCCION", EscanerInventario.this);
+            error = ing_prod_ad.ExecuteSqlTransaction(listTransactionTrb1, "JJVPRGPRODUCCION", EscanerInventario.this);
             if(error.equals("")){
                 consultarGalvTerminado();
                 incompleta = false;
-                /////////////////////////////////////////////////////////////
+                ///////////////////////////////////////////////////////////
                 //Correo electronico funciono la transacción
                 /*correo = conexion.obtenerCorreo(EscanerInventario.this);
                 String email = correo.getCorreo();
@@ -619,21 +617,21 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
 
                     RetreiveFeedTask task = new RetreiveFeedTask();
                     task.execute();
+                    alertDialog.dismiss();
                 } else {
                     toastError("Problemas de conexión a Internet");
                 }
-                alertDialog.dismiss();
             });
             alertDialog.setCancelable(false);
             alertDialog.show();
         }
-
     }
 
     /////////////////////////////////////////////////////////////////////////////////////////////
     //Funciones para enviar correos de error a auditoria y sistemas
     //Evidencia
 
+    //Funcion para verificar una buena conexion de internet
     private boolean isNetworkAvailable() {
         ConnectivityManager connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
         NetworkInfo activeNetworkInfo = connectivityManager.getActiveNetworkInfo();
@@ -937,20 +935,6 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
         Toast toast = new Toast(getApplicationContext());
         toast.setGravity(Gravity.CENTER_VERTICAL | Gravity.CENTER,0,200);
         toast.setDuration(Toast.LENGTH_LONG);
-        toast.setView(view);
-        toast.show();
-    }
-
-    //METODO DE TOAST PERSONALIZADO : ACTUALIZADO
-    public void toastActualizado(String msg){
-        LayoutInflater layoutInflater = getLayoutInflater();
-        View view = layoutInflater.inflate(R.layout.custom_toast_actualizado, findViewById(R.id.ll_custom_toast_actualizado));
-        @SuppressLint({"MissingInflatedId", "LocalSuppress"}) TextView txtMensaje = view.findViewById(R.id.txtMsgToast);
-        txtMensaje.setText(msg);
-
-        Toast toast = new Toast(getApplicationContext());
-        toast.setGravity(Gravity.CENTER_VERTICAL | Gravity.BOTTOM,0,200);
-        toast.setDuration(Toast.LENGTH_SHORT);
         toast.setView(view);
         toast.show();
     }

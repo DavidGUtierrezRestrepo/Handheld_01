@@ -7,9 +7,13 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.annotation.SuppressLint;
+import android.app.ProgressDialog;
 import android.content.Context;
 import android.media.AudioManager;
 import android.media.SoundPool;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -37,6 +41,7 @@ import com.example.handheld.ClasesOperativas.Obj_ordenprodLn;
 import com.example.handheld.ClasesOperativas.objOperacionesDb;
 import com.example.handheld.atv.holder.adapters.listTrefiTerminadoAdapter;
 import com.example.handheld.conexionDB.Conexion;
+import com.example.handheld.modelos.CorreoModelo;
 import com.example.handheld.modelos.PermisoPersonaModelo;
 import com.example.handheld.modelos.RolloTrefiRevisionModelo;
 import com.example.handheld.modelos.TrefiRecepcionModelo;
@@ -48,6 +53,16 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
+import java.util.Properties;
+
+import javax.mail.Authenticator;
+import javax.mail.Message;
+import javax.mail.MessagingException;
+import javax.mail.PasswordAuthentication;
+import javax.mail.Session;
+import javax.mail.Transport;
+import javax.mail.internet.InternetAddress;
+import javax.mail.internet.MimeMessage;
 
 public class RevisionTerminadoTrefilacion extends AppCompatActivity{
 
@@ -70,13 +85,14 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
     Conexion conexion;
 
     //Se inicializa variables necesarias en la clase
-    String consecutivo, motivo, traccion, diametro, permiso = "", error, fechaActualString, monthActualString, yearActualString;
+    String consecutivo, motivo, traccion1, diametro1,traccion2,diametro2,traccion3,diametro3, permiso = "", error, fechaActualString, monthActualString, yearActualString, CeLog;
     Integer numero_transaccion, numero_revision, repeticiones, paso = 0, yaentre = 0, id_revision;
 
     Calendar calendar;
 
     Boolean incompleta = false;
     PermisoPersonaModelo personaCalidad;
+    CorreoModelo correo;
 
     RolloTrefiRevisionModelo revisionRollo;
 
@@ -88,7 +104,7 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
 
     //Se inicializa los varibles para el sonido de error
     SoundPool sp;
-    int sonido_de_Reproduccion;
+    int sonido_de_Reproduccion, leidos;
 
     //Se inicializa una instancia para hacer vibrar el celular
     Vibrator vibrator;
@@ -98,6 +114,14 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
 
     private AlertDialog alertDialogRevision, alertDialogTransaccion;
     private TextView cargandoAlertDialogRevision, cargandoAlertDialogTransaccion;
+
+    //Se inicializan elementos para enviar correos
+    Session session = null;
+    ProgressDialog pdialog = null;
+    Context context = null;
+
+    String[] rec;
+    String subject, textMessage;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -127,6 +151,15 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
         sonido_de_Reproduccion = sp.load(this, R.raw.sonido_error_2,1);
 
         vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+
+        //Se definen elementos para enviar correos
+        context = this;
+
+        rec = new String[] {
+                "auxiliar3.TI@corsan.com.co",
+                "isabel.gomez@corsan.com.co",
+                "auditoria@corsan.com.co"
+        };
 
         /////////////////////////////////////////////////////////////////////////////////////////////
         //Llamamos al metodo para consultar si hay alguna transaccion incompleta
@@ -218,19 +251,23 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
         @SuppressLint({"MissingInflatedId", "LocalSuppress"}) Button btnCancelar = mView.findViewById(R.id.btnCancelar);
         @SuppressLint({"MissingInflatedId", "LocalSuppress"}) ProgressBar Barraprogreso = mView.findViewById(R.id.progress_bar);
         cargandoAlertDialogRevision = mView.findViewById(mensaje_cargando);
-        @SuppressLint({"MissingInflatedId", "LocalSuppress"}) EditText editTraccion = mView.findViewById(R.id.editTraccion);
-        @SuppressLint({"MissingInflatedId", "LocalSuppress"}) EditText editDiametro = mView.findViewById(R.id.editDiametro);
+        @SuppressLint({"MissingInflatedId", "LocalSuppress"}) EditText editTraccion1 = mView.findViewById(R.id.editTraccion1);
+        @SuppressLint({"MissingInflatedId", "LocalSuppress"}) EditText editDiametro1 = mView.findViewById(R.id.editDiametro1);
+        @SuppressLint({"MissingInflatedId", "LocalSuppress"}) EditText editTraccion2 = mView.findViewById(R.id.editTraccion2);
+        @SuppressLint({"MissingInflatedId", "LocalSuppress"}) EditText editDiametro2 = mView.findViewById(R.id.editDiametro2);
+        @SuppressLint({"MissingInflatedId", "LocalSuppress"}) EditText editTraccion3 = mView.findViewById(R.id.editTraccion3);
+        @SuppressLint({"MissingInflatedId", "LocalSuppress"}) EditText editDiametro3 = mView.findViewById(R.id.editDiametro3);
         builder.setView(mView);
         alertDialogRevision = builder.create();
         btnAceptar.setOnClickListener(v12 -> {
             String CeLog = txtCedulaCalidad.getText().toString().trim();
-            if (editTraccion.getText().toString().equals("")){
+            if (editTraccion1.getText().toString().equals("") || editTraccion2.getText().toString().equals("") || editTraccion3.getText().toString().equals("")){
                 AudioError();
-                toastError("Por favor ingresar Tracción");
+                toastError("Por favor ingresar Tracciones");
             }else{
-                if(editDiametro.getText().toString().equals("")){
+                if(editDiametro1.getText().toString().equals("") || editDiametro2.getText().toString().equals("") || editDiametro3.getText().toString().equals("")){
                     AudioError();
-                    toastError("Por favor ingresar Diametro");
+                    toastError("Por favor ingresar Diametros");
                 }else{
                     if (CeLog.equals("")){
                         AudioError();
@@ -241,8 +278,12 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
                         permiso = personaCalidad.getNit();
                         //Verificamos que la persona sea de calidad
                         if (!permiso.equals("")){
-                            traccion = editTraccion.getText().toString();
-                            diametro = editDiametro.getText().toString();
+                            traccion1 = editTraccion1.getText().toString();
+                            diametro1 = editDiametro1.getText().toString();
+                            traccion2 = editTraccion2.getText().toString();
+                            diametro2 = editDiametro2.getText().toString();
+                            traccion3 = editTraccion3.getText().toString();
+                            diametro3 = editDiametro3.getText().toString();
                             Barraprogreso.setVisibility(View.VISIBLE);
                             cargandoAlertDialogRevision.setVisibility(View.VISIBLE);
                             Handler handler = new Handler(Looper.getMainLooper());
@@ -301,7 +342,7 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
             // Convierte la fecha actual en un String con el formato definido
             fechaActualString = formatoFecha.format(fechaActual);
 
-            String sql_revision= "INSERT INTO jd_revision_calidad_trefilacion(fecha_hora,revisor,estado,traccion,diametro)VALUES('" + fechaActualString + "','" + personaCalidad.getNit() + "','A','" + traccion + "','" + diametro + "')";
+            String sql_revision= "INSERT INTO jd_revision_calidad_trefilacion(fecha_hora,revisor,estado,traccion_1,diametro_1,traccion_2,diametro_2,traccion_3,diametro_3)VALUES('" + fechaActualString + "','" + personaCalidad.getNit() + "','A','" + traccion1 + "','" + diametro1 + "','" + traccion2 + "','" + diametro2 + "','" + traccion3 + "','" + diametro3 + "')";
 
             try {
                 //Se ejecuta el sql_revision en la base de datos
@@ -423,10 +464,10 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
 
             switch (m){
                 case 1:
-                    sql_revisionTransa= "INSERT INTO jd_revision_calidad_trefilacion(fecha_hora,revisor,estado,defecto,traccion,tipo_transa)VALUES('" + fechaActualString + "','" + personaCalidad.getNit() + "','R','" + motivo + "','" + traccion + "','TRB1')";
+                    sql_revisionTransa= "INSERT INTO jd_revision_calidad_trefilacion(fecha_hora,revisor,estado,defecto,traccion_1,tipo_transa)VALUES('" + fechaActualString + "','" + personaCalidad.getNit() + "','R','" + motivo + "','" + traccion1 + "','TRB1')";
                     break;
                 case 2:
-                    sql_revisionTransa= "INSERT INTO jd_revision_calidad_trefilacion(fecha_hora,revisor,estado,defecto,diametro,tipo_transa)VALUES('" + fechaActualString + "','" + personaCalidad.getNit() + "','R','" + motivo + "','" + diametro + "','TRB1')";
+                    sql_revisionTransa= "INSERT INTO jd_revision_calidad_trefilacion(fecha_hora,revisor,estado,defecto,diametro_1,tipo_transa)VALUES('" + fechaActualString + "','" + personaCalidad.getNit() + "','R','" + motivo + "','" + diametro1 + "','TRB1')";
                     break;
                 default:
                     sql_revisionTransa= "INSERT INTO jd_revision_calidad_trefilacion(fecha_hora,revisor,estado,defecto,tipo_transa)VALUES('" + fechaActualString + "','" + personaCalidad.getNit() + "','R','" + motivo + "','TRB1')";
@@ -476,16 +517,34 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
                     btnAprobado.setEnabled(false);
                     incompleta =  true;
                     AudioError();
-                    toastError("Error al realizar la revision!" +
-                            "Intentelo de nuevo");
+                    AlertDialog.Builder builder = new AlertDialog.Builder(RevisionTerminadoTrefilacion.this);
+                    View mView = getLayoutInflater().inflate(R.layout.alertdialog_aceptar,null);
+                    TextView alertMensaje = mView.findViewById(R.id.alertMensaje);
+                    alertMensaje.setText("Error al relacionar la revision! \n'" + error + "'\n ¡Vuelve a intentarlo de nuevo!");
+                    Button btnAceptar = mView.findViewById(R.id.btnAceptar);
+                    btnAceptar.setText("Aceptar");
+                    builder.setView(mView);
+                    AlertDialog alertDialog = builder.create();
+                    btnAceptar.setOnClickListener(v -> alertDialog.dismiss());
+                    alertDialog.setCancelable(false);
+                    alertDialog.show();
                 }
             }
         }else{
             btnAprobado.setEnabled(false);
             incompleta =  true;
             AudioError();
-            toastError("Error al realizar la revision!" +
-                    "Intentelo de nuevo");
+            AlertDialog.Builder builder = new AlertDialog.Builder(RevisionTerminadoTrefilacion.this);
+            View mView = getLayoutInflater().inflate(R.layout.alertdialog_aceptar,null);
+            TextView alertMensaje = mView.findViewById(R.id.alertMensaje);
+            alertMensaje.setText("Error al realizar la revision! \n ¡Vuelve a intentarlo de nuevo!");
+            Button btnAceptar = mView.findViewById(R.id.btnAceptar);
+            btnAceptar.setText("Aceptar");
+            builder.setView(mView);
+            AlertDialog alertDialog = builder.create();
+            btnAceptar.setOnClickListener(v -> alertDialog.dismiss());
+            alertDialog.setCancelable(false);
+            alertDialog.show();
         }
 
         if(paso==2){
@@ -511,12 +570,50 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
                 AlertDialog.Builder builder = new AlertDialog.Builder(RevisionTerminadoTrefilacion.this);
                 View mView = getLayoutInflater().inflate(R.layout.alertdialog_aceptar,null);
                 TextView alertMensaje = mView.findViewById(R.id.alertMensaje);
-                alertMensaje.setText(error + ",\n Intenta de nuevo!!");
+                alertMensaje.setText("Hubo un problema al realizar la transacción de la revisión #" + numero_revision + " , \n '" + error + "'\n ¡Vuelve a intentar realizar el rechazo de nuevo!");
                 Button btnAceptar = mView.findViewById(R.id.btnAceptar);
                 btnAceptar.setText("Aceptar");
                 builder.setView(mView);
                 AlertDialog alertDialog = builder.create();
-                btnAceptar.setOnClickListener(v -> alertDialog.dismiss());
+                btnAceptar.setOnClickListener(v -> {
+                    /////////////////////////////////////////////////////////////
+                    //Correo electronico funciono la transacción
+                    correo = conexion.obtenerCorreo(RevisionTerminadoTrefilacion.this);
+                    String email = correo.getCorreo();
+                    String pass = correo.getContrasena();
+                    subject = "Revision de calidad #" + numero_revision + " incompleta";
+                    textMessage = "La revision #" + numero_revision + " de rechazo de calidad de producto terminado del area de trefilación no se completo y quedo sin transacción \n" +
+                            "Detalles de la revision: \n" +
+                            "Error: '" + error + "'\n" +
+                            "Numero de rollos: " + leidos + " \n" +
+                            "Nit inspector (Producción): " + permiso + " \n" +
+                            "Fecha revisión: " + fechaActualString + "";
+
+                    // Verificar la conectividad antes de intentar enviar el correo
+                    if (isNetworkAvailable()) {
+                        // Resto del código para enviar el correo electrónico
+                        Properties props = new Properties();
+                        props.put("mail.smtp.host", "smtp.gmail.com");
+                        props.put("mail.smtp.socketFactory.port", "465");
+                        props.put("mail.smtp.socketFactory.class","javax.net.ssl.SSLSocketFactory");
+                        props.put("mail.smtp.auth","true");
+                        props.put("mail.smtp.port", "465");
+
+                        session = Session.getDefaultInstance(props, new Authenticator() {
+                            protected PasswordAuthentication getPasswordAuthentication() {
+                                return new PasswordAuthentication(email,pass);
+                            }
+                        });
+
+                        pdialog = ProgressDialog.show(context,"","Sending Mail...", true);
+
+                        RetreiveFeedTask task = new RetreiveFeedTask();
+                        task.execute();
+                        alertDialog.dismiss();
+                    } else {
+                        toastError("Problemas de conexión a Internet");
+                    }
+                });
                 alertDialog.setCancelable(false);
                 alertDialog.show();
             }
@@ -587,14 +684,105 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
             AlertDialog.Builder builder = new AlertDialog.Builder(RevisionTerminadoTrefilacion.this);
             View mView = getLayoutInflater().inflate(R.layout.alertdialog_aceptar,null);
             TextView alertMensaje = mView.findViewById(R.id.alertMensaje);
-            alertMensaje.setText("Hubo un problema en el paso 3 de la transacción, \n Por favor comunicarse inmediatamente con el área de sistemas, \n para poder continuar con las transacciones, de lo \n contrario no se le permitira continuar");
+            alertMensaje.setText("Hubo un problema en la relacion de la revision #" + numero_revision + " con la transacción #" + numero_transaccion + ", \n '" + error + "' \n Por favor comunicarse inmediatamente con el área de sistemas, \n para poder continuar con las transacciones, de lo \n contrario no se le permitira continuar");
             Button btnAceptar = mView.findViewById(R.id.btnAceptar);
             btnAceptar.setText("Aceptar");
             builder.setView(mView);
             AlertDialog alertDialog = builder.create();
-            btnAceptar.setOnClickListener(v -> alertDialog.dismiss());
+            btnAceptar.setOnClickListener(v -> {
+                StringBuilder mensaje = new StringBuilder(); // Usamos StringBuilder para construir el mensaje
+
+                for (Object objeto : listTransactionTrb1) {
+                    // Convierte el objeto a String
+                    String objetoComoString = objeto.toString();
+
+                    // Agrega el objeto convertido al mensaje
+                    mensaje.append(objetoComoString).append("\n");
+                }
+
+                // Muestra el mensaje
+                String mensajeFinal = mensaje.toString();
+                correo = conexion.obtenerCorreo(RevisionTerminadoTrefilacion.this);
+                String email = correo.getCorreo();
+                String pass = correo.getContrasena();
+                subject = "Revision de calidad #" + numero_revision + " sin relación con transacción #" + numero_transaccion;
+                textMessage = "La revisión #" + numero_revision + " de calidad de producto terminado del area de trefilación se fué incompleta sin la relación \n" +
+                        "con la transacción # " + numero_transaccion +
+                        "Detalles de la Revision: \n" +
+                        mensajeFinal +
+                        "Error: '" + error + "'\n" +
+                        "Numero de rollos: " + leidos + " \n" +
+                        "Nit inspector (Producción): " + permiso + " \n" +
+                        "Fecha revisión: " + fechaActualString + "";
+
+                // Verificar la conectividad antes de intentar enviar el correo
+                if (isNetworkAvailable()) {
+                    // Resto del código para enviar el correo electrónico
+                    Properties props = new Properties();
+                    props.put("mail.smtp.host", "smtp.gmail.com");
+                    props.put("mail.smtp.socketFactory.port", "465");
+                    props.put("mail.smtp.socketFactory.class","javax.net.ssl.SSLSocketFactory");
+                    props.put("mail.smtp.auth","true");
+                    props.put("mail.smtp.port", "465");
+
+                    session = Session.getDefaultInstance(props, new Authenticator() {
+                        protected PasswordAuthentication getPasswordAuthentication() {
+                            return new PasswordAuthentication(email,pass);
+                        }
+                    });
+
+                    pdialog = ProgressDialog.show(context,"","Sending Mail...", true);
+
+                    RetreiveFeedTask task = new RetreiveFeedTask();
+                    task.execute();
+                    alertDialog.dismiss();
+                } else {
+                    toastError("Problemas de conexión a Internet");
+                }
+            });
             alertDialog.setCancelable(false);
             alertDialog.show();
+        }
+    }
+
+    /////////////////////////////////////////////////////////////////////////////////////////////
+    //Funciones para enviar correos de error a auditoria y sistemas
+    //Evidencia
+
+    private boolean isNetworkAvailable() {
+        ConnectivityManager connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo activeNetworkInfo = connectivityManager.getActiveNetworkInfo();
+        return activeNetworkInfo != null && activeNetworkInfo.isConnected();
+    }
+
+    class RetreiveFeedTask extends AsyncTask<String, Void, String> {
+
+        @Override
+        protected String doInBackground(String... strings) {
+
+            try {
+                Message message = new MimeMessage(session);
+                message.setFrom(new InternetAddress("emailservicecorsan@gmail.com"));
+                InternetAddress [] toAddresses = new InternetAddress[rec.length];
+                for (int i = 0; i< rec.length;i++){
+                    toAddresses[i] = new InternetAddress(rec[i]);
+                }
+                message.setRecipients(Message.RecipientType.TO, toAddresses);
+                message.setSubject(subject);
+                message.setContent(textMessage, "text/html; charset=utf-8");
+                Transport.send(message);
+            }catch (MessagingException e) {
+                e.printStackTrace();
+            }catch (Exception e){
+                e.printStackTrace();
+            }
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(String result){
+            pdialog.dismiss();
+            toastAcierto("Message sent");
         }
     }
 
@@ -873,12 +1061,12 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
     private void onClick(View v) {
         int sleer = Integer.parseInt(txtTotalSinLeer.getText().toString());
         int total = Integer.parseInt(txtTotal.getText().toString());
-        int leidos = (total - sleer);
+        leidos = (total - sleer);
         //Verificamos que la cantidad de rollos sin leer sea 0 y si hubiera produccion en
         //Trefilación que leer
         if (sleer == 0 && total > 0) {
             //Mostramos el mensaje para logistica
-            alertDialogTransaccion(leidos);
+            alertDialogTransaccion();
         } else {
             if (sleer == 0 && total == 0) {
                 toastError("No hay rollos por leer");
@@ -889,14 +1077,14 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
                     AudioError();
                 } else {
                     //Segundo AlertDialog
-                    alertDialogTransaccion(leidos);
+                    alertDialogTransaccion();
                 }
             }
         }
     }
 
     @SuppressLint("SetTextI18n")
-    private void alertDialogTransaccion(int leidos) {
+    private void alertDialogTransaccion() {
         AlertDialog.Builder builder = new AlertDialog.Builder(RevisionTerminadoTrefilacion.this);
         View mView = getLayoutInflater().inflate(R.layout.alertdialog_rechazado, null);
         @SuppressLint("CutPasteId") final EditText txtCedulaLogistica = mView.findViewById(R.id.txtCedulaLogistica);
@@ -928,7 +1116,7 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
         btnAceptar.setOnClickListener(v12 -> {
             if (!spinnerRechazo.getSelectedItem().equals("Seleccione motivo rechazo")) {
                 motivo = spinnerRechazo.getSelectedItem().toString();
-                String CeLog = txtCedulaLogistica.getText().toString().trim();
+                CeLog = txtCedulaLogistica.getText().toString().trim();
                 switch (motivo) {
                     case "Baja/Alta tracción":
                         if(editTraccion.getText().toString().equals("")) {
@@ -943,7 +1131,7 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
                                 permiso = personaCalidad.getNit();
                                 //Verificamos que la persona pertenezca al centro de logistica
                                 if (!permiso.equals("")){
-                                    traccion = editTraccion.getText().toString();
+                                    traccion1 = editTraccion.getText().toString();
                                     Barraprogreso.setVisibility(View.VISIBLE);
                                     cargandoAlertDialogTransaccion.setVisibility(View.VISIBLE);
                                     Handler handler = new Handler(Looper.getMainLooper());
@@ -987,7 +1175,7 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
                                 permiso = personaCalidad.getNit();
                                 //Verificamos que la persona pertenezca al centro de logistica
                                 if (!permiso.equals("")){
-                                    diametro = editTraccion.getText().toString();
+                                    diametro1 = editTraccion.getText().toString();
                                     Barraprogreso.setVisibility(View.VISIBLE);
                                     cargandoAlertDialogTransaccion.setVisibility(View.VISIBLE);
                                     Handler handler = new Handler(Looper.getMainLooper());
