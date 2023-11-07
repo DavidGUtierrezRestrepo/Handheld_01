@@ -60,4 +60,29 @@ public class Gestion_alambronLn {
         }
         return respuesta.toString();
     }
+
+    public String extraerDatoCodigoBarrasGalvanizado(String dato, String codigoBarra){
+        Integer numSeparador = 0;
+        int contSeparador = 0;
+        StringBuilder respuesta = new StringBuilder();
+        switch (dato){
+            case "nro_orden":
+                numSeparador = 0;
+                break;
+            case "nro_rollo":
+                numSeparador = 1;
+                break;
+        }
+        for (int i = 0; i <= codigoBarra.length() - 1; i++){
+            if (numSeparador.equals(contSeparador)){
+                if (codigoBarra.charAt(i) != '-'){
+                    respuesta.append(codigoBarra.charAt(i));
+                }
+            }
+            if (codigoBarra.charAt(i) == '-'){
+                contSeparador += 1;
+            }
+        }
+        return respuesta.toString();
+    }
 }

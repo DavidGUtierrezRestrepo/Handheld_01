@@ -5,6 +5,7 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.content.Intent;
 import android.media.AudioManager;
 import android.media.SoundPool;
 import android.net.ConnectivityManager;
@@ -29,6 +30,7 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.example.handheld.ClasesOperativas.Gestion_alambronLn;
 import com.example.handheld.ClasesOperativas.Ing_prod_ad;
 import com.example.handheld.ClasesOperativas.ObjTraslado_bodLn;
 import com.example.handheld.ClasesOperativas.Obj_ordenprodLn;
@@ -38,6 +40,7 @@ import com.example.handheld.modelos.CorreoModelo;
 import com.example.handheld.modelos.GalvRecepcionModelo;
 import com.example.handheld.modelos.GalvRecepcionadoRollosModelo;
 import com.example.handheld.modelos.PersonaModelo;
+import com.example.handheld.modelos.RolloGalvTransa;
 
 import java.sql.SQLException;
 import java.text.SimpleDateFormat;
@@ -78,7 +81,7 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
 
     //Se inicializa variables necesarias en la clase
     int yaentre = 0, leidos;
-    String consecutivo, error, fechaTransaccion;
+    String consecutivo, error, fechaTransaccion, nro_orden,nro_rollo;
     Integer numero_transaccion, repeticiones;
     String centro = "";
 
@@ -86,6 +89,7 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
     PersonaModelo personaLogistica;
     CorreoModelo correo;
     ObjTraslado_bodLn objTraslado_bodLn = new ObjTraslado_bodLn();
+    Gestion_alambronLn obj_gestion_alambronLn = new Gestion_alambronLn();
     Ing_prod_ad ing_prod_ad = new Ing_prod_ad();
     List<GalvRecepcionadoRollosModelo> ListarefeRecepcionados= new ArrayList<>();
 
@@ -343,7 +347,7 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
                 numero_transaccion = Integer.valueOf(Obj_ordenprodLn.mover_consecutivo("TRB1", EscanerInventario.this));
                 listTransaccionBodega = traslado_bodega(ListarefeRecepcionados, calendar);
                 //Ejecutamos la lista de consultas para hacer la TRB1
-                error = ing_prod_ad.ExecuteSqlTransaction(listTransaccionBodega, "JJVDMSCIERREAGOSTO", EscanerInventario.this);
+                error = ing_prod_ad.ExecuteSqlTransaction(listTransaccionBodega, "CORSAN", EscanerInventario.this);
                 if (error.equals("")){
                     for(int u=0;u<ListaGalvRollosRecep.size();u++){
                         String nro_orden = ListaGalvRollosRecep.get(u).getNro_orden();
@@ -369,9 +373,13 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
                     builder.setView(mView);
                     AlertDialog alertDialog = builder.create();
                     btnAceptar.setOnClickListener(v -> {
-                        repeticiones = 0;
-                        reanudarTransacion();
-                        alertDialog.dismiss();
+                        if (isNetworkAvailable()) {
+                            repeticiones = 0;
+                            reanudarTransacion();
+                            alertDialog.dismiss();
+                        } else {
+                            toastError("Problemas de conexión a Internet");
+                        }
                     });
                     alertDialog.setCancelable(false);
                     alertDialog.show();
@@ -397,7 +405,7 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
     private String ciclo1() {
         repeticiones = repeticiones + 1;
         if(repeticiones<=5){
-            error = ing_prod_ad.ExecuteSqlTransaction(listTransactionGal, "JJVPRGPRODUCCION", EscanerInventario.this);
+            error = ing_prod_ad.ExecuteSqlTransaction(listTransactionGal, "PRGPRODUCCION", EscanerInventario.this);
             if(error.equals("")){
                 return error;
             }else{
@@ -426,7 +434,7 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
                     Toast.makeText(EscanerInventario.this, e.getMessage(), Toast.LENGTH_SHORT).show();
                 }
             }
-            error = ing_prod_ad.ExecuteSqlTransaction(listReanudarTransa,"JJVPRGPRODUCCION",EscanerInventario.this);
+            error = ing_prod_ad.ExecuteSqlTransaction(listReanudarTransa,"PRGPRODUCCION",EscanerInventario.this);
             repeticiones = repeticiones + 1;
             if (error.equals("")){
                 toastAcierto("Transacción Cancelada correctamente");
@@ -451,35 +459,35 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
             builder.setView(mView);
             AlertDialog alertDialog = builder.create();
             btnAceptar.setOnClickListener(v -> {
-                StringBuilder mensaje = new StringBuilder(); // Usamos StringBuilder para construir el mensaje
-
-                for (Object objeto : listReanudarTransa) {
-                    // Convierte el objeto a String
-                    String objetoComoString = objeto.toString();
-
-                    // Agrega el objeto convertido al mensaje
-                    mensaje.append(objetoComoString).append("\n");
-                }
-
-                // Muestra el mensaje
-                String mensajeFinal = mensaje.toString();
-                /////////////////////////////////////////////////////////////
-                //Correo electronico funciono la transacción
-                correo = conexion.obtenerCorreo(EscanerInventario.this);
-                String email = correo.getCorreo();
-                String pass = correo.getContrasena();
-                subject = "El paso 1 de una transacción en Control en Piso Galvanizado no se pudo cancelar";
-                textMessage = "El paso 1 de la Transacción de recepcion de producto terminado del area de Galvanizado no se pudo cancelar correctamente \n" +
-                        "Detalles de la recepción: \n" +
-                        mensajeFinal +
-                        "Error: '" + error + "'\n" +
-                        "Numero de rollos: " + leidos + " \n" +
-                        "Nit quien entrega (Producción): " + nit_usuario + " \n" +
-                        "Nit quien recibe (Logistica): " + personaLogistica.getNit() + " \n" +
-                        "Fecha transacción: " + fechaTransaccion + "";
-
                 // Verificar la conectividad antes de intentar enviar el correo
                 if (isNetworkAvailable()) {
+                    StringBuilder mensaje = new StringBuilder(); // Usamos StringBuilder para construir el mensaje
+
+                    for (Object objeto : listReanudarTransa) {
+                        // Convierte el objeto a String
+                        String objetoComoString = objeto.toString();
+
+                        // Agrega el objeto convertido al mensaje
+                        mensaje.append(objetoComoString).append("\n");
+                    }
+
+                    // Muestra el mensaje
+                    String mensajeFinal = mensaje.toString();
+                    /////////////////////////////////////////////////////////////
+                    //Correo electronico funciono la transacción
+                    correo = conexion.obtenerCorreo(EscanerInventario.this);
+                    String email = correo.getCorreo();
+                    String pass = correo.getContrasena();
+                    subject = "El paso 1 de una transacción en Control en Piso Galvanizado no se pudo cancelar";
+                    textMessage = "El paso 1 de la Transacción de recepcion de producto terminado del area de Galvanizado no se pudo cancelar correctamente \n" +
+                            "Detalles de la recepción: \n" +
+                            mensajeFinal +
+                            "Error: '" + error + "'\n" +
+                            "Numero de rollos: " + leidos + " \n" +
+                            "Nit quien entrega (Producción): " + nit_usuario + " \n" +
+                            "Nit quien recibe (Logistica): " + personaLogistica.getNit() + " \n" +
+                            "Fecha transacción: " + fechaTransaccion + "";
+
                     // Resto del código para enviar el correo electrónico
                     Properties props = new Properties();
                     props.put("mail.smtp.host", "smtp.gmail.com");
@@ -512,7 +520,7 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
     private void ciclo3() {
         repeticiones = repeticiones + 1;
         if(repeticiones<=5){
-            error = ing_prod_ad.ExecuteSqlTransaction(listTransactionTrb1, "JJVPRGPRODUCCION", EscanerInventario.this);
+            error = ing_prod_ad.ExecuteSqlTransaction(listTransactionTrb1, "PRGPRODUCCION", EscanerInventario.this);
             if(error.equals("")){
                 consultarGalvTerminado();
                 incompleta = false;
@@ -572,33 +580,33 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
             builder.setView(mView);
             AlertDialog alertDialog = builder.create();
             btnAceptar.setOnClickListener(v -> {
-                StringBuilder mensaje = new StringBuilder(); // Usamos StringBuilder para construir el mensaje
-
-                for (Object objeto : listTransactionTrb1) {
-                    // Convierte el objeto a String
-                    String objetoComoString = objeto.toString();
-
-                    // Agrega el objeto convertido al mensaje
-                    mensaje.append(objetoComoString).append("\n");
-                }
-
-                // Muestra el mensaje
-                String mensajeFinal = mensaje.toString();
-                correo = conexion.obtenerCorreo(EscanerInventario.this);
-                String email = correo.getCorreo();
-                String pass = correo.getContrasena();
-                subject = "Error en el paso 3 de la transacción Control en Piso Galvanizado";
-                textMessage = "La transacción #" + numero_transaccion + " de recepcion de producto terminado del area de Galvanizado se fué incompleta \n" +
-                        "Detalles de la transacción: \n" +
-                        mensajeFinal +
-                        "Error: '" + error + "'\n" +
-                        "Numero de rollos: " + leidos + " \n" +
-                        "Nit quien entrega (Producción): " + nit_usuario + " \n" +
-                        "Nit quien recibe (Logistica): " + personaLogistica.getNit() + " \n" +
-                        "Fecha transacción: " + fechaTransaccion + "";
-
                 // Verificar la conectividad antes de intentar enviar el correo
                 if (isNetworkAvailable()) {
+                    StringBuilder mensaje = new StringBuilder(); // Usamos StringBuilder para construir el mensaje
+
+                    for (Object objeto : listTransactionTrb1) {
+                        // Convierte el objeto a String
+                        String objetoComoString = objeto.toString();
+
+                        // Agrega el objeto convertido al mensaje
+                        mensaje.append(objetoComoString).append("\n");
+                    }
+
+                    // Muestra el mensaje
+                    String mensajeFinal = mensaje.toString();
+                    correo = conexion.obtenerCorreo(EscanerInventario.this);
+                    String email = correo.getCorreo();
+                    String pass = correo.getContrasena();
+                    subject = "Error en el paso 3 de la transacción Control en Piso Galvanizado";
+                    textMessage = "La transacción #" + numero_transaccion + " de recepcion de producto terminado del area de Galvanizado se fué incompleta \n" +
+                            "Detalles de la transacción: \n" +
+                            mensajeFinal +
+                            "Error: '" + error + "'\n" +
+                            "Numero de rollos: " + leidos + " \n" +
+                            "Nit quien entrega (Producción): " + nit_usuario + " \n" +
+                            "Nit quien recibe (Logistica): " + personaLogistica.getNit() + " \n" +
+                            "Fecha transacción: " + fechaTransaccion + "";
+
                     // Resto del código para enviar el correo electrónico
                     Properties props = new Properties();
                     props.put("mail.smtp.host", "smtp.gmail.com");
@@ -766,45 +774,72 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
     /////////////////////////////////////////////////////////////////////////////////////////////
     //Metodo que verifica que el codigo escaneado se encuentre en la lista de rollos de producción
     //No recepcionados
+    @SuppressLint("SetTextI18n")
     private void codigoIngresado() throws SQLException {
         consecutivo = codigoGalva.getText().toString().trim();
         boolean encontrado = false;
         int position = 0;
-        for (int i=0;i<ListaGalvTerminado.size();i++){
-            String codigoList = ListaGalvTerminado.get(i).getNro_orden()+"-"+ListaGalvTerminado.get(i).getNro_rollo();
-            if(consecutivo.equals(codigoList)){
-                encontrado = true;
-                position = i;
+        if (isNetworkAvailable()) {
+            for (int i=0;i<ListaGalvTerminado.size();i++){
+                String codigoList = ListaGalvTerminado.get(i).getNro_orden()+"-"+ListaGalvTerminado.get(i).getNro_rollo();
+                if(consecutivo.equals(codigoList)){
+                    encontrado = true;
+                    position = i;
+                }
             }
-        }
-        //Si el rollos es encontrado o no se muestra mensaje
-        if (encontrado){
-            //Si el rollo encontrado esta pintado de verde ya fue leido anteriormente
-            if(ListaGalvTerminado.get(position).getColor().equals("GREEN")){
-                toastError("Rollo Ya leido");
-                AudioError();
-                cargarNuevo();
+            //Si el rollos es encontrado o no se muestra mensaje
+            if (encontrado){
+                //Si el rollo encontrado esta pintado de verde ya fue leido anteriormente
+                if(ListaGalvTerminado.get(position).getColor().equals("GREEN")){
+                    toastError("Rollo Ya leido");
+                    AudioError();
+                    cargarNuevo();
+                }else{
+                    //Copiamos el rollo encontrado de la lista de producción
+                    galvRecepcionModelo = ListaGalvTerminado.get(position);
+                    //Agregamos la copia a la de los rollos escaneados
+                    ListaGalvRollosRecep.add(galvRecepcionModelo);
+                    //Pintamos el rollo de verde en la lista de produccion para no poder volverlo a leer
+                    pintarRollo(position);
+                    //Contamos los rollos leidos y no leidos
+                    contarSinLeer();
+                    contarLeidos();
+                    //Mostramos mensaje
+                    toastAcierto("Rollo encontrado");
+                    //Inicializamos la lectura
+                    cargarNuevo();
+                }
             }else{
-                //Copiamos el rollo encontrado de la lista de producción
-                galvRecepcionModelo = ListaGalvTerminado.get(position);
-                //Agregamos la copia a la de los rollos escaneados
-                ListaGalvRollosRecep.add(galvRecepcionModelo);
-                //Pintamos el rollo de verde en la lista de produccion para no poder volverlo a leer
-                pintarRollo(position);
-                //Contamos los rollos leidos y no leidos
-                contarSinLeer();
-                contarLeidos();
-                //Mostramos mensaje
-                toastAcierto("Rollo encontrado");
-                //Inicializamos la lectura
-                cargarNuevo();
+                RolloGalvTransa TransRollo;
+                nro_orden = obj_gestion_alambronLn.extraerDatoCodigoBarrasGalvanizado("nro_orden", consecutivo);
+                nro_rollo = obj_gestion_alambronLn.extraerDatoCodigoBarrasGalvanizado("nro_rollo", consecutivo);
+                TransRollo = conexion.obtenerRolloTransGalv(EscanerInventario.this,nro_orden,nro_rollo);
+                if(!TransRollo.getNro_orden().equals("")){
+                    AudioError();
+                    cargarNuevo();
+                    AlertDialog.Builder builder = new AlertDialog.Builder(EscanerInventario.this);
+                    View mView = getLayoutInflater().inflate(R.layout.alertdialog_aceptar,null);
+                    TextView alertMensaje = mView.findViewById(R.id.alertMensaje);
+                    alertMensaje.setText("Rollo ya transladado a bodega 3 \n Fecha:" + TransRollo.getFecha_recepcion() + " \n Transacción: " + TransRollo.getTrb1());
+                    Button btnAceptar = mView.findViewById(R.id.btnAceptar);
+                    btnAceptar.setText("Aceptar");
+                    builder.setView(mView);
+                    AlertDialog alertDialog = builder.create();
+                    btnAceptar.setOnClickListener(v -> {
+                        alertDialog.dismiss();
+                    });
+                    alertDialog.setCancelable(false);
+                    alertDialog.show();
+                }else{
+                    toastError("Rollo no encontrado");
+                    AudioError();
+                    cargarNuevo();
+                }
             }
-        }else{
-            toastError("Rollo no encontrado");
-            AudioError();
+        } else {
             cargarNuevo();
+            toastError("Problemas de conexión a Internet");
         }
-
     }
 
     //Se realiza para realizar transaccion rollo a rollo, pero despues se cambia de idea

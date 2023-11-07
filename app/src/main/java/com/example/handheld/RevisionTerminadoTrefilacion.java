@@ -1,6 +1,5 @@
 package com.example.handheld;
 
-import static com.example.handheld.R.id.mensaje_cargando;
 import static com.example.handheld.R.id.txtCedulaLogistica;
 
 import androidx.appcompat.app.AlertDialog;
@@ -9,6 +8,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import android.annotation.SuppressLint;
 import android.app.ProgressDialog;
 import android.content.Context;
+import android.content.Intent;
 import android.media.AudioManager;
 import android.media.SoundPool;
 import android.net.ConnectivityManager;
@@ -113,7 +113,6 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
     ArrayList<String> listaRechazos, listaTrefiRechazos;
 
     private AlertDialog alertDialogRevision, alertDialogTransaccion;
-    private TextView cargandoAlertDialogRevision, cargandoAlertDialogTransaccion;
 
     //Se inicializan elementos para enviar correos
     Session session = null;
@@ -250,7 +249,6 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
         @SuppressLint({"MissingInflatedId", "LocalSuppress"}) Button btnAceptar = mView.findViewById(R.id.btnAceptar);
         @SuppressLint({"MissingInflatedId", "LocalSuppress"}) Button btnCancelar = mView.findViewById(R.id.btnCancelar);
         @SuppressLint({"MissingInflatedId", "LocalSuppress"}) ProgressBar Barraprogreso = mView.findViewById(R.id.progress_bar);
-        cargandoAlertDialogRevision = mView.findViewById(mensaje_cargando);
         @SuppressLint({"MissingInflatedId", "LocalSuppress"}) EditText editTraccion1 = mView.findViewById(R.id.editTraccion1);
         @SuppressLint({"MissingInflatedId", "LocalSuppress"}) EditText editDiametro1 = mView.findViewById(R.id.editDiametro1);
         @SuppressLint({"MissingInflatedId", "LocalSuppress"}) EditText editTraccion2 = mView.findViewById(R.id.editTraccion2);
@@ -260,65 +258,66 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
         builder.setView(mView);
         alertDialogRevision = builder.create();
         btnAceptar.setOnClickListener(v12 -> {
-            String CeLog = txtCedulaCalidad.getText().toString().trim();
-            if (editTraccion1.getText().toString().equals("") || editTraccion2.getText().toString().equals("") || editTraccion3.getText().toString().equals("")){
-                AudioError();
-                toastError("Por favor ingresar Tracciones");
-            }else{
-                if(editDiametro1.getText().toString().equals("") || editDiametro2.getText().toString().equals("") || editDiametro3.getText().toString().equals("")){
+            if (isNetworkAvailable()) {
+                String CeLog = txtCedulaCalidad.getText().toString().trim();
+                if (editTraccion1.getText().toString().equals("") || editTraccion2.getText().toString().equals("") || editTraccion3.getText().toString().equals("")){
                     AudioError();
-                    toastError("Por favor ingresar Diametros");
+                    toastError("Por favor ingresar Tracciones");
                 }else{
-                    if (CeLog.equals("")){
+                    if(editDiametro1.getText().toString().equals("") || editDiametro2.getText().toString().equals("") || editDiametro3.getText().toString().equals("")){
                         AudioError();
-                        toastError("Ingresar la cedula de la persona que inspecciona");
+                        toastError("Por favor ingresar Diametros");
                     }else{
-                        //Verificamos el numero de documentos de la persona en la base da datos
-                        personaCalidad = conexion.obtenerPermisoPersona(RevisionTerminadoTrefilacion.this,CeLog,"mod_revision_calidad_trefilacion" );
-                        permiso = personaCalidad.getNit();
-                        //Verificamos que la persona sea de calidad
-                        if (!permiso.equals("")){
-                            traccion1 = editTraccion1.getText().toString();
-                            diametro1 = editDiametro1.getText().toString();
-                            traccion2 = editTraccion2.getText().toString();
-                            diametro2 = editDiametro2.getText().toString();
-                            traccion3 = editTraccion3.getText().toString();
-                            diametro3 = editDiametro3.getText().toString();
-                            Barraprogreso.setVisibility(View.VISIBLE);
-                            cargandoAlertDialogRevision.setVisibility(View.VISIBLE);
-                            Handler handler = new Handler(Looper.getMainLooper());
-                            new Thread(() -> {
-                                try {
-                                    runOnUiThread(() -> {
-                                        try {
-                                            realizarRevision();
-                                        } catch (SQLException e) {
-                                            throw new RuntimeException(e);
-                                        }
-                                    });
-                                    handler.post(() -> {
-                                        Barraprogreso.setVisibility(View.GONE);
-                                        cargandoAlertDialogRevision.setVisibility(View.GONE);
-                                        alertDialogRevision.dismiss();
-                                        closeTecladoMovil();
-                                    });
-                                } catch (Exception e) {
-                                    handler.post(() -> {
-                                        Barraprogreso.setVisibility(View.GONE);
-                                        cargandoAlertDialogRevision.setVisibility(View.GONE);
-                                        alertDialogRevision.dismiss();
-                                        toastError(e.getMessage());
-                                    });
-                                }
-                            }).start();
-                            closeTecladoMovil();
-                        }else{
-                            txtCedulaCalidad.setText("");
+                        if (CeLog.equals("")){
                             AudioError();
-                            toastError("La cedula ingresada no tiene permiso para hacer revisiones de calidad!");
+                            toastError("Ingresar la cedula de la persona que inspecciona");
+                        }else{
+                            //Verificamos el numero de documentos de la persona en la base da datos
+                            personaCalidad = conexion.obtenerPermisoPersona(RevisionTerminadoTrefilacion.this,CeLog,"mod_revision_calidad_trefilacion" );
+                            permiso = personaCalidad.getNit();
+                            //Verificamos que la persona sea de calidad
+                            if (!permiso.equals("")){
+                                traccion1 = editTraccion1.getText().toString();
+                                diametro1 = editDiametro1.getText().toString();
+                                traccion2 = editTraccion2.getText().toString();
+                                diametro2 = editDiametro2.getText().toString();
+                                traccion3 = editTraccion3.getText().toString();
+                                diametro3 = editDiametro3.getText().toString();
+                                Barraprogreso.setVisibility(View.VISIBLE);
+                                Handler handler = new Handler(Looper.getMainLooper());
+                                new Thread(() -> {
+                                    try {
+                                        runOnUiThread(() -> {
+                                            try {
+                                                realizarRevision();
+                                            } catch (SQLException e) {
+                                                throw new RuntimeException(e);
+                                            }
+                                        });
+                                        handler.post(() -> {
+                                            Barraprogreso.setVisibility(View.GONE);
+                                            alertDialogRevision.dismiss();
+                                            closeTecladoMovil();
+                                        });
+                                    } catch (Exception e) {
+                                        handler.post(() -> {
+                                            Barraprogreso.setVisibility(View.GONE);
+                                            alertDialogRevision.dismiss();
+                                            toastError(e.getMessage());
+                                        });
+                                    }
+                                }).start();
+                                closeTecladoMovil();
+                            }else{
+                                txtCedulaCalidad.setText("");
+                                AudioError();
+                                toastError("La cedula ingresada no tiene permiso para hacer revisiones de calidad!");
+                            }
                         }
                     }
                 }
+            } else {
+                toastError("Problemas de conexión a Internet");
             }
         });
         btnCancelar.setOnClickListener(v1 -> alertDialogRevision.dismiss());
@@ -326,6 +325,7 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
         alertDialogRevision.show();
     }
 
+    @SuppressLint("SetTextI18n")
     private void realizarRevision() throws SQLException {
         //Creamos una lista para almacenar todas las consultas que se realizaran en la base de datos
         listRevisionTrefi = new ArrayList<>();
@@ -384,16 +384,34 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
                     btnRechazado.setEnabled(false);
                     incompleta =  true;
                     AudioError();
-                    toastError("Error al realizar la revision!" +
-                            "Intentelo de nuevo");
+                    AlertDialog.Builder builder = new AlertDialog.Builder(RevisionTerminadoTrefilacion.this);
+                    View mView = getLayoutInflater().inflate(R.layout.alertdialog_aceptar,null);
+                    TextView alertMensaje = mView.findViewById(R.id.alertMensaje);
+                    alertMensaje.setText("Error al realizar la revision en el paso 2! \n'" + error + "'\n ¡Vuelve a intentar realizar la revisión!");
+                    Button btnAceptar = mView.findViewById(R.id.btnAceptar);
+                    btnAceptar.setText("Aceptar");
+                    builder.setView(mView);
+                    AlertDialog alertDialog = builder.create();
+                    btnAceptar.setOnClickListener(v -> alertDialog.dismiss());
+                    alertDialog.setCancelable(false);
+                    alertDialog.show();
                 }
             }
         }else{
             btnRechazado.setEnabled(false);
             incompleta =  true;
             AudioError();
-            toastError("Error al realizar la revision!" +
-                    "Intentelo de nuevo");
+            AlertDialog.Builder builder = new AlertDialog.Builder(RevisionTerminadoTrefilacion.this);
+            View mView = getLayoutInflater().inflate(R.layout.alertdialog_aceptar,null);
+            TextView alertMensaje = mView.findViewById(R.id.alertMensaje);
+            alertMensaje.setText("Error al realizar la revision en el paso 1! \n'" + error + "'\n ¡Vuelve a intentar realizar la revisión!");
+            Button btnAceptar = mView.findViewById(R.id.btnAceptar);
+            btnAceptar.setText("Aceptar");
+            builder.setView(mView);
+            AlertDialog alertDialog = builder.create();
+            btnAceptar.setOnClickListener(v -> alertDialog.dismiss());
+            alertDialog.setCancelable(false);
+            alertDialog.show();
         }
     }
 
@@ -401,10 +419,8 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
     private String revision() {
         repeticiones = repeticiones + 1;
         if(repeticiones<=5){
-            cargandoAlertDialogRevision.setText("Intento produccion " + repeticiones + "/5");
             error = ing_prod_ad.ExecuteSqlTransaction(listRevisionTrefi, "JJVPRGPRODUCCION", RevisionTerminadoTrefilacion.this);
             if(error.equals("")){
-                cargandoAlertDialogRevision.setText("");
                 return error;
             }else{
                 revision();
@@ -576,21 +592,21 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
                 builder.setView(mView);
                 AlertDialog alertDialog = builder.create();
                 btnAceptar.setOnClickListener(v -> {
-                    /////////////////////////////////////////////////////////////
-                    //Correo electronico funciono la transacción
-                    correo = conexion.obtenerCorreo(RevisionTerminadoTrefilacion.this);
-                    String email = correo.getCorreo();
-                    String pass = correo.getContrasena();
-                    subject = "Revision de calidad #" + numero_revision + " incompleta";
-                    textMessage = "La revision #" + numero_revision + " de rechazo de calidad de producto terminado del area de trefilación no se completo y quedo sin transacción \n" +
-                            "Detalles de la revision: \n" +
-                            "Error: '" + error + "'\n" +
-                            "Numero de rollos: " + leidos + " \n" +
-                            "Nit inspector (Producción): " + permiso + " \n" +
-                            "Fecha revisión: " + fechaActualString + "";
-
                     // Verificar la conectividad antes de intentar enviar el correo
                     if (isNetworkAvailable()) {
+                        /////////////////////////////////////////////////////////////
+                        //Correo electronico funciono la transacción
+                        correo = conexion.obtenerCorreo(RevisionTerminadoTrefilacion.this);
+                        String email = correo.getCorreo();
+                        String pass = correo.getContrasena();
+                        subject = "Revision de calidad #" + numero_revision + " incompleta";
+                        textMessage = "La revision #" + numero_revision + " de rechazo de calidad de producto terminado del area de trefilación no se completo y quedo sin transacción \n" +
+                                "Detalles de la revision: \n" +
+                                "Error: '" + error + "'\n" +
+                                "Numero de rollos: " + leidos + " \n" +
+                                "Nit inspector (Producción): " + permiso + " \n" +
+                                "Fecha revisión: " + fechaActualString + "";
+
                         // Resto del código para enviar el correo electrónico
                         Properties props = new Properties();
                         props.put("mail.smtp.host", "smtp.gmail.com");
@@ -624,10 +640,8 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
     private String produccion1() {
         repeticiones = repeticiones + 1;
         if(repeticiones<=5){
-            cargandoAlertDialogTransaccion.setText("Intento produccion 1 " + repeticiones + "/5");
             error = ing_prod_ad.ExecuteSqlTransaction(listRevisionTrefi, "JJVPRGPRODUCCION", RevisionTerminadoTrefilacion.this);
             if(error.equals("")){
-                cargandoAlertDialogTransaccion.setText("");
                 return error;
             }else{
                 produccion1();
@@ -642,10 +656,8 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
     private String transaccion() {
         repeticiones = repeticiones + 1;
         if(repeticiones<=5){
-            cargandoAlertDialogTransaccion.setText("Intento transacción " + repeticiones + "/5");
             error = ing_prod_ad.ExecuteSqlTransaction(listTransaccionBodega, "JJVDMSCIERREAGOSTO", RevisionTerminadoTrefilacion.this);
             if(error.equals("")){
-                cargandoAlertDialogTransaccion.setText("");
                 return error;
             }else{
                 transaccion();
@@ -660,10 +672,8 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
     private void produccion2() {
         repeticiones = repeticiones + 1;
         if(repeticiones<=5){
-            cargandoAlertDialogTransaccion.setText("Intento produccion 2 " + repeticiones + "/5");
             error = ing_prod_ad.ExecuteSqlTransaction(listTransactionTrb1, "JJVPRGPRODUCCION", RevisionTerminadoTrefilacion.this);
             if(error.equals("")){
-                cargandoAlertDialogTransaccion.setText("");
                 consultarTrefiTerminado();
                 incompleta = false;
                 btnAprobado.setEnabled(true);
@@ -690,33 +700,33 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
             builder.setView(mView);
             AlertDialog alertDialog = builder.create();
             btnAceptar.setOnClickListener(v -> {
-                StringBuilder mensaje = new StringBuilder(); // Usamos StringBuilder para construir el mensaje
-
-                for (Object objeto : listTransactionTrb1) {
-                    // Convierte el objeto a String
-                    String objetoComoString = objeto.toString();
-
-                    // Agrega el objeto convertido al mensaje
-                    mensaje.append(objetoComoString).append("\n");
-                }
-
-                // Muestra el mensaje
-                String mensajeFinal = mensaje.toString();
-                correo = conexion.obtenerCorreo(RevisionTerminadoTrefilacion.this);
-                String email = correo.getCorreo();
-                String pass = correo.getContrasena();
-                subject = "Revision de calidad #" + numero_revision + " sin relación con transacción #" + numero_transaccion;
-                textMessage = "La revisión #" + numero_revision + " de calidad de producto terminado del area de trefilación se fué incompleta sin la relación \n" +
-                        "con la transacción # " + numero_transaccion +
-                        "Detalles de la Revision: \n" +
-                        mensajeFinal +
-                        "Error: '" + error + "'\n" +
-                        "Numero de rollos: " + leidos + " \n" +
-                        "Nit inspector (Producción): " + permiso + " \n" +
-                        "Fecha revisión: " + fechaActualString + "";
-
                 // Verificar la conectividad antes de intentar enviar el correo
                 if (isNetworkAvailable()) {
+                    StringBuilder mensaje = new StringBuilder(); // Usamos StringBuilder para construir el mensaje
+
+                    for (Object objeto : listTransactionTrb1) {
+                        // Convierte el objeto a String
+                        String objetoComoString = objeto.toString();
+
+                        // Agrega el objeto convertido al mensaje
+                        mensaje.append(objetoComoString).append("\n");
+                    }
+
+                    // Muestra el mensaje
+                    String mensajeFinal = mensaje.toString();
+                    correo = conexion.obtenerCorreo(RevisionTerminadoTrefilacion.this);
+                    String email = correo.getCorreo();
+                    String pass = correo.getContrasena();
+                    subject = "Revision de calidad #" + numero_revision + " sin relación con transacción #" + numero_transaccion;
+                    textMessage = "La revisión #" + numero_revision + " de calidad de producto terminado del area de trefilación se fué incompleta sin la relación \n" +
+                            "con la transacción # " + numero_transaccion +
+                            "Detalles de la Revision: \n" +
+                            mensajeFinal +
+                            "Error: '" + error + "'\n" +
+                            "Numero de rollos: " + leidos + " \n" +
+                            "Nit inspector (Producción): " + permiso + " \n" +
+                            "Fecha revisión: " + fechaActualString + "";
+
                     // Resto del código para enviar el correo electrónico
                     Properties props = new Properties();
                     props.put("mail.smtp.host", "smtp.gmail.com");
@@ -1110,144 +1120,138 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
         Button btnAceptar = mView.findViewById(R.id.btnAceptar);
         Button btnCancelar = mView.findViewById(R.id.btnCancelar);
         ProgressBar Barraprogreso = mView.findViewById(R.id.progress_bar);
-        cargandoAlertDialogTransaccion = mView.findViewById(mensaje_cargando);
         builder.setView(mView);
         alertDialogTransaccion = builder.create();
         btnAceptar.setOnClickListener(v12 -> {
-            if (!spinnerRechazo.getSelectedItem().equals("Seleccione motivo rechazo")) {
-                motivo = spinnerRechazo.getSelectedItem().toString();
-                CeLog = txtCedulaLogistica.getText().toString().trim();
-                switch (motivo) {
-                    case "Baja/Alta tracción":
-                        if(editTraccion.getText().toString().equals("")) {
-                            AudioError();
-                            toastError("Por favor ingresar tracción");
-                        }else{
-                            if (CeLog.equals("")) {
+            if (isNetworkAvailable()) {
+                if (!spinnerRechazo.getSelectedItem().equals("Seleccione motivo rechazo")) {
+                    motivo = spinnerRechazo.getSelectedItem().toString();
+                    CeLog = txtCedulaLogistica.getText().toString().trim();
+                    switch (motivo) {
+                        case "Baja/Alta tracción":
+                            if(editTraccion.getText().toString().equals("")) {
                                 AudioError();
-                                toastError("Ingresar la cedula de la persona que inspecciona");
+                                toastError("Por favor ingresar tracción");
                             }else{
-                                personaCalidad = conexion.obtenerPermisoPersona(RevisionTerminadoTrefilacion.this, CeLog,"mod_revision_calidad_trefilacion");
-                                permiso = personaCalidad.getNit();
-                                //Verificamos que la persona pertenezca al centro de logistica
-                                if (!permiso.equals("")){
-                                    traccion1 = editTraccion.getText().toString();
-                                    Barraprogreso.setVisibility(View.VISIBLE);
-                                    cargandoAlertDialogTransaccion.setVisibility(View.VISIBLE);
-                                    Handler handler = new Handler(Looper.getMainLooper());
-                                    new Thread(() -> {
-                                        try {
-                                            runOnUiThread(() -> realizarTransaccion(1));
-                                            handler.post(() -> {
-                                                Barraprogreso.setVisibility(View.GONE);
-                                                cargandoAlertDialogTransaccion.setVisibility(View.GONE);
-                                                alertDialogTransaccion.dismiss();
-                                                closeTecladoMovil();
-                                            });
-                                        } catch (Exception e) {
-                                            handler.post(() -> {
-                                                toastError(e.getMessage());
-                                                Barraprogreso.setVisibility(View.GONE);
-                                                cargandoAlertDialogTransaccion.setVisibility(View.GONE);
-                                                alertDialogTransaccion.dismiss();
-                                            });
-                                        }
-                                    }).start();
-                                    closeTecladoMovil();
-                                }else{
-                                    txtCedulaLogistica.setText("");
+                                if (CeLog.equals("")) {
                                     AudioError();
-                                    toastError("La cedula ingresada no tiene permiso para hacer revisiones de calidad!");
-                                }
-                            }
-                        }
-                        break;
-                    case "Fuera de Medida":
-                        if(editTraccion.getText().toString().equals("")) {
-                            AudioError();
-                            toastError("Por favor ingresar Diametro");
-                        }else{
-                            if (CeLog.equals("")) {
-                                AudioError();
-                                toastError("Ingresar la cedula de la persona que inspecciona");
-                            }else{
-                                personaCalidad = conexion.obtenerPermisoPersona(RevisionTerminadoTrefilacion.this, CeLog,"mod_revision_calidad_trefilacion");
-                                permiso = personaCalidad.getNit();
-                                //Verificamos que la persona pertenezca al centro de logistica
-                                if (!permiso.equals("")){
-                                    diametro1 = editTraccion.getText().toString();
-                                    Barraprogreso.setVisibility(View.VISIBLE);
-                                    cargandoAlertDialogTransaccion.setVisibility(View.VISIBLE);
-                                    Handler handler = new Handler(Looper.getMainLooper());
-                                    new Thread(() -> {
-                                        try {
-                                            runOnUiThread(() -> realizarTransaccion(2));
-                                            handler.post(() -> {
-                                                Barraprogreso.setVisibility(View.GONE);
-                                                cargandoAlertDialogTransaccion.setVisibility(View.GONE);
-                                                alertDialogTransaccion.dismiss();
-                                                closeTecladoMovil();
-                                            });
-                                        } catch (Exception e) {
-                                            handler.post(() -> {
-                                                toastError(e.getMessage());
-                                                Barraprogreso.setVisibility(View.GONE);
-                                                cargandoAlertDialogTransaccion.setVisibility(View.GONE);
-                                                alertDialogTransaccion.dismiss();
-                                            });
-                                        }
-                                    }).start();
-                                    closeTecladoMovil();
+                                    toastError("Ingresar la cedula de la persona que inspecciona");
                                 }else{
-                                    txtCedulaLogistica.setText("");
-                                    AudioError();
-                                    toastError("La cedula ingresada no tiene permiso para hacer revisiones de calidad!");
-                                }
-                            }
-                        }
-                        break;
-                    default:
-                        if (CeLog.equals("")) {
-                            AudioError();
-                            toastError("Ingresar la cedula de la persona que inspecciona");
-                        } else {
-                            personaCalidad = conexion.obtenerPermisoPersona(RevisionTerminadoTrefilacion.this, CeLog,"mod_revision_calidad_trefilacion");
-                            permiso = personaCalidad.getNit();
-                            //Verificamos que la persona pertenezca al centro de logistica
-                            if (!permiso.equals("")) {
-                                Barraprogreso.setVisibility(View.VISIBLE);
-                                cargandoAlertDialogTransaccion.setVisibility(View.VISIBLE);
-                                Handler handler = new Handler(Looper.getMainLooper());
-                                new Thread(() -> {
-                                    try {
-                                        runOnUiThread(() -> realizarTransaccion(3));
-                                        handler.post(() -> {
-                                            Barraprogreso.setVisibility(View.GONE);
-                                            cargandoAlertDialogTransaccion.setVisibility(View.GONE);
-                                            alertDialogTransaccion.dismiss();
-                                            closeTecladoMovil();
-                                        });
-                                    } catch (Exception e) {
-                                        handler.post(() -> {
-                                            toastError(e.getMessage());
-                                            Barraprogreso.setVisibility(View.GONE);
-                                            cargandoAlertDialogTransaccion.setVisibility(View.GONE);
-                                            alertDialogTransaccion.dismiss();
-                                        });
+                                    personaCalidad = conexion.obtenerPermisoPersona(RevisionTerminadoTrefilacion.this, CeLog,"mod_revision_calidad_trefilacion");
+                                    permiso = personaCalidad.getNit();
+                                    //Verificamos que la persona pertenezca al centro de logistica
+                                    if (!permiso.equals("")){
+                                        traccion1 = editTraccion.getText().toString();
+                                        Barraprogreso.setVisibility(View.VISIBLE);
+                                        Handler handler = new Handler(Looper.getMainLooper());
+                                        new Thread(() -> {
+                                            try {
+                                                runOnUiThread(() -> realizarTransaccion(1));
+                                                handler.post(() -> {
+                                                    Barraprogreso.setVisibility(View.GONE);
+                                                    alertDialogTransaccion.dismiss();
+                                                    closeTecladoMovil();
+                                                });
+                                            } catch (Exception e) {
+                                                handler.post(() -> {
+                                                    toastError(e.getMessage());
+                                                    Barraprogreso.setVisibility(View.GONE);
+                                                    alertDialogTransaccion.dismiss();
+                                                });
+                                            }
+                                        }).start();
+                                        closeTecladoMovil();
+                                    }else{
+                                        txtCedulaLogistica.setText("");
+                                        AudioError();
+                                        toastError("La cedula ingresada no tiene permiso para hacer revisiones de calidad!");
                                     }
-                                }).start();
-                                closeTecladoMovil();
-                            } else {
-                                txtCedulaLogistica.setText("");
-                                AudioError();
-                                toastError("La cedula ingresada no tiene permiso para hacer revisiones de calidad!");
+                                }
                             }
-                        }
-                        break;
+                            break;
+                        case "Fuera de Medida":
+                            if(editTraccion.getText().toString().equals("")) {
+                                AudioError();
+                                toastError("Por favor ingresar Diametro");
+                            }else{
+                                if (CeLog.equals("")) {
+                                    AudioError();
+                                    toastError("Ingresar la cedula de la persona que inspecciona");
+                                }else{
+                                    personaCalidad = conexion.obtenerPermisoPersona(RevisionTerminadoTrefilacion.this, CeLog,"mod_revision_calidad_trefilacion");
+                                    permiso = personaCalidad.getNit();
+                                    //Verificamos que la persona pertenezca al centro de logistica
+                                    if (!permiso.equals("")){
+                                        diametro1 = editTraccion.getText().toString();
+                                        Barraprogreso.setVisibility(View.VISIBLE);
+                                        Handler handler = new Handler(Looper.getMainLooper());
+                                        new Thread(() -> {
+                                            try {
+                                                runOnUiThread(() -> realizarTransaccion(2));
+                                                handler.post(() -> {
+                                                    Barraprogreso.setVisibility(View.GONE);
+                                                    alertDialogTransaccion.dismiss();
+                                                    closeTecladoMovil();
+                                                });
+                                            } catch (Exception e) {
+                                                handler.post(() -> {
+                                                    toastError(e.getMessage());
+                                                    Barraprogreso.setVisibility(View.GONE);
+                                                    alertDialogTransaccion.dismiss();
+                                                });
+                                            }
+                                        }).start();
+                                        closeTecladoMovil();
+                                    }else{
+                                        txtCedulaLogistica.setText("");
+                                        AudioError();
+                                        toastError("La cedula ingresada no tiene permiso para hacer revisiones de calidad!");
+                                    }
+                                }
+                            }
+                            break;
+                        default:
+                            if (CeLog.equals("")) {
+                                AudioError();
+                                toastError("Ingresar la cedula de la persona que inspecciona");
+                            } else {
+                                personaCalidad = conexion.obtenerPermisoPersona(RevisionTerminadoTrefilacion.this, CeLog,"mod_revision_calidad_trefilacion");
+                                permiso = personaCalidad.getNit();
+                                //Verificamos que la persona pertenezca al centro de logistica
+                                if (!permiso.equals("")) {
+                                    Barraprogreso.setVisibility(View.VISIBLE);
+                                    Handler handler = new Handler(Looper.getMainLooper());
+                                    new Thread(() -> {
+                                        try {
+                                            runOnUiThread(() -> realizarTransaccion(3));
+                                            handler.post(() -> {
+                                                Barraprogreso.setVisibility(View.GONE);
+                                                alertDialogTransaccion.dismiss();
+                                                closeTecladoMovil();
+                                            });
+                                        } catch (Exception e) {
+                                            handler.post(() -> {
+                                                toastError(e.getMessage());
+                                                Barraprogreso.setVisibility(View.GONE);
+                                                alertDialogTransaccion.dismiss();
+                                            });
+                                        }
+                                    }).start();
+                                    closeTecladoMovil();
+                                } else {
+                                    txtCedulaLogistica.setText("");
+                                    AudioError();
+                                    toastError("La cedula ingresada no tiene permiso para hacer revisiones de calidad!");
+                                }
+                            }
+                            break;
+                    }
+                } else {
+                    AudioError();
+                    toastError("Seleccione motivo rechazo");
                 }
             } else {
-                AudioError();
-                toastError("Seleccione motivo rechazo");
+                toastError("Problemas de conexión a Internet");
             }
         });
         btnCancelar.setOnClickListener(v1 -> alertDialogTransaccion.dismiss());
