@@ -1,17 +1,24 @@
 package com.example.handheld;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.annotation.SuppressLint;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.Intent;
+import android.media.AudioManager;
+import android.media.SoundPool;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.os.Vibrator;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
@@ -23,6 +30,8 @@ import com.example.handheld.ClasesOperativas.MyHolder;
 import com.example.handheld.atv.model.TreeNode;
 import com.example.handheld.atv.view.AndroidTreeView;
 import com.example.handheld.conexionDB.Conexion;
+import com.example.handheld.conexionDB.ConfiguracionBD;
+import com.example.handheld.modelos.PermisoPersonaModelo;
 import com.example.handheld.modelos.PersonaModelo;
 
 import java.util.Properties;
@@ -37,6 +46,8 @@ public class MainActivity extends AppCompatActivity {
     //Se declaran los elementos del layout
     EditText cedula;
     ImageButton consultar;
+
+    Button btnCambiarBD;
     TextView mensaje;
 
     //Se declara un objeto conexion
@@ -44,10 +55,18 @@ public class MainActivity extends AppCompatActivity {
 
     //Se declaran variables necesarias
     PersonaModelo persona;
+    PermisoPersonaModelo personaPermiso;
     String nombre_usuario;
-    String cd;
+    String cd, permiso = "";
 
     ProgressBar progressBar;
+
+    //Se inicializa los varibles para el sonido de error
+    SoundPool sp;
+    int sonido_de_Reproduccion;
+
+    //Se inicializa una instancia para hacer vibrar el celular
+    Vibrator vibrator;
 
     @SuppressLint({"MissingInflatedId", "SetTextI18n"})
     @Override
@@ -60,9 +79,15 @@ public class MainActivity extends AppCompatActivity {
         consultar = findViewById(R.id.btnBuscarPersona);
         mensaje = findViewById(R.id.txtMensaje);
         progressBar = findViewById(R.id.progress_bar);
+        btnCambiarBD = findViewById(R.id.btnCambiarBD);
 
         //Se inicializa el objeto conexión
         conexion = new Conexion();
+
+        //Se Define los varibles para el sonido de error y vibracion
+        sp = new SoundPool(2, AudioManager.STREAM_MUSIC,1);
+        sonido_de_Reproduccion = sp.load(this, R.raw.sonido_error_2,1);
+        vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
 
         //Se programa el boton consultar
         consultar.setOnClickListener(view -> {
@@ -92,6 +117,59 @@ public class MainActivity extends AppCompatActivity {
             }else{
                 toastEscribir("Por favor escribir tu cedula");
                 progressBar.setVisibility(View.GONE);
+            }
+        });
+
+        btnCambiarBD.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+                View mView = getLayoutInflater().inflate(R.layout.alertdialog_cedularecepciona,null);
+                //Obtenemos los elementos del alertDialog
+                EditText CedulaIngresada = mView.findViewById(R.id.txtCedulaLogistica);
+                TextView txtMrollos = mView.findViewById(R.id.txtMrollos);
+                TextView txtCedula = mView.findViewById(R.id.textView6);
+                Button btnAceptar = mView.findViewById(R.id.btnAceptar);
+                Button btnCancelar = mView.findViewById(R.id.btnCancelar);
+                ProgressBar Barraprogreso = mView.findViewById(R.id.progress_bar);
+                //Enviamos valores a los elementos del alert
+                txtMrollos.setText("¡Se cambiaran las bases de datos!");
+                txtCedula.setText("Ingrese cedula autorizada");
+                CedulaIngresada.setHint("Cedula Autorizada");
+                builder.setView(mView);
+                AlertDialog alertDialog = builder.create();
+                btnAceptar.setOnClickListener(v12 -> {
+                    if (isNetworkAvailable()) {
+                        String CedulaAutorizada = CedulaIngresada.getText().toString().trim();
+                        if (CedulaAutorizada.equals("")){
+                            AudioError();
+                            toastError("Ingresar cedula autorizada");
+                        }else{
+                            personaPermiso = conexion.obtenerPermisoPersona(MainActivity.this,CedulaAutorizada,"cambiar_bd" );
+                            permiso = personaPermiso.getNit();
+                            if(!permiso.equals("")){
+                                // Cambiar el modo al hacer clic en el botón
+                                ConfiguracionBD.cambiarModo();
+                                Boolean tipo = ConfiguracionBD.isModoPrueba();
+                                if (tipo.equals(true)){
+                                    toastAcierto("Base de datos cambiada correctamente a prueba");
+                                }else{
+                                    toastAcierto("Base de datos cambiada correctamente a real");
+                                }
+                                alertDialog.dismiss();
+                            }else{
+                                CedulaIngresada.setText("");
+                                AudioError();
+                                toastError("La cedula ingresada no esta autorizada!");
+                            }
+                        }
+                    } else {
+                        toastError("Problemas de conexión a Internet");
+                    }
+                });
+                btnCancelar.setOnClickListener(v1 -> alertDialog.dismiss());
+                alertDialog.setCancelable(false);
+                alertDialog.show();
             }
         });
     }
@@ -124,6 +202,21 @@ public class MainActivity extends AppCompatActivity {
         Toast toast = new Toast(getApplicationContext());
         toast.setGravity(Gravity.CENTER_VERTICAL | Gravity.BOTTOM,0,200);
         toast.setDuration(Toast.LENGTH_SHORT);
+        toast.setView(view);
+        toast.show();
+    }
+
+    //METODO DE TOAST PERSONALIZADO : ACIERTO
+    public void toastAcierto(String msg){
+        LayoutInflater layoutInflater = getLayoutInflater();
+        View view = layoutInflater.inflate(R.layout.custom_toast_acierto, findViewById(R.id.ll_custom_toast_acierto));
+        @SuppressLint({"MissingInflatedId", "LocalSuppress"})
+        TextView txtMens = view.findViewById(R.id.txtMensa);
+        txtMens.setText(msg);
+
+        Toast toast = new Toast(getApplicationContext());
+        toast.setGravity(Gravity.CENTER_VERTICAL | Gravity.CENTER,0,200);
+        toast.setDuration(Toast.LENGTH_LONG);
         toast.setView(view);
         toast.show();
     }
@@ -348,7 +441,7 @@ public class MainActivity extends AppCompatActivity {
         //child5.addChild(subChild5_1);
 
         //Agregamos subgrupo2"Revisión - Calidad: Trefilación".
-        //child5.addChild(subChild5_2);
+        child5.addChild(subChild5_2);
 
         //Agregamos subgrupo2"Revisión - Calidad: Mesas Empaque".
         //child5.addChild(subChild5_3); Todavia no hay desarrollado un modulo de calidad para empaque
@@ -409,7 +502,7 @@ public class MainActivity extends AppCompatActivity {
         });
 
         //Agregamos subgrupo1"Logistica - Recepción: Galvanizado".
-        child6.addChild(subChild6_1);
+        //child6.addChild(subChild6_1);
 
         //Agregamos subgrupo2"Logistica - Recepción: Trefilación".
         //child6.addChild(subChild6_2);
@@ -467,6 +560,14 @@ public class MainActivity extends AppCompatActivity {
 
         //Agregamos AndroidTreeView en la vista.
         AndroidTreeView tView = new AndroidTreeView(getApplicationContext(), root);
-        ((LinearLayout) findViewById(R.id.ll_parent)).addView(tView.getView());
+        ((LinearLayout) findViewById(R.id.ll_menu)).addView(tView.getView());
+    }
+
+
+    /////////////////////////////////////////////////////////////////////////////////////////////
+    //Metodo que reproduce sonido y hace vibrar el dispositivo
+    public void AudioError(){
+        sp.play(sonido_de_Reproduccion,100,100,1,0,0);
+        vibrator.vibrate(2000);
     }
 }

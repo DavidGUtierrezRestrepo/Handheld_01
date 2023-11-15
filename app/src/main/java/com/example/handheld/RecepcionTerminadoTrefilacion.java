@@ -34,8 +34,10 @@ import com.example.handheld.ClasesOperativas.ObjTraslado_bodLn;
 import com.example.handheld.ClasesOperativas.Obj_ordenprodLn;
 import com.example.handheld.atv.holder.adapters.listTrefiTerminadoAdapter;
 import com.example.handheld.conexionDB.Conexion;
+import com.example.handheld.conexionDB.ConfiguracionBD;
 import com.example.handheld.modelos.CorreoModelo;
 import com.example.handheld.modelos.PersonaModelo;
+import com.example.handheld.modelos.RolloGalvTransa;
 import com.example.handheld.modelos.TrefiRecepcionModelo;
 import com.example.handheld.modelos.TrefiRecepcionadoRollosModelo;
 
@@ -261,6 +263,7 @@ public class RecepcionTerminadoTrefilacion extends AppCompatActivity implements 
                                     });
                                 } catch (Exception e) {
                                     handler.post(() -> {
+                                        AudioError();
                                         toastError(e.getMessage());
                                         Barraprogreso.setVisibility(View.GONE);
                                     });
@@ -269,8 +272,12 @@ public class RecepcionTerminadoTrefilacion extends AppCompatActivity implements 
                             closeTecladoMovil();
                         }else{
                             if (centro.equals("")){
+                                txtCedulaLogistica.setText("");
+                                AudioError();
                                 toastError("Persona no encontrada");
                             }else{
+                                txtCedulaLogistica.setText("");
+                                AudioError();
                                 toastError("La cedula ingresada no pertenece a logistica!");
                             }
                         }
@@ -339,7 +346,7 @@ public class RecepcionTerminadoTrefilacion extends AppCompatActivity implements 
                 numero_transaccion = Integer.valueOf(Obj_ordenprodLn.mover_consecutivo("TRB1", RecepcionTerminadoTrefilacion.this));
                 listTransaccionBodega = traslado_bodega(ListarefeRecepcionados, calendar);
                 //Ejecutamos la lista de consultas para hacer la TRB1
-                error = ing_prod_ad.ExecuteSqlTransaction(listTransaccionBodega, "JJVDMSCIERREAGOSTO", RecepcionTerminadoTrefilacion.this);
+                error = ing_prod_ad.ExecuteSqlTransaction(listTransaccionBodega, ConfiguracionBD.obtenerNombreBD(1), RecepcionTerminadoTrefilacion.this);
                 if (error.equals("")){
                     for(int u=0;u<ListaTrefiRollosRecep.size();u++){
                         String cod_orden = ListaTrefiRollosRecep.get(u).getCod_orden();
@@ -366,9 +373,13 @@ public class RecepcionTerminadoTrefilacion extends AppCompatActivity implements 
                     builder.setView(mView);
                     AlertDialog alertDialog = builder.create();
                     btnAceptar.setOnClickListener(v -> {
-                        repeticiones = 0;
-                        reanudarTransacion();
-                        alertDialog.dismiss();
+                        if (isNetworkAvailable()) {
+                            repeticiones = 0;
+                            reanudarTransacion();
+                            alertDialog.dismiss();
+                        } else {
+                            toastError("Problemas de conexión a Internet");
+                        }
                     });
                     alertDialog.setCancelable(false);
                     alertDialog.show();
@@ -394,7 +405,7 @@ public class RecepcionTerminadoTrefilacion extends AppCompatActivity implements 
     private String ciclo1(){
         repeticiones = repeticiones + 1;
         if(repeticiones<=5){
-            error = ing_prod_ad.ExecuteSqlTransaction(listTransactionTrefi, "JJVPRGPRODUCCION", RecepcionTerminadoTrefilacion.this);
+            error = ing_prod_ad.ExecuteSqlTransaction(listTransactionTrefi, ConfiguracionBD.obtenerNombreBD(2), RecepcionTerminadoTrefilacion.this);
             if(error.equals("")){
                 return error;
             }else{
@@ -424,7 +435,7 @@ public class RecepcionTerminadoTrefilacion extends AppCompatActivity implements 
                     Toast.makeText(RecepcionTerminadoTrefilacion.this, e.getMessage(), Toast.LENGTH_SHORT).show();
                 }
             }
-            error = ing_prod_ad.ExecuteSqlTransaction(listReanudarTransa,"JJVPRGPRODUCCION",RecepcionTerminadoTrefilacion.this);
+            error = ing_prod_ad.ExecuteSqlTransaction(listReanudarTransa,ConfiguracionBD.obtenerNombreBD(2),RecepcionTerminadoTrefilacion.this);
             repeticiones = repeticiones + 1;
             if (error.equals("")){
                 toastAcierto("Transacción Cancelada correctamente");
@@ -449,35 +460,35 @@ public class RecepcionTerminadoTrefilacion extends AppCompatActivity implements 
             builder.setView(mView);
             AlertDialog alertDialog = builder.create();
             btnAceptar.setOnClickListener(v -> {
-                StringBuilder mensaje = new StringBuilder(); // Usamos StringBuilder para construir el mensaje
-
-                for (Object objeto : listReanudarTransa) {
-                    // Convierte el objeto a String
-                    String objetoComoString = objeto.toString();
-
-                    // Agrega el objeto convertido al mensaje
-                    mensaje.append(objetoComoString).append("\n");
-                }
-
-                // Muestra el mensaje
-                String mensajeFinal = mensaje.toString();
-                /////////////////////////////////////////////////////////////
-                //Correo electronico funciono la transacción
-                correo = conexion.obtenerCorreo(RecepcionTerminadoTrefilacion.this);
-                String email = correo.getCorreo();
-                String pass = correo.getContrasena();
-                subject = "El paso 1 de una transacción en Control en Piso Galvanizado no se pudo cancelar";
-                textMessage = "El paso 1 de la Transacción de recepcion de producto terminado del area de Galvanizado no se pudo cancelar correctamente \n" +
-                        "Detalles de la recepción: \n" +
-                        mensajeFinal +
-                        "Error: '" + error + "'\n" +
-                        "Numero de rollos: " + leidos + " \n" +
-                        "Nit quien entrega (Producción): " + nit_usuario + " \n" +
-                        "Nit quien recibe (Logistica): " + personaLogistica.getNit() + " \n" +
-                        "Fecha transacción: " + fechaTransaccion + "";
-
-                // Verificar la conectividad antes de intentar enviar el correo
+                // Verificar la conectividad antes de intentar enviar el correo para evitar que no se envien
                 if (isNetworkAvailable()) {
+                    StringBuilder mensaje = new StringBuilder(); // Usamos StringBuilder para construir el mensaje
+
+                    for (Object objeto : listReanudarTransa) {
+                        // Convierte el objeto a String
+                        String objetoComoString = objeto.toString();
+
+                        // Agrega el objeto convertido al mensaje
+                        mensaje.append(objetoComoString).append("\n");
+                    }
+
+                    // Muestra el mensaje
+                    String mensajeFinal = mensaje.toString();
+                    /////////////////////////////////////////////////////////////
+                    //Correo electronico para notificar error en la transacción
+                    correo = conexion.obtenerCorreo(RecepcionTerminadoTrefilacion.this);
+                    String email = correo.getCorreo();
+                    String pass = correo.getContrasena();
+                    subject = "El paso 1 de una transacción en Control en Piso Trefilación no se pudo cancelar";
+                    textMessage = "El paso 1 de la Transacción de recepcion de producto terminado del area de Trefilación no se pudo cancelar correctamente \n" +
+                            "Detalles de la recepción: \n" +
+                            mensajeFinal +
+                            "Error: '" + error + "'\n" +
+                            "Numero de rollos: " + leidos + " \n" +
+                            "Nit quien entrega (Producción): " + nit_usuario + " \n" +
+                            "Nit quien recibe (Logistica): " + personaLogistica.getNit() + " \n" +
+                            "Fecha transacción: " + fechaTransaccion + "";
+
                     // Resto del código para enviar el correo electrónico
                     Properties props = new Properties();
                     props.put("mail.smtp.host", "smtp.gmail.com");
@@ -510,7 +521,7 @@ public class RecepcionTerminadoTrefilacion extends AppCompatActivity implements 
     private void ciclo3(){
         repeticiones = repeticiones + 1;
         if(repeticiones<=5){
-            error = ing_prod_ad.ExecuteSqlTransaction(listTransactionTrb1, "JJVPRGPRODUCCION", RecepcionTerminadoTrefilacion.this);
+            error = ing_prod_ad.ExecuteSqlTransaction(listTransactionTrb1, ConfiguracionBD.obtenerNombreBD(2), RecepcionTerminadoTrefilacion.this);
             if(error.equals("")){
                 consultarTrefiTerminado();
                 incompleta = false;
@@ -533,33 +544,33 @@ public class RecepcionTerminadoTrefilacion extends AppCompatActivity implements 
             builder.setView(mView);
             AlertDialog alertDialog = builder.create();
             btnAceptar.setOnClickListener(v -> {
-                StringBuilder mensaje = new StringBuilder(); // Usamos StringBuilder para construir el mensaje
-
-                for (Object objeto : listTransactionTrb1) {
-                    // Convierte el objeto a String
-                    String objetoComoString = objeto.toString();
-
-                    // Agrega el objeto convertido al mensaje
-                    mensaje.append(objetoComoString).append("\n");
-                }
-
-                // Muestra el mensaje
-                String mensajeFinal = mensaje.toString();
-                correo = conexion.obtenerCorreo(RecepcionTerminadoTrefilacion.this);
-                String email = correo.getCorreo();
-                String pass = correo.getContrasena();
-                subject = "Error en el paso 3 de la transacción Control en Piso Galvanizado";
-                textMessage = "La transacción #" + numero_transaccion + " de recepcion de producto terminado del area de Galvanizado se fué incompleta \n" +
-                        "Detalles de la transacción: \n" +
-                        mensajeFinal +
-                        "Error: '" + error + "'\n" +
-                        "Numero de rollos: " + leidos + " \n" +
-                        "Nit quien entrega (Producción): " + nit_usuario + " \n" +
-                        "Nit quien recibe (Logistica): " + personaLogistica.getNit() + " \n" +
-                        "Fecha transacción: " + fechaTransaccion + "";
-
                 // Verificar la conectividad antes de intentar enviar el correo
                 if (isNetworkAvailable()) {
+                    StringBuilder mensaje = new StringBuilder(); // Usamos StringBuilder para construir el mensaje
+
+                    for (Object objeto : listTransactionTrb1) {
+                        // Convierte el objeto a String
+                        String objetoComoString = objeto.toString();
+
+                        // Agrega el objeto convertido al mensaje
+                        mensaje.append(objetoComoString).append("\n");
+                    }
+
+                    // Muestra el mensaje
+                    String mensajeFinal = mensaje.toString();
+                    correo = conexion.obtenerCorreo(RecepcionTerminadoTrefilacion.this);
+                    String email = correo.getCorreo();
+                    String pass = correo.getContrasena();
+                    subject = "Error en el paso 3 de la transacción Control en Piso Trefilación";
+                    textMessage = "La transacción #" + numero_transaccion + " de recepcion de producto terminado del area de Trefilación se fué incompleta \n" +
+                            "Detalles de la transacción: \n" +
+                            mensajeFinal +
+                            "Error: '" + error + "'\n" +
+                            "Numero de rollos: " + leidos + " \n" +
+                            "Nit quien entrega (Producción): " + nit_usuario + " \n" +
+                            "Nit quien recibe (Logistica): " + personaLogistica.getNit() + " \n" +
+                            "Fecha transacción: " + fechaTransaccion + "";
+
                     // Resto del código para enviar el correo electrónico
                     Properties props = new Properties();
                     props.put("mail.smtp.host", "smtp.gmail.com");
@@ -729,40 +740,45 @@ public class RecepcionTerminadoTrefilacion extends AppCompatActivity implements 
         consecutivo = codigoTrefi.getText().toString().trim();
         boolean encontrado = false;
         int position = 0;
-        for (int i=0;i<ListaTrefiTerminado.size();i++){
-            String codigoList = ListaTrefiTerminado.get(i).getCod_orden()+"-"+ListaTrefiTerminado.get(i).getId_detalle()+"-"+ListaTrefiTerminado.get(i).getId_rollo();
-            if(consecutivo.equals(codigoList)){
-                encontrado = true;
-                position = i;
-                break;
+        if (isNetworkAvailable()) {
+            for (int i=0;i<ListaTrefiTerminado.size();i++){
+                String codigoList = ListaTrefiTerminado.get(i).getCod_orden()+"-"+ListaTrefiTerminado.get(i).getId_detalle()+"-"+ListaTrefiTerminado.get(i).getId_rollo();
+                if(consecutivo.equals(codigoList)){
+                    encontrado = true;
+                    position = i;
+                    break;
+                }
             }
-        }
-        //Si el rollos es encontrado o no se muestra mensaje
-        if (encontrado){
-            //Si el rollo encontrado esta pintado de verde ya fue leido anteriormente
-            if(ListaTrefiTerminado.get(position).getColor().equals("GREEN")){
-                toastError("Rollo Ya leido");
+            //Si el rollos es encontrado o no se muestra mensaje
+            if (encontrado){
+                //Si el rollo encontrado esta pintado de verde ya fue leido anteriormente
+                if(ListaTrefiTerminado.get(position).getColor().equals("GREEN")){
+                    toastError("Rollo Ya leido");
+                    AudioError();
+                    cargarNuevo();
+                }else{
+                    //Copiamos el rollo encontrado de la lista de producción
+                    trefiRecepcionModelo = ListaTrefiTerminado.get(position);
+                    //Agregamos la copia a la de los rollos escaneados
+                    ListaTrefiRollosRecep.add(trefiRecepcionModelo);
+                    //Pintamos el rollo de verde en la lista de produccion para no poder volverlo a leer
+                    pintarRollo(position);
+                    //Contamos los rollos leidos y no leidos
+                    contarSinLeer();
+                    contarLeidos();
+                    //Mostramos mensaje
+                    toastAcierto("Rollo encontrado");
+                    //Inicializamos la lectura
+                    cargarNuevo();
+                }
+            }else{
+                toastError("Rollo no encontrado");
                 AudioError();
                 cargarNuevo();
-            }else{
-                //Copiamos el rollo encontrado de la lista de producción
-                trefiRecepcionModelo = ListaTrefiTerminado.get(position);
-                //Agregamos la copia a la de los rollos escaneados
-                ListaTrefiRollosRecep.add(trefiRecepcionModelo);
-                //Pintamos el rollo de verde en la lista de produccion para no poder volverlo a leer
-                pintarRollo(position);
-                //Contamos los rollos leidos y no leidos
-                contarSinLeer();
-                contarLeidos();
-                //Mostramos mensaje
-                toastAcierto("Rollo encontrado");
-                //Inicializamos la lectura
-                cargarNuevo();
             }
-        }else{
-            toastError("Rollo no encontrado");
-            AudioError();
+        } else {
             cargarNuevo();
+            toastError("Problemas de conexión a Internet");
         }
     }
 

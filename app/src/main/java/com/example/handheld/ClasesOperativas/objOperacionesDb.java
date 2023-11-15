@@ -4,6 +4,7 @@ import android.content.Context;
 import android.widget.Toast;
 
 import com.example.handheld.conexionDB.Conexion;
+import com.example.handheld.conexionDB.ConfiguracionBD;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -16,7 +17,7 @@ import java.util.HashMap;
 public class objOperacionesDb {
     public Integer ejecutarUpdate(String Sql, Context context) throws SQLException {
         int resp = 0;
-        Connection cnn = new Conexion().conexionBD("CORSAN",context);
+        Connection cnn = new Conexion().conexionBD(ConfiguracionBD.obtenerNombreBD(1),context);
         try {
             if (cnn != null){
                 PreparedStatement stm = cnn.prepareStatement(Sql);
@@ -35,7 +36,7 @@ public class objOperacionesDb {
 
     public Integer ejecutarInsertJjprgproduccion(String Sql, Context context) throws SQLException {
         int resp = 0;
-        Connection cnn = new Conexion().conexionBD("PRGPRODUCCION",context);
+        Connection cnn = new Conexion().conexionBD(ConfiguracionBD.obtenerNombreBD(2),context);
         try {
             if (cnn != null){
                 PreparedStatement stm = cnn.prepareStatement(Sql);
@@ -54,7 +55,7 @@ public class objOperacionesDb {
 
     public Integer ejecutarUpdateDbProduccion(String Sql, Context context) throws SQLException {
         int resp = 0;
-        Connection cnn = new Conexion().conexionBD("PRGPRODUCCION",context);
+        Connection cnn = new Conexion().conexionBD(ConfiguracionBD.obtenerNombreBD(2),context);
         try {
             if (cnn != null){
                 PreparedStatement stm = cnn.prepareStatement(Sql);
@@ -73,7 +74,7 @@ public class objOperacionesDb {
 
     public Integer ejecutarUpdateProduccion(String Sql, Context context) throws SQLException {
         int resp = 0;
-        Connection cnn = new Conexion().conexionBD("CORSAN",context);
+        Connection cnn = new Conexion().conexionBD(ConfiguracionBD.obtenerNombreBD(2),context);
         try {
             if (cnn != null){
                 PreparedStatement stm = cnn.prepareStatement(Sql);
@@ -93,7 +94,7 @@ public class objOperacionesDb {
 
     public ArrayList<HashMap<String, Object>> listadoDatosProduccionHasp(String Sql, Context context) throws SQLException {
         ArrayList<HashMap<String, Object>> resultados = new ArrayList<>();
-        Connection cnn = new Conexion().conexionBD("PRGPRODUCCION",context);
+        Connection cnn = new Conexion().conexionBD(ConfiguracionBD.obtenerNombreBD(2),context);
         try {
             if (cnn != null){
                 PreparedStatement stm = cnn.prepareStatement(Sql);
@@ -126,7 +127,7 @@ public class objOperacionesDb {
 
     public Integer ejecutarInsertCorsan(String Sql, Context context) throws SQLException {
         int resp = 0;
-        Connection cnn = new Conexion().conexionBD("CORSAN",context);
+        Connection cnn = new Conexion().conexionBD(ConfiguracionBD.obtenerNombreBD(1),context);
         try {
             if (cnn != null){
                 PreparedStatement stm = cnn.prepareStatement(Sql);

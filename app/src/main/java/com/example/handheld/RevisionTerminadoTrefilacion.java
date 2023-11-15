@@ -41,6 +41,7 @@ import com.example.handheld.ClasesOperativas.Obj_ordenprodLn;
 import com.example.handheld.ClasesOperativas.objOperacionesDb;
 import com.example.handheld.atv.holder.adapters.listTrefiTerminadoAdapter;
 import com.example.handheld.conexionDB.Conexion;
+import com.example.handheld.conexionDB.ConfiguracionBD;
 import com.example.handheld.modelos.CorreoModelo;
 import com.example.handheld.modelos.PermisoPersonaModelo;
 import com.example.handheld.modelos.RolloTrefiRevisionModelo;
@@ -419,7 +420,7 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
     private String revision() {
         repeticiones = repeticiones + 1;
         if(repeticiones<=5){
-            error = ing_prod_ad.ExecuteSqlTransaction(listRevisionTrefi, "JJVPRGPRODUCCION", RevisionTerminadoTrefilacion.this);
+            error = ing_prod_ad.ExecuteSqlTransaction(listRevisionTrefi, ConfiguracionBD.obtenerNombreBD(2), RevisionTerminadoTrefilacion.this);
             if(error.equals("")){
                 return error;
             }else{
@@ -536,7 +537,7 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
                     AlertDialog.Builder builder = new AlertDialog.Builder(RevisionTerminadoTrefilacion.this);
                     View mView = getLayoutInflater().inflate(R.layout.alertdialog_aceptar,null);
                     TextView alertMensaje = mView.findViewById(R.id.alertMensaje);
-                    alertMensaje.setText("Error al relacionar la revision! \n'" + error + "'\n ¡Vuelve a intentarlo de nuevo!");
+                    alertMensaje.setText("Error al relacionar la revision en el paso 2! \n'" + error + "'\n ¡Vuelve a intentarlo de nuevo!");
                     Button btnAceptar = mView.findViewById(R.id.btnAceptar);
                     btnAceptar.setText("Aceptar");
                     builder.setView(mView);
@@ -553,7 +554,7 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
             AlertDialog.Builder builder = new AlertDialog.Builder(RevisionTerminadoTrefilacion.this);
             View mView = getLayoutInflater().inflate(R.layout.alertdialog_aceptar,null);
             TextView alertMensaje = mView.findViewById(R.id.alertMensaje);
-            alertMensaje.setText("Error al realizar la revision! \n ¡Vuelve a intentarlo de nuevo!");
+            alertMensaje.setText("Error al realizar la revision en el Paso 1! \n ¡Vuelve a intentarlo de nuevo!");
             Button btnAceptar = mView.findViewById(R.id.btnAceptar);
             btnAceptar.setText("Aceptar");
             builder.setView(mView);
@@ -640,7 +641,7 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
     private String produccion1() {
         repeticiones = repeticiones + 1;
         if(repeticiones<=5){
-            error = ing_prod_ad.ExecuteSqlTransaction(listRevisionTrefi, "JJVPRGPRODUCCION", RevisionTerminadoTrefilacion.this);
+            error = ing_prod_ad.ExecuteSqlTransaction(listRevisionTrefi, ConfiguracionBD.obtenerNombreBD(2), RevisionTerminadoTrefilacion.this);
             if(error.equals("")){
                 return error;
             }else{
@@ -656,7 +657,7 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
     private String transaccion() {
         repeticiones = repeticiones + 1;
         if(repeticiones<=5){
-            error = ing_prod_ad.ExecuteSqlTransaction(listTransaccionBodega, "JJVDMSCIERREAGOSTO", RevisionTerminadoTrefilacion.this);
+            error = ing_prod_ad.ExecuteSqlTransaction(listTransaccionBodega, ConfiguracionBD.obtenerNombreBD(1), RevisionTerminadoTrefilacion.this);
             if(error.equals("")){
                 return error;
             }else{
@@ -672,7 +673,7 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
     private void produccion2() {
         repeticiones = repeticiones + 1;
         if(repeticiones<=5){
-            error = ing_prod_ad.ExecuteSqlTransaction(listTransactionTrb1, "JJVPRGPRODUCCION", RevisionTerminadoTrefilacion.this);
+            error = ing_prod_ad.ExecuteSqlTransaction(listTransactionTrb1, ConfiguracionBD.obtenerNombreBD(2), RevisionTerminadoTrefilacion.this);
             if(error.equals("")){
                 consultarTrefiTerminado();
                 incompleta = false;

@@ -35,6 +35,7 @@ import com.example.handheld.ClasesOperativas.Obj_ordenprodLn;
 import com.example.handheld.ClasesOperativas.objOperacionesDb;
 import com.example.handheld.atv.holder.adapters.listescanerAdapter;
 import com.example.handheld.conexionDB.Conexion;
+import com.example.handheld.conexionDB.ConfiguracionBD;
 import com.example.handheld.databinding.ActivityEscanerBinding;
 import com.example.handheld.modelos.DetalleTranModelo;
 import com.example.handheld.modelos.PermisoPersonaModelo;
@@ -654,8 +655,9 @@ public class Escaner extends AppCompatActivity implements AdapterView.OnItemClic
         repeticiones = repeticiones + 1;
         if(repeticiones<=5){
             cargando.setVisibility(View.VISIBLE);
+            // quitar mensaje guardado ya que esto no funciono muy bien en el programa
             mensajeCargando.setText("Intento transacción " + repeticiones + "/5");
-            error = ing_prod_ad.ExecuteSqlTransaction(listTransaccion_corsan, "CORSAN", Escaner.this);
+            error = ing_prod_ad.ExecuteSqlTransaction(listTransaccion_corsan, ConfiguracionBD.obtenerNombreBD(1), Escaner.this);
             if(error.equals("")){
                 mensajeCargando.setText("");
                 return error;
@@ -673,8 +675,9 @@ public class Escaner extends AppCompatActivity implements AdapterView.OnItemClic
         cargando.setVisibility(View.VISIBLE);
         repeticiones = repeticiones + 1;
         if(repeticiones<=5){
+            //Quitar este mensaje ya que no funciono muy bien en el programa
             mensajeCargando.setText("Intento producción " + repeticiones + "/5");
-            error = ing_prod_ad.ExecuteSqlTransaction(listTransaccion_prod, "PRGPRODUCCION", Escaner.this);
+            error = ing_prod_ad.ExecuteSqlTransaction(listTransaccion_prod, ConfiguracionBD.obtenerNombreBD(2), Escaner.this);
             if(error.equals("")){
                 mensajeCargando.setText("");
                 return error;

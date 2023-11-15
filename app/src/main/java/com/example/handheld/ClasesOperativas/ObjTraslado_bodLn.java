@@ -16,6 +16,8 @@ import com.example.handheld.modelos.EmpRecepcionadoCajasModelo;
 import com.example.handheld.modelos.GalvRecepcionadoRollosModelo;
 import com.example.handheld.modelos.TrefiRecepcionadoRollosModelo;
 
+import java.sql.ResultSet;
+import java.sql.Statement;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -931,6 +933,7 @@ public class ObjTraslado_bodLn {
         return sw;
     }
 
+    /*Se comenta ese codigo ya que se modifica debido a un error en contabilidad que ocurrio al hacer el descargue de alambron
     private List<Object> script_cuentas(String tipo, String modelo, Double numero, Double costo_total, Double nit, String fec,Context context) {
         List<Object> listSql = new ArrayList<Object>();
         String sql_consulta_tipo_transacciones_mod = "SELECT cta1,cta2,cta3 FROM tipo_transacciones_mod WHERE tipo ='" + tipo + "' AND modelo= '" + modelo + "'";
@@ -964,8 +967,66 @@ public class ObjTraslado_bodLn {
             }
         }
         return listSql;
-    }
+    }*/
 
+    private List<Object> script_cuentas(String tipo, String modelo, Double numero, Double costo_total, Double nit, String fec,Context context) {
+        if (modelo.equals("1")) {
+            modelo = "01";
+        }
+        List<Object> listSql = new ArrayList<Object>();
+        String sql_consulta_tipo_transacciones_mod = "SELECT cta1,cta2,cta3 FROM tipo_transacciones_mod WHERE tipo ='" + tipo + "' AND modelo= " + modelo + "";
+        List<Object> dt_cuentas = Collections.singletonList(conexion.lista_consulta_tipo_transacciones(context, sql_consulta_tipo_transacciones_mod));
+        String sql_movimientos = "";
+        String sql = "";
+        Integer seq = 1;
+        Double valor = 0.0;
+        Double iva = conexion.obtenerIvaPorc(context);
+        Double valor_iva = costo_total * iva;
+        Double centro = 0.0;
+
+        String[] resultado = new String[4];
+        try {
+            Statement st = conexion.conexionBD("CORSAN", context).createStatement();
+            ResultSet rs = st.executeQuery(sql_consulta_tipo_transacciones_mod);
+            while (rs.next()){
+                resultado[0] = rs.getString("cta1");
+                resultado[1] = rs.getString("cta2");
+                resultado[2] = rs.getString("cta3");
+            }
+        }catch (Exception e){
+            Toast.makeText(context, e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+        if (!dt_cuentas.isEmpty()) {
+            for (int j = 0; j < resultado.length-1; j++) {
+                String codigoCuenta = resultado[j].toString();
+                System.out.println("cuenta = " + codigoCuenta);
+                switch (codigoCuenta) {
+                    case "220501":
+                        valor = costo_total + valor_iva;
+                        valor *= -1;
+                        sql_movimientos = "INSERT INTO movimiento (tipo, numero,seq, nit, fec,  cuenta, centro, valor) VALUES ('" + tipo + "', " + numero + "," + seq + ", " + nit + ",'" + fec + "', " + codigoCuenta + ", " + centro + ", " + valor + ")";
+                        listSql.add(sql_movimientos);
+                        seq += 1;
+                        break; // Agrega un break al final de cada caso
+
+                    case "14050100":
+                        valor = costo_total;
+                        sql_movimientos = "INSERT INTO movimiento (tipo, numero,seq, nit, fec,  cuenta, centro, valor) VALUES ('" + tipo + "', " + numero + "," + seq + ", " + nit + ", '" + fec + "', " + codigoCuenta + ", " + centro + ", " + valor + ")";
+                        listSql.add(sql_movimientos);
+                        seq += 1;
+                        break;
+
+                    case "24080505":
+                        valor = valor_iva;
+                        sql_movimientos = "INSERT INTO movimiento (tipo, numero,seq, nit, fec,  cuenta, centro, valor,base) VALUES ('" + tipo + "', " + numero + "," + seq + ", " + nit + ", '" + fec + "', " + codigoCuenta + ", " + centro + ", " + valor + "," + costo_total + ")";
+                        listSql.add(sql_movimientos);
+                        seq += 1;
+                        break;
+                }
+            }
+        }
+        return listSql;
+    }
 
 
 }
