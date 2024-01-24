@@ -73,7 +73,7 @@
                     android:layout_width="90sp"
                     android:layout_height="wrap_content"
                     android:ems="10"
-                    android:inputType="number"
+                    android:inputType="numberDecimal"
                     android:textAlignment="center" />
 
                 <EditText
@@ -81,7 +81,7 @@
                     android:layout_width="90sp"
                     android:layout_height="wrap_content"
                     android:ems="10"
-                    android:inputType="number"
+                    android:inputType="numberDecimal"
                     android:textAlignment="center" />
 
                 <EditText
@@ -89,7 +89,7 @@
                     android:layout_width="90sp"
                     android:layout_height="wrap_content"
                     android:ems="10"
-                    android:inputType="number"
+                    android:inputType="numberDecimal"
                     android:textAlignment="center" />
 
 
@@ -128,7 +128,7 @@
                     android:layout_width="90sp"
                     android:layout_height="wrap_content"
                     android:ems="10"
-                    android:inputType="number"
+                    android:inputType="numberDecimal"
                     android:textAlignment="center" />
 
                 <EditText
@@ -136,7 +136,7 @@
                     android:layout_width="90sp"
                     android:layout_height="wrap_content"
                     android:ems="10"
-                    android:inputType="number"
+                    android:inputType="numberDecimal"
                     android:textAlignment="center" />
 
                 <EditText
@@ -144,7 +144,7 @@
                     android:layout_width="90sp"
                     android:layout_height="wrap_content"
                     android:ems="10"
-                    android:inputType="number"
+                    android:inputType="numberDecimal"
                     android:textAlignment="center" />
 
 

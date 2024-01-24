@@ -22,7 +22,7 @@ import com.example.handheld.modelos.PedidoModelo;
 import java.util.ArrayList;
 import java.util.List;
 
-public class Pedido extends AppCompatActivity implements AdapterView.OnItemClickListener {
+public class PedidoTrasladoBod2_Bod1 extends AppCompatActivity implements AdapterView.OnItemClickListener {
 
     //Se declaran los elementos del layout
     Button btnSalir, btnActualizar;
@@ -43,11 +43,11 @@ public class Pedido extends AppCompatActivity implements AdapterView.OnItemClick
     Integer bod_destino;
     String modelo;
 
-    @SuppressLint({"MissingInflatedId", "SetTextI18n"})
+    @SuppressLint("SetTextI18n")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_pedido);
+        setContentView(R.layout.activity_pedido_traslado_bod2_bod1);
 
         //Definimos los elemetos del layout en la clase
         btnSalir = findViewById(R.id.btnSalir);
@@ -68,7 +68,7 @@ public class Pedido extends AppCompatActivity implements AdapterView.OnItemClick
         //Le enviamos al Textview "movimiento" un texto
         movimiento.setText("Movimiento: Bodega " + bod_origen.toString() + " - " + bod_destino.toString());
 
-       //Llamamos al metodo para consultar los pedidos
+        //Llamamos al metodo para consultar los pedidos
         consultarPedidos();
 
         //Programos el boton "Actualizar" para que al presionarlo actualice y muestre un mensaje
@@ -82,8 +82,8 @@ public class Pedido extends AppCompatActivity implements AdapterView.OnItemClick
     public void consultarPedidos(){
         conexion = new Conexion();
 
-        ListaPedidos = conexion.obtenerPedidos(getApplication());
-        PedidoAdapter = new listpedidoAdapter(Pedido.this,R.layout.item_row,ListaPedidos);
+        ListaPedidos = conexion.obtenerPedidosTrasladoB2aB1(getApplication());
+        PedidoAdapter = new listpedidoAdapter(PedidoTrasladoBod2_Bod1.this,R.layout.item_row,ListaPedidos);
         listviewPedido.setAdapter(PedidoAdapter);
     }
 
@@ -100,7 +100,7 @@ public class Pedido extends AppCompatActivity implements AdapterView.OnItemClick
         int intPendiente = Integer.parseInt(ListaPedidos.get(position).getPendiente());
 
         if (intPendiente > 0){
-            Intent intent = new Intent(this,Escaner.class);
+            Intent intent = new Intent(this,EscanerTrasladoBod2_Bod1.class);
             //Enviamos al siguiente Activity los datos del Listview Seleccionado
             intent.putExtra("numero", ListaPedidos.get(position).getNumero());
             intent.putExtra("idDetalle", ListaPedidos.get(position).getIdDetalle());
@@ -147,5 +147,4 @@ public class Pedido extends AppCompatActivity implements AdapterView.OnItemClick
         toast.setView(view);
         toast.show();
     }
-
 }

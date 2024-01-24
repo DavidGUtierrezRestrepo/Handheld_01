@@ -20,8 +20,9 @@
     <string name="txtcedula">Ingresar Cedula</string>
     <string name="contentDescripcionImg">Boton buscar cedula</string>
 
-    //Strings Utilizados en el layout "activity_pedido"
-    <string name="txtMovimientosPedido">PEDIDO</string>
+    //Strings Utilizados en el layout "activity_pedidos Translados alambron"
+    <string name="txtMovimientosPedido">PEDIDO TRASLADO BOD_1 A BOD2 </string>
+    <string name="txtMovimientosPedidosBod2_Bod1">PEDIDO TRASLADO BOD_2 A BOD1 </string>
     <string name="btnActualizar">Actualizar Consulta</string>
     <string name="btnSalir">Salir</string>
 
@@ -41,8 +42,10 @@
     <string name="txtTRollosLeidos">Total Leidos: </string>
     <string name="btnTransaGalv">MOVER ROLLOS</string>
 
-    //Strings Utilizados en el layout "activity_revision_terminado_trefilacion"
+    //String Utilizado en el layout "activity_revision_terminado_trefilacion"
     <string name="txtTCTrefi">REVISION CALIDAD TREFILACIÓN</string>
+    //String Utilizado en el layout "activity_revision_terminado_recocido"
+    <string name="txtTCReco">REVISION CALIDAD RECOCIDO</string>
     <string name="btnRechazado">RECHAZADO</string>
     <string name="btnAprobado">APROBADO</string>
 
@@ -95,5 +98,8 @@
     <string name="txtTrefCaja">Referencia</string>
     <string name="txtCfisica">Fisico:</string>
     <string name="txtCsiste">Sistema:</string>
+
+    //Strings utilizados en el layout "AuditoriaLogistica"
+    <string name="noDisponible">No Disponible</string>
 
 </resources>

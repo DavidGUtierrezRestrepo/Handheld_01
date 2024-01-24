@@ -12,6 +12,7 @@ import com.example.handheld.modelos.CentrosModelo;
 import com.example.handheld.modelos.CodigoGalvModelo;
 import com.example.handheld.modelos.CorreoModelo;
 import com.example.handheld.modelos.CuentasModelo;
+import com.example.handheld.modelos.DatosRevisionCalidad;
 import com.example.handheld.modelos.EmpRecepcionadoCajasModelo;
 import com.example.handheld.modelos.GalvRecepcionModelo;
 import com.example.handheld.modelos.GalvRecepcionadoRollosModelo;
@@ -22,8 +23,15 @@ import com.example.handheld.modelos.PedidoModelo;
 import com.example.handheld.modelos.PermisoPersonaModelo;
 import com.example.handheld.modelos.Persona;
 import com.example.handheld.modelos.PersonaModelo;
+import com.example.handheld.modelos.RecoRecepcionModelo;
+import com.example.handheld.modelos.RecoRecepcionadoRollosModelo;
+import com.example.handheld.modelos.RolloGalvInfor;
 import com.example.handheld.modelos.RolloGalvTransa;
+import com.example.handheld.modelos.RolloRecoRevisionModelo;
+import com.example.handheld.modelos.RolloRecoTransa;
+import com.example.handheld.modelos.RolloTrefiInfor;
 import com.example.handheld.modelos.RolloTrefiRevisionModelo;
+import com.example.handheld.modelos.RolloTrefiTransa;
 import com.example.handheld.modelos.RolloterminadoModelo;
 import com.example.handheld.modelos.TipotransModelo;
 import com.example.handheld.modelos.TrefiRecepcionModelo;
@@ -148,6 +156,23 @@ public class Conexion {
         return persona;
     }
 
+    public String obtenerNombrePersona(Context context, String cedula){
+        String nombre = "";
+
+        try {
+            Statement st = conexionBD(ConfiguracionBD.obtenerNombreBD(1), context).createStatement();
+            ResultSet rs = st.executeQuery("select nombres from Jjv_emplea_CORcontrol_Act_ret where nit='" + cedula + "'");
+            if (rs.next()){
+                nombre = rs.getString("nombres");
+            }else{
+                nombre = "";
+            }
+        }catch (Exception e){
+            Toast.makeText(context, e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+        return nombre;
+    }
+
     //Obtiene datos del correo empresarial en la BD
     public CorreoModelo obtenerCorreo(Context context){
         CorreoModelo correo = null;
@@ -194,6 +219,33 @@ public class Conexion {
         return persona;
     }
 
+    public PermisoPersonaModelo obtenerPermisoPersonaAlambre(Context context, String cedula, String permiso){
+        PermisoPersonaModelo personaAlambre = null;
+        ResultSet rs;
+
+        try {
+            Statement st = conexionBD(ConfiguracionBD.obtenerNombreBD(2), context).createStatement();
+            if (permiso.equals("entrega")){
+                rs = st.executeQuery("SELECT p.nit, p.permiso\n" +
+                        "FROM jd_permisos_traslado_alambron p\n" +
+                        "where p.permiso = 'E' and p.nit = '" + cedula + "' and p.modulo ='mod_recepcion_terminado_trefilacion'");
+            }else{
+                rs = st.executeQuery("SELECT p.nit, p.permiso\n" +
+                        "FROM jd_permisos_traslado_alambron p\n" +
+                        "where p.permiso = 'R' and p.nit = '" + cedula + "' and p.modulo ='mod_recepcion_terminado_trefilacion'");
+            }
+
+            if (rs.next()){
+                personaAlambre = new PermisoPersonaModelo(rs.getString("nit"), rs.getString("permiso"));
+            }else{
+                personaAlambre = new PermisoPersonaModelo("", "");
+            }
+        }catch (Exception e){
+            Toast.makeText(context, e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+        return personaAlambre;
+    }
+
     public PermisoPersonaModelo obtenerPermisoPersona(Context context, String cedula, String modulo){
         PermisoPersonaModelo persona = null;
         ResultSet rs;
@@ -213,6 +265,26 @@ public class Conexion {
             Toast.makeText(context, e.getMessage(), Toast.LENGTH_SHORT).show();
         }
         return persona;
+    }
+
+    //Obtener datos de la revision de calidad un rollo
+
+    public DatosRevisionCalidad obtenerDatosRevision(Context context, String id_revision){
+        DatosRevisionCalidad modelo;
+        modelo = new DatosRevisionCalidad("","","");
+
+        try {
+            Statement st = conexionBD(ConfiguracionBD.obtenerNombreBD(2), context).createStatement();
+            ResultSet rs = st.executeQuery("select fecha_hora,revisor,estado from jd_revision_calidad_trefilacion where id_revision='" + id_revision + "'");
+            if (rs.next()){
+                modelo.setFecha_revision(rs.getString("fecha_hora"));
+                modelo.setRevisor(rs.getString("revisor"));
+                modelo.setEstado(rs.getString("estado"));
+            }
+        }catch (Exception e){
+            Toast.makeText(context, e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+        return modelo;
     }
 
     //Obtiene un dato
@@ -515,6 +587,23 @@ public class Conexion {
     }
 
     //Obtiene un dato
+    public String obtenerConsumosRollo(Context context, String sql){
+        String numConsumos = "";
+
+        try {
+            Statement st = conexionBD(ConfiguracionBD.obtenerNombreBD(2), context).createStatement();
+            ResultSet rs = st.executeQuery(sql);
+            if (rs.next()){
+                numConsumos = rs.getString("nro_consumos");
+            }
+
+        }catch (Exception e){
+            Toast.makeText(context, e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+        return numConsumos;
+    }
+
+    //Obtiene un dato
     public boolean existeCodigo(Context context, String codigo){
         String Pcodigo;
         boolean resp = false;
@@ -674,6 +763,32 @@ public class Conexion {
         return pedidos;
     }
 
+    public List<PedidoModelo> obtenerPedidosTrasladoB2aB1(Context context){
+        List<PedidoModelo> pedidos = new ArrayList<>();
+        PedidoModelo modelo;
+
+        try {
+            Statement st = conexionBD(ConfiguracionBD.obtenerNombreBD(2), context).createStatement();
+            ResultSet rs = st.executeQuery("SELECT E.numero,D.id_detalle,E.fecha,D.codigo,(D.cantidad - (SELECT COUNT(numero) FROM J_salida_alambron_transaccion  WHERE numero = D.numero AND id_detalle = D.id_detalle))As pendiente,R.descripcion \n" +
+                    "                               FROM J_salida_alambron_enc E ,J_salida_alambron_det D, CORSAN.dbo.referencias R \n" +
+                    "                                  WHERE E.anulado is null AND  R.codigo = D.codigo AND D.numero = E.numero AND (D.cantidad - (SELECT COUNT(numero) FROM J_salida_alambron_transaccion  WHERE numero = D.numero AND id_detalle = D.id_detalle)) > 0 AND e.devolver = 'S' \n" +
+                    "                                    ORDER BY E.fecha");
+            while (rs.next()){
+                modelo = new PedidoModelo();
+                modelo.setNumero(Integer.valueOf(rs.getString("numero")));
+                modelo.setIdDetalle(Integer.valueOf(rs.getString("id_detalle")));
+                modelo.setFecha(rs.getString("fecha"));
+                modelo.setCodigo(rs.getString("codigo"));
+                modelo.setPendiente(rs.getString("pendiente"));
+                modelo.setDescripcion(rs.getString("descripcion"));
+                pedidos.add(modelo);
+            }
+        }catch (Exception e){
+            Toast.makeText(context, e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+        return pedidos;
+    }
+
     public List<MesasModelo> obtenerMesas(Context context, String sql){
         List<MesasModelo> mesas = new ArrayList<>();
         MesasModelo modelo;
@@ -760,6 +875,38 @@ public class Conexion {
         return id_revision;
     }
 
+    public Integer consultarReviRecoIncomple(Context context, String tipo){
+        int id_revision = 0;
+
+        try {
+            Statement st = conexionBD(ConfiguracionBD.obtenerNombreBD(2), context).createStatement();
+            ResultSet rs;
+            if (tipo.equals("construccion")){
+                rs = st.executeQuery("select Rev.id_revision\n" +
+                        "from jd_revision_calidad_recocido Rev inner join\n" +
+                        "JB_rollos_rec R on R.id_revision = Rev.id_revision inner join \n" +
+                        "JB_orden_prod_rec_refs O on R.cod_orden_rec = O.cod_orden inner join \n" +
+                        "CORSAN.dbo.referencias Ref on O.prod_final = Ref.codigo\n" +
+                        "where estado='R' and num_transa is null and O.prod_final like '33%'\n" +
+                        "AND (Ref.descripcion LIKE 'ALAMBRE REC PARA CONSTRUCC%' OR Ref.descripcion LIKE 'ALAMBRE RECOCIDO PARA CONSTRUCC%');");
+            }else{
+                rs = st.executeQuery("select Rev.id_revision\n" +
+                        "from jd_revision_calidad_recocido Rev inner join\n" +
+                        "JB_rollos_rec R on R.id_revision = Rev.id_revision inner join \n" +
+                        "JB_orden_prod_rec_refs O on R.cod_orden_rec = O.cod_orden inner join \n" +
+                        "CORSAN.dbo.referencias Ref on O.prod_final = Ref.codigo\n" +
+                        "where estado='R' and num_transa is null and O.prod_final like '33%'\n" +
+                        "AND NOT (Ref.descripcion LIKE 'ALAMBRE REC PARA CONSTRUCC%' OR Ref.descripcion LIKE 'ALAMBRE RECOCIDO PARA CONSTRUCC%');");
+            }
+            if(rs.next()){
+                id_revision = rs.getInt("id_revision");
+            }
+        }catch (Exception e){
+            Toast.makeText(context, e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+        return id_revision;
+    }
+
     public List<TrefiRecepcionModelo> consultarTrefiIncomple(Context context){
         List<TrefiRecepcionModelo> trefiTerminado = new ArrayList<>();
         TrefiRecepcionModelo modelo;
@@ -787,16 +934,48 @@ public class Conexion {
         return trefiTerminado;
     }
 
+    public List<RecoRecepcionModelo> consultarRecoIncomple(Context context){
+        List<RecoRecepcionModelo> recoTerminado = new ArrayList<>();
+        RecoRecepcionModelo modelo;
+
+        try {
+            Statement st = conexionBD(ConfiguracionBD.obtenerNombreBD(2), context).createStatement();
+            ResultSet rs = st.executeQuery("select R.cod_orden_rec,R.id_detalle_rec,R.id_rollo_rec, O.prod_final,Ref.descripcion, R.peso\n" +
+                    "from JB_rollos_rec R inner join JB_orden_prod_rec_refs O on R.cod_orden_rec = O.cod_orden inner join CORSAN.dbo.referencias Ref on O.prod_final = Ref.codigo inner join jd_revision_calidad_recocido Rev on R.id_revision = Rev.id_revision inner join jd_detalle_recepcion_recocido Rec on Rec.id_recepcion = R.id_recepcion\n" +
+                    "where O.prod_final like '33%' and R.id_recepcion is not null and Rec.trb1 is null and R.id_revision is not null and R.no_conforme is null and Rev.estado='A'");
+            while (rs.next()){
+                modelo = new RecoRecepcionModelo();
+                modelo.setCod_orden(rs.getString("cod_orden"));
+                modelo.setId_detalle(rs.getString("id_detalle"));
+                modelo.setId_rollo(rs.getString("id_rollo"));
+                modelo.setReferencia(rs.getString("prod_final"));
+                modelo.setDescripcion(rs.getString("descripcion"));
+                modelo.setPeso(String.valueOf(rs.getInt("peso")));
+                modelo.setColor("RED");
+                recoTerminado.add(modelo);
+            }
+        }catch (Exception e){
+            Toast.makeText(context, e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+        return recoTerminado;
+    }
+
     public List<TrefiRecepcionModelo> obtenerTrefiRevision(Context context){
         List<TrefiRecepcionModelo> trefiTerminado = new ArrayList<>();
         TrefiRecepcionModelo modelo;
 
         try {
             Statement st = conexionBD(ConfiguracionBD.obtenerNombreBD(2), context).createStatement();
+            //Se modifica la consulta para que traiga tambien los rollos manuales debido a que hay tiquetes en los cuales produccion se equivoca, en datos como el peso
+            //y calidad debe de corregir sacando rollos manuales, aun asi con estos tiquetes deben hacerse transacciones entre bodegas, se realiza a decision de Maria Isabel Gomez
+            //ResultSet rs = st.executeQuery("select R.cod_orden,R.id_detalle,R.id_rollo, O.prod_final,Ref.descripcion, R.peso\n" +
+            //        "from J_rollos_tref R inner join J_orden_prod_tef O on R.cod_orden = O.consecutivo inner join CORSAN.dbo.referencias Ref on O.prod_final = Ref.codigo\n" +
+            //        "where O.prod_final like '33%' and R.recepcionado is null and R.id_revision is null and R.anulado is null and R.no_conforme is null  and R.motivo is null and R.traslado is null and\n" +
+            //        "R.saga is null and R.bobina is null and R.scla is null and R.destino is null and R.srec is null and R.scal is null and R.scae is null and R.sar is null and R.sav is null and R.manuales is null and R.fecha_hora >= '2023-12-01'");
             ResultSet rs = st.executeQuery("select R.cod_orden,R.id_detalle,R.id_rollo, O.prod_final,Ref.descripcion, R.peso\n" +
                     "from J_rollos_tref R inner join J_orden_prod_tef O on R.cod_orden = O.consecutivo inner join CORSAN.dbo.referencias Ref on O.prod_final = Ref.codigo\n" +
                     "where O.prod_final like '33%' and R.recepcionado is null and R.id_revision is null and R.anulado is null and R.no_conforme is null  and R.motivo is null and R.traslado is null and\n" +
-                    "R.saga is null and R.bobina is null and R.scla is null and R.destino is null and R.srec is null and R.scal is null and R.scae is null and R.sar is null and R.sav is null and R.manuales is null");
+                    "R.saga is null and R.bobina is null and R.scla is null and R.destino is null and R.srec is null and R.scal is null and R.scae is null and R.sar is null and R.sav is null and R.fecha_hora >= '2023-12-01'");
             while (rs.next()){
                 modelo = new TrefiRecepcionModelo();
                 modelo.setCod_orden(rs.getString("cod_orden"));
@@ -814,7 +993,46 @@ public class Conexion {
         return trefiTerminado;
     }
 
-    public RolloTrefiRevisionModelo obtenerRolloRevision(Context context, String cod_orden,String id_detalle, String id_rollo){
+    public List<RecoRecepcionModelo> obtenerRecoRevision(Context context, String tipo){
+        List<RecoRecepcionModelo> recoTerminado = new ArrayList<>();
+        RecoRecepcionModelo modelo;
+
+        try {
+            Statement st = conexionBD(ConfiguracionBD.obtenerNombreBD(2), context).createStatement();
+            ResultSet rs;
+            if (tipo.equals("construccion")){
+                 rs = st.executeQuery("select R.cod_orden_rec,R.id_detalle_rec,R.id_rollo_rec,O.prod_final,Ref.descripcion,R.peso \n" +
+                        "from JB_rollos_rec R inner join JB_orden_prod_rec_refs O on R.cod_orden_rec = O.cod_orden inner join CORSAN.dbo.referencias Ref on O.prod_final = Ref.codigo\n" +
+                        "inner join JB_orden_prod_rec_detalle D on D.cod_orden = R.cod_orden_rec\n" +
+                        "where R.id_prof_final = O.num and O.prod_final like '33%' and R.scae is null and R.no_conforme is null and R.id_recepcion is null and R.id_revision is null \n" +
+                        "and eipp is null and traslado_p is null and consu_noconfor is null and D.id_detalle = R.id_detalle_rec and D.fecha_fin >= '2023-12-01'\n" +
+                        "AND (Ref.descripcion LIKE 'ALAMBRE REC PARA CONSTRUCC%' OR Ref.descripcion LIKE 'ALAMBRE RECOCIDO PARA CONSTRUCC%')");
+            }else{
+                rs = st.executeQuery("select R.cod_orden_rec,R.id_detalle_rec,R.id_rollo_rec,O.prod_final,Ref.descripcion,R.peso \n" +
+                        "from JB_rollos_rec R inner join JB_orden_prod_rec_refs O on R.cod_orden_rec = O.cod_orden inner join CORSAN.dbo.referencias Ref on O.prod_final = Ref.codigo\n" +
+                        "inner join JB_orden_prod_rec_detalle D on D.cod_orden = R.cod_orden_rec\n" +
+                        "where R.id_prof_final = O.num and O.prod_final like '33%' and R.scae is null and R.no_conforme is null and R.id_recepcion is null and R.id_revision is null \n" +
+                        "and eipp is null and traslado_p is null and consu_noconfor is null and D.id_detalle = R.id_detalle_rec and D.fecha_fin >= '2023-12-01'\n" +
+                        "AND NOT (Ref.descripcion LIKE 'ALAMBRE REC PARA CONSTRUCC%' OR Ref.descripcion LIKE 'ALAMBRE RECOCIDO PARA CONSTRUCC%')");
+            }
+            while (rs.next()){
+                modelo = new RecoRecepcionModelo();
+                modelo.setCod_orden(rs.getString("cod_orden_rec"));
+                modelo.setId_detalle(rs.getString("id_detalle_rec"));
+                modelo.setId_rollo(rs.getString("id_rollo_rec"));
+                modelo.setReferencia(rs.getString("prod_final"));
+                modelo.setDescripcion(rs.getString("descripcion"));
+                modelo.setPeso(String.valueOf(rs.getInt("peso")));
+                modelo.setColor("RED");
+                recoTerminado.add(modelo);
+            }
+        }catch (Exception e){
+            Toast.makeText(context, e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+        return recoTerminado;
+    }
+
+    public RolloTrefiRevisionModelo obtenerRolloRevisionTrefi(Context context, String cod_orden,String id_detalle, String id_rollo){
         RolloTrefiRevisionModelo modelo;
         modelo = new RolloTrefiRevisionModelo("","");
 
@@ -824,6 +1042,26 @@ public class Conexion {
                     "from J_rollos_tref R inner join J_orden_prod_tef O on R.cod_orden = O.consecutivo inner join jd_revision_calidad_trefilacion C on C.id_revision = R.id_revision\n" +
                     "where O.prod_final like '33%' and R.recepcionado is null and R.id_revision is not null and R.anulado is null \n" +
                     "and R.cod_orden = '" + cod_orden + "' and R.id_detalle = '" + id_detalle + "' and R.id_rollo = '" + id_rollo + "'");
+            if (rs.next()){
+                modelo.setId_revision(rs.getString("id_revision"));
+                modelo.setEstado(rs.getString("estado"));
+            }
+        }catch (Exception e){
+            Toast.makeText(context, e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+        return modelo;
+    }
+
+    public RolloRecoRevisionModelo obtenerRolloRevisionReco(Context context, String cod_orden, String id_detalle, String id_rollo){
+        RolloRecoRevisionModelo modelo;
+        modelo = new RolloRecoRevisionModelo("","");
+
+        try {
+            Statement st = conexionBD(ConfiguracionBD.obtenerNombreBD(2), context).createStatement();
+            ResultSet rs = st.executeQuery("select R.id_revision, C.estado\n" +
+                    "from JB_rollos_rec R inner join JB_orden_prod_rec_refs O on R.cod_orden_rec = O.cod_orden inner join jd_revision_calidad_recocido C on C.id_revision = R.id_revision\n" +
+                    "where O.num = R.id_prof_final and O.prod_final like '33%' and R.id_recepcion is null and R.id_revision is not null and R.no_conforme is null \n" +
+                    "and R.cod_orden_rec = '" + cod_orden + "' and R.id_detalle_rec = '" + id_detalle + "' and R.id_rollo_rec = '" + id_rollo + "'");
             if (rs.next()){
                 modelo.setId_revision(rs.getString("id_revision"));
                 modelo.setEstado(rs.getString("estado"));
@@ -848,6 +1086,129 @@ public class Conexion {
                 modelo.setNro_orden(rs.getString("nro_orden"));
                 modelo.setNro_rollo(rs.getString("nro_rollo"));
                 modelo.setReferencia(rs.getString("referencia"));
+                modelo.setFecha_recepcion(rs.getString("fecha_recepcion"));
+                modelo.setTrb1(rs.getString("trb1"));
+            }
+        }catch (Exception e){
+            Toast.makeText(context, e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+        return modelo;
+    }
+
+    public RolloGalvInfor obtenerInforRolloGalv(Context context, String nro_orden, String consecutivo_rollo){
+        RolloGalvInfor modelo;
+        modelo = new RolloGalvInfor("","","","","","","","","","");
+
+        try {
+            Statement st = conexionBD(ConfiguracionBD.obtenerNombreBD(2), context).createStatement();
+            ResultSet rs = st.executeQuery("SELECT \n" +
+                    "R.nro_orden,\n" +
+                    "R.anular,\n" +
+                    "R.trb1, \n" +
+                    "R.fecha_recepcion, \n" +
+                    "R.nit_recepcionado AS nombre_entrega, \n" +
+                    "R.nit_entrega AS nombre_recepcion \n" +
+                    "FROM \n" +
+                    "D_rollo_galvanizado_f R \n" +
+                    "JOIN \n" +
+                    "D_orden_pro_galv_enc S ON R.nro_orden = S.consecutivo_orden_G \n" +
+                    "WHERE \n" +
+                    "S.final_galv LIKE '33G%' \n" +
+                    "AND R.nro_orden = '" + nro_orden + "'\n" +
+                    "AND R.consecutivo_rollo = '" + consecutivo_rollo + "'");
+            if (rs.next()){
+                modelo.setNro_orden(rs.getString("nro_orden"));
+                modelo.setAnulado(rs.getString("anular"));
+                modelo.setNum_transa(rs.getString("trb1"));
+                modelo.setFecha_recepcion(rs.getString("fecha_recepcion"));
+                modelo.setEntrega(rs.getString("nombre_entrega"));
+                modelo.setRecibe(rs.getString("nombre_recepcion"));
+            }
+        }catch (Exception e){
+            Toast.makeText(context, e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+        return modelo;
+    }
+
+    public RolloTrefiInfor obtenerInforRolloTrefi(Context context, String cod_orden, String id_detalle, String id_rollo){
+        RolloTrefiInfor modelo;
+        modelo = new RolloTrefiInfor("","","","","","","","","","");
+
+        try {
+            Statement st = conexionBD(ConfiguracionBD.obtenerNombreBD(2), context).createStatement();
+            ResultSet rs = st.executeQuery("SELECT \n" +
+                    "R.cod_orden,\n" +
+                    "R.anulado,\n" +
+                    "R.id_revision, \n" +
+                    "R.trb1, \n" +
+                    "R.fecha_recepcion, \n" +
+                    "R.nit_recepcionado AS nombre_entrega, \n" +
+                    "R.nit_entrega AS nombre_recepcion \n" +
+                    "FROM \n" +
+                    "J_rollos_tref R \n" +
+                    "JOIN \n" +
+                    "J_orden_prod_tef S ON R.cod_orden = S.consecutivo \n" +
+                    "WHERE \n" +
+                    "S.prod_final LIKE '33%' \n" +
+                    "AND R.cod_orden = '" + cod_orden + "'\n" +
+                    "AND R.id_detalle = '" + id_detalle + "'\n" +
+                    "AND R.id_rollo='" + id_rollo + "'");
+            if (rs.next()){
+                modelo.setCod_orden(rs.getString("cod_orden"));
+                modelo.setAnulado(rs.getString("anulado"));
+                modelo.setId_revision(rs.getString("id_revision"));
+                modelo.setNum_transa(rs.getString("trb1"));
+                modelo.setFecha_recepcion(rs.getString("fecha_recepcion"));
+                modelo.setEntrega(rs.getString("nombre_entrega"));
+                modelo.setRecibe(rs.getString("nombre_recepcion"));
+            }
+        }catch (Exception e){
+            Toast.makeText(context, e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+        return modelo;
+    }
+
+    public RolloTrefiTransa obtenerRolloTransTrefi(Context context, String cod_orden, String id_detalle, String id_rollo){
+        RolloTrefiTransa modelo;
+        modelo = new RolloTrefiTransa("","","","","","");
+
+        try {
+            Statement st = conexionBD(ConfiguracionBD.obtenerNombreBD(2), context).createStatement();
+            ResultSet rs = st.executeQuery("select R.cod_orden,R.id_detalle,R.id_rollo,C.estado, R.fecha_recepcion,R.trb1\n" +
+                    "from J_rollos_tref R inner join J_orden_prod_tef O on R.cod_orden = O.consecutivo inner join jd_revision_calidad_trefilacion C on C.id_revision = R.id_revision\n" +
+                    "where O.prod_final like '33%' and R.anulado is null and R.no_conforme is null  and R.motivo is null and R.traslado is null and\n" +
+                    "R.saga is null and R.bobina is null and R.scla is null and R.destino is null and R.srec is null and R.scal is null and R.scae is null and R.sar is null and R.sav is null\n" +
+                    "and R.cod_orden = '" + cod_orden + "' and R.id_detalle = '" + id_detalle + "' and R.id_rollo = '" + id_rollo + "' and (R.trb1 is not null or R.id_revision is not null)");
+            if (rs.next()){
+                modelo.setCod_orden(rs.getString("cod_orden"));
+                modelo.setId_detalle(rs.getString("id_detalle"));
+                modelo.setId_rollo(rs.getString("id_rollo"));
+                modelo.setEstado(rs.getString("estado"));
+                modelo.setFecha_recepcion(rs.getString("fecha_recepcion"));
+                modelo.setTrb1(rs.getString("trb1"));
+            }
+        }catch (Exception e){
+            Toast.makeText(context, e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+        return modelo;
+    }
+
+    public RolloRecoTransa obtenerRolloTransReco(Context context, String cod_orden, String id_detalle, String id_rollo){
+        RolloRecoTransa modelo;
+        modelo = new RolloRecoTransa("","","","","","");
+
+        try {
+            Statement st = conexionBD(ConfiguracionBD.obtenerNombreBD(2), context).createStatement();
+            ResultSet rs = st.executeQuery("select R.cod_orden_rec,R.id_detalle_rec,R.id_rollo_rec,C.estado, Rec.fecha_recepcion,Rec.trb1\n" +
+                    "from JB_rollos_rec R inner join JB_orden_prod_rec_refs O on R.cod_orden_rec = O.cod_orden inner join jd_revision_calidad_recocido C \n" +
+                    "on C.id_revision = R.id_revision inner join jd_detalle_recepcion_recocido Rec on Rec.id_recepcion = R.id_recepcion\n" +
+                    "where O.prod_final like '33%' and R.no_conforme is null and R.cod_orden_rec = '" + cod_orden + "' and R.id_detalle_rec = '" + id_detalle + "' and \n" +
+                    "R.id_rollo_rec = '" + id_rollo + "' and (Rec.trb1 is not null or R.id_revision is not null)");
+            if (rs.next()){
+                modelo.setCod_orden(rs.getString("cod_orden"));
+                modelo.setId_detalle(rs.getString("id_detalle"));
+                modelo.setId_rollo(rs.getString("id_rollo"));
+                modelo.setEstado(rs.getString("estado"));
                 modelo.setFecha_recepcion(rs.getString("fecha_recepcion"));
                 modelo.setTrb1(rs.getString("trb1"));
             }
@@ -884,16 +1245,48 @@ public class Conexion {
         return trefiTerminado;
     }
 
+    public List<RecoRecepcionModelo> obtenerReviRecoTerminado(Context context, Integer id_revision){
+        List<RecoRecepcionModelo> recoTerminado = new ArrayList<>();
+        RecoRecepcionModelo modelo;
+
+        try {
+            Statement st = conexionBD(ConfiguracionBD.obtenerNombreBD(2), context).createStatement();
+            ResultSet rs = st.executeQuery("select R.cod_orden_rec,R.id_detalle_rec,R.id_rollo_rec,O.prod_final,Ref.descripcion,R.peso \n" +
+                    "from JB_rollos_rec R inner join JB_orden_prod_rec_refs O on R.cod_orden_rec = O.cod_orden inner join CORSAN.dbo.referencias Ref on O.prod_final = Ref.codigo\n" +
+                    "where R.id_prof_final = O.num and O.prod_final like '33%' and R.scae is null and R.no_conforme is null and R.id_recepcion is null and R.id_revision = " + id_revision + " \n" +
+                    "and eipp is null and traslado_p is null and consu_noconfor is null");
+            while (rs.next()){
+                modelo = new RecoRecepcionModelo();
+                modelo.setCod_orden(rs.getString("cod_orden_rec"));
+                modelo.setId_detalle(rs.getString("id_detalle_rec"));
+                modelo.setId_rollo(rs.getString("id_rollo_rec"));
+                modelo.setReferencia(rs.getString("prod_final"));
+                modelo.setDescripcion(rs.getString("descripcion"));
+                modelo.setPeso(String.valueOf(rs.getInt("peso")));
+                modelo.setColor("GREEN");
+                recoTerminado.add(modelo);
+            }
+        }catch (Exception e){
+            Toast.makeText(context, e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+        return recoTerminado;
+    }
+
     public List<TrefiRecepcionModelo> obtenerTrefiTerminado(Context context){
         List<TrefiRecepcionModelo> trefiTerminado = new ArrayList<>();
         TrefiRecepcionModelo modelo;
 
         try {
             Statement st = conexionBD(ConfiguracionBD.obtenerNombreBD(2), context).createStatement();
+            //Se cambia la consulta a una con menos condiciones para que cargue más rápido los rollos autorizados
+            //ResultSet rs = st.executeQuery("select R.cod_orden,R.id_detalle,R.id_rollo, O.prod_final,Ref.descripcion, R.peso\n" +
+            //        "from J_rollos_tref R inner join J_orden_prod_tef O on R.cod_orden = O.consecutivo inner join CORSAN.dbo.referencias Ref on O.prod_final = Ref.codigo inner join jd_revision_calidad_trefilacion Rev on R.id_revision = Rev.id_revision\n" +
+            //        "where O.prod_final like '33%' and R.recepcionado is null and R.trb1 is null and R.id_revision is not null and R.anulado is null and R.no_conforme is null  and R.motivo is null and R.traslado is null and\n" +
+            //        "R.saga is null and R.bobina is null and R.scla is null and R.destino is null and R.srec is null and R.scal is null and R.scae is null and R.sar is null and R.sav is null and Rev.estado='A'");
             ResultSet rs = st.executeQuery("select R.cod_orden,R.id_detalle,R.id_rollo, O.prod_final,Ref.descripcion, R.peso\n" +
-                    "from J_rollos_tref R inner join J_orden_prod_tef O on R.cod_orden = O.consecutivo inner join CORSAN.dbo.referencias Ref on O.prod_final = Ref.codigo inner join jd_revision_calidad_trefilacion Rev on R.id_revision = Rev.id_revision\n" +
-                    "where O.prod_final like '33%' and R.recepcionado is null and R.trb1 is null and R.id_revision is not null and R.anulado is null and R.no_conforme is null  and R.motivo is null and R.traslado is null and\n" +
-                    "R.saga is null and R.bobina is null and R.scla is null and R.destino is null and R.srec is null and R.scal is null and R.scae is null and R.sar is null and R.sav is null and Rev.estado='A'");
+                    "from J_rollos_tref R inner join J_orden_prod_tef O on R.cod_orden = O.consecutivo inner join CORSAN.dbo.referencias Ref on O.prod_final = Ref.codigo inner join \n" +
+                    "jd_revision_calidad_trefilacion Rev on R.id_revision = Rev.id_revision\n" +
+                    "where O.prod_final like '33%' and R.recepcionado is null and R.trb1 is null and R.id_revision is not null and Rev.estado='A'");
             while (rs.next()){
                 modelo = new TrefiRecepcionModelo();
                 modelo.setCod_orden(rs.getString("cod_orden"));
@@ -909,6 +1302,38 @@ public class Conexion {
             Toast.makeText(context, e.getMessage(), Toast.LENGTH_SHORT).show();
         }
         return trefiTerminado;
+    }
+
+    public List<RecoRecepcionModelo> obtenerRecoTerminado(Context context){
+        List<RecoRecepcionModelo> recoTerminado = new ArrayList<>();
+        RecoRecepcionModelo modelo;
+
+        try {
+            Statement st = conexionBD(ConfiguracionBD.obtenerNombreBD(2), context).createStatement();
+            //Se cambia la consulta a una con menos condiciones para que cargue más rápido los rollos autorizados
+            //ResultSet rs = st.executeQuery("select R.cod_orden,R.id_detalle,R.id_rollo, O.prod_final,Ref.descripcion, R.peso\n" +
+            //        "from J_rollos_tref R inner join J_orden_prod_tef O on R.cod_orden = O.consecutivo inner join CORSAN.dbo.referencias Ref on O.prod_final = Ref.codigo inner join jd_revision_calidad_trefilacion Rev on R.id_revision = Rev.id_revision\n" +
+            //        "where O.prod_final like '33%' and R.recepcionado is null and R.trb1 is null and R.id_revision is not null and R.anulado is null and R.no_conforme is null  and R.motivo is null and R.traslado is null and\n" +
+            //        "R.saga is null and R.bobina is null and R.scla is null and R.destino is null and R.srec is null and R.scal is null and R.scae is null and R.sar is null and R.sav is null and Rev.estado='A'");
+            ResultSet rs = st.executeQuery("select R.cod_orden_rec,R.id_detalle_rec,R.id_rollo_rec, O.prod_final,Ref.descripcion, R.peso\n" +
+                    "from JB_rollos_rec R inner join JB_orden_prod_rec_refs O on R.cod_orden_rec = O.cod_orden inner join CORSAN.dbo.referencias Ref on O.prod_final = Ref.codigo inner join \n" +
+                    "jd_revision_calidad_recocido Rev on R.id_revision = Rev.id_revision inner join jd_detalle_recepcion_recocido Rec on rec.id_recepcion = R.id_recepcion\n" +
+                    "where O.prod_final like '33%' and R.id_recepcion is null and Rec.trb1 is null and R.id_revision is not null and Rev.estado='A'");
+            while (rs.next()){
+                modelo = new RecoRecepcionModelo();
+                modelo.setCod_orden(rs.getString("cod_orden"));
+                modelo.setId_detalle(rs.getString("id_detalle"));
+                modelo.setId_rollo(rs.getString("id_rollo"));
+                modelo.setReferencia(rs.getString("prod_final"));
+                modelo.setDescripcion(rs.getString("descripcion"));
+                modelo.setPeso(String.valueOf(rs.getInt("peso")));
+                modelo.setColor("RED");
+                recoTerminado.add(modelo);
+            }
+        }catch (Exception e){
+            Toast.makeText(context, e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+        return recoTerminado;
     }
 
     public List<CajasRefeModelo> obtenerCajasRefe(Context context, String mesa, String referencia){
@@ -1028,6 +1453,31 @@ public class Conexion {
         return refeRecepcionados;
     }
 
+    public List<RecoRecepcionadoRollosModelo> recoRefeRecepcionados(Context context, String fecha_recepcion, String month, String year){
+        List<RecoRecepcionadoRollosModelo> refeRecepcionados = new ArrayList<>();
+        RecoRecepcionadoRollosModelo modelo;
+
+        try {
+            Statement st = conexionBD(ConfiguracionBD.obtenerNombreBD(2), context).createStatement();
+            ResultSet rs = st.executeQuery("select sum(R.peso) as peso, (SELECT p.promedio from corsan.dbo.v_promedio p where codigo = O.prod_final and P.ano = "+ year +" and P.mes = "+ month +")  as promedio, (select costo_unitario from CORSAN.dbo.referencias R where codigo = O.prod_final) as costo_unitario , O.prod_final\n" +
+                    "from JB_rollos_rec R inner join JB_orden_prod_rec_refs O on O.cod_orden = R.cod_orden_rec inner join jd_detalle_recepcion_recocido D on D.id_recepcion =  R.id_recepcion\n" +
+                    "where R.id_recepcion is not null and D.fecha_recepcion = '"+ fecha_recepcion +"' and R.no_conforme is null and O.prod_final like '33%' \n" +
+                    "group by O.prod_final");
+
+            while (rs.next()){
+                modelo = new RecoRecepcionadoRollosModelo();
+                modelo.setPeso(rs.getDouble("peso"));
+                modelo.setPromedio(rs.getDouble("promedio"));
+                modelo.setCosto_unitario(rs.getDouble("costo_unitario"));
+                modelo.setReferencia(rs.getString("prod_final"));
+                refeRecepcionados.add(modelo);
+            }
+        }catch (Exception e){
+            Toast.makeText(context, e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+        return refeRecepcionados;
+    }
+
     public List<TrefiRecepcionadoRollosModelo> trefiRefeRevisados(Context context, Integer numero_revision, String month, String year){
         List<TrefiRecepcionadoRollosModelo> refeRecepcionados = new ArrayList<>();
         TrefiRecepcionadoRollosModelo modelo;
@@ -1041,6 +1491,32 @@ public class Conexion {
 
             while (rs.next()){
                 modelo = new TrefiRecepcionadoRollosModelo();
+                modelo.setPeso(rs.getDouble("peso"));
+                modelo.setPromedio(rs.getDouble("promedio"));
+                modelo.setCosto_unitario(rs.getDouble("costo_unitario"));
+                modelo.setReferencia(rs.getString("prod_final"));
+                refeRecepcionados.add(modelo);
+            }
+        }catch (Exception e){
+            Toast.makeText(context, e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+        return refeRecepcionados;
+    }
+
+    public List<RecoRecepcionadoRollosModelo> recoRefeRevisados(Context context, Integer numero_revision, String month, String year){
+        List<RecoRecepcionadoRollosModelo> refeRecepcionados = new ArrayList<>();
+        RecoRecepcionadoRollosModelo modelo;
+
+        try {
+            Statement st = conexionBD(ConfiguracionBD.obtenerNombreBD(2), context).createStatement();
+            ResultSet rs = st.executeQuery("select sum(R.peso) as peso, (SELECT p.promedio from corsan.dbo.v_promedio p where codigo = O.prod_final and P.ano = "+ year +" and P.mes = "+ month +")  as promedio, \n" +
+                    "(select costo_unitario from CORSAN.dbo.referencias R where codigo = O.prod_final) as costo_unitario , O.prod_final \n" +
+                    "from JB_rollos_rec R inner join JB_orden_prod_rec_refs O on O.cod_orden = R.cod_orden_rec \n" +
+                    "where O.num = R.id_prof_final and id_recepcion is null and R.id_revision = '"+ numero_revision.toString() +"' and R.no_conforme is null and O.prod_final like '33%' \n" +
+                    "group by O.prod_final");
+
+            while (rs.next()){
+                modelo = new RecoRecepcionadoRollosModelo();
                 modelo.setPeso(rs.getDouble("peso"));
                 modelo.setPromedio(rs.getDouble("promedio"));
                 modelo.setCosto_unitario(rs.getDouble("costo_unitario"));

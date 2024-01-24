@@ -32,6 +32,7 @@ public class ConfiguracionBD {
         }
     }
 
+    //Método para retornar el modo (prueba/real) de los nombres de las bases de datos
     public static boolean isModoPrueba() {
         return modoPrueba;
     }

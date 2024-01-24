@@ -8,7 +8,6 @@ import androidx.appcompat.app.AppCompatActivity;
 import android.annotation.SuppressLint;
 import android.app.ProgressDialog;
 import android.content.Context;
-import android.content.Intent;
 import android.media.AudioManager;
 import android.media.SoundPool;
 import android.net.ConnectivityManager;
@@ -39,14 +38,14 @@ import com.example.handheld.ClasesOperativas.Ing_prod_ad;
 import com.example.handheld.ClasesOperativas.ObjTraslado_bodLn;
 import com.example.handheld.ClasesOperativas.Obj_ordenprodLn;
 import com.example.handheld.ClasesOperativas.objOperacionesDb;
-import com.example.handheld.atv.holder.adapters.listTrefiTerminadoAdapter;
+import com.example.handheld.atv.holder.adapters.listRecoTerminadoAdapter;
 import com.example.handheld.conexionDB.Conexion;
 import com.example.handheld.conexionDB.ConfiguracionBD;
 import com.example.handheld.modelos.CorreoModelo;
 import com.example.handheld.modelos.PermisoPersonaModelo;
-import com.example.handheld.modelos.RolloTrefiRevisionModelo;
-import com.example.handheld.modelos.TrefiRecepcionModelo;
-import com.example.handheld.modelos.TrefiRecepcionadoRollosModelo;
+import com.example.handheld.modelos.RecoRecepcionModelo;
+import com.example.handheld.modelos.RecoRecepcionadoRollosModelo;
+import com.example.handheld.modelos.RolloRecoRevisionModelo;
 
 import java.sql.SQLException;
 import java.text.SimpleDateFormat;
@@ -65,22 +64,22 @@ import javax.mail.Transport;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
 
-public class RevisionTerminadoTrefilacion extends AppCompatActivity{
+public class RevisionTerminadoRecocido extends AppCompatActivity {
 
     //se declaran las variables de los elementos del Layout
-    EditText codigoTrefi;
-    TextView txtTotal, txtTotalSinLeer, txtRollosLeidos;
+    EditText codigoReco;
+    TextView txtTotal, txtTotalSinLeer, txtRollosLeidos, tituloRecocido;
     Button btnAprobado, btnRechazado, btnCancelarTrans;
 
     //se declaran las variables donde estaran los datos que vienen de la anterior clase
-    String nit_usuario;
+    String nit_usuario, tipo;
 
     //Se declaran los elementos necesarios para el list view
-    ListView listviewTrefiTerminado;
-    List<TrefiRecepcionModelo> ListaTrefiRevisado, ListaTrefiRollosRecep;
-    List<Object> listRevisionTrefi, listTransaccionBodega, listTransactionTrb1;
-    ListAdapter TrefiTerminadoAdapter;
-    TrefiRecepcionModelo trefiRecepcionModelo;
+    ListView listviewRecoTerminado;
+    List<RecoRecepcionModelo> ListaRecoRevisado, ListaRecoRollosRecep;
+    List<Object> listRevisionReco, listTransaccionBodega, listTransactionTrb1;
+    ListAdapter RecoTerminadoAdapter;
+    RecoRecepcionModelo recoRecepcionModelo;
 
     //Se declara un objeto conexion
     Conexion conexion;
@@ -95,13 +94,13 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
     PermisoPersonaModelo personaCalidad;
     CorreoModelo correo;
 
-    RolloTrefiRevisionModelo revisionRollo;
+    RolloRecoRevisionModelo revisionRollo;
 
     Gestion_alambronLn obj_gestion_alambronLn = new Gestion_alambronLn();
     ObjTraslado_bodLn objTraslado_bodLn = new ObjTraslado_bodLn();
     objOperacionesDb objOperacionesDb = new objOperacionesDb();
     Ing_prod_ad ing_prod_ad = new Ing_prod_ad();
-    List<TrefiRecepcionadoRollosModelo> ListarefeRecepcionados= new ArrayList<>();
+    List<RecoRecepcionadoRollosModelo> ListarefeRecepcionados= new ArrayList<>();
 
     //Se inicializa los varibles para el sonido de error
     SoundPool sp;
@@ -111,7 +110,7 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
     Vibrator vibrator;
 
     //Se inicializan las listas para el comboBox
-    ArrayList<String> listaRechazos, listaTrefiRechazos;
+    ArrayList<String> listaRechazos, listaRecoRechazos;
 
     private AlertDialog alertDialogRevision, alertDialogTransaccion;
 
@@ -123,28 +122,35 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
     String[] rec;
     String subject, textMessage;
 
+    @SuppressLint("MissingInflatedId")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_revision_terminado_trefilacion);
+        setContentView(R.layout.activity_revision_terminado_recocido);
 
         //Definimos los elementos del Layout
-        codigoTrefi = findViewById(R.id.codigoCajaRecep);
+        codigoReco = findViewById(R.id.codigoCajaRecep);
         txtTotal = findViewById(R.id.txtTotal);
         txtTotalSinLeer = findViewById(R.id.txtTotalSinLeer);
         txtRollosLeidos = findViewById(R.id.txtRollosLeidos);
         btnAprobado = findViewById(R.id.btnAprobado);
         btnRechazado = findViewById(R.id.btnRechazado);
         btnCancelarTrans = findViewById(R.id.btnCancelarTrans);
+        tituloRecocido = findViewById(R.id.tituloRecocido);
 
         //Recibimos los datos desde la class PedidoInventraio
         nit_usuario = getIntent().getStringExtra("nit_usuario");
-        //fecha_inicio = getIntent().getStringExtra("fecha_inicio"); //YA NO SE RECIBE FECHA INICIO
-        //fecha_final = getIntent().getStringExtra("fecha_final"); //YA NO SE RECIBE FECHA FINAL
+        tipo = getIntent().getStringExtra("tipo");
+
+        if (tipo.equals("industrial")){
+            tituloRecocido.setText("RECOCIDO INDUSTRIAL");
+        } else if (tipo.equals("construccion")) {
+            tituloRecocido.setText("RECOCIDO DE CONSTRUCCIÓN");
+        }
 
         //Definimos los elementos necesarios para el list view
-        listviewTrefiTerminado = findViewById(R.id.listviewTrefiTerminado);
-        trefiRecepcionModelo = new TrefiRecepcionModelo();
+        listviewRecoTerminado = findViewById(R.id.listviewRecoTerminado);
+        recoRecepcionModelo = new RecoRecepcionModelo();
 
         //Se Define los varibles para el sonido de error
         sp = new SoundPool(2, AudioManager.STREAM_MUSIC,1);
@@ -167,18 +173,18 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
 
         /////////////////////////////////////////////////////////////////////////////////////////////
         //Se establece el foco en el edit text
-        codigoTrefi.requestFocus();
+        codigoReco.requestFocus();
 
         /////////////////////////////////////////////////////////////////////////////////////////////
         //Se programa para que al presionar (enter) en el EditText inicie el proceso
-        codigoTrefi.setOnKeyListener((v, keyCode, event) -> {
+        codigoReco.setOnKeyListener((v, keyCode, event) -> {
             if (keyCode == KeyEvent.KEYCODE_ENTER) {
                 if (incompleta){
-                    codigoTrefi.setText("");
+                    codigoReco.setText("");
                     toastAtencion("No se pueden leer más tiquetes");
                 }else{
                     if(yaentre == 0){
-                        if(codigoTrefi.getText().toString().equals("")){
+                        if(codigoReco.getText().toString().equals("")){
                             toastError("Por favor escribir o escanear el codigo de barras");
                         }else{
                             //Ocultamos el teclado de la pantalla
@@ -239,7 +245,7 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
 
     @SuppressLint({"MissingInflatedId", "SetTextI18n"})
     private void alertDialogRevision(int leidos){
-        AlertDialog.Builder builder = new AlertDialog.Builder(RevisionTerminadoTrefilacion.this);
+        AlertDialog.Builder builder = new AlertDialog.Builder(RevisionTerminadoRecocido.this);
         View mView = getLayoutInflater().inflate(R.layout.alertdialog_aprobado,null);
         @SuppressLint({"MissingInflatedId", "LocalSuppress"}) final EditText txtCedulaCalidad = mView.findViewById(txtCedulaLogistica);
         txtCedulaCalidad.setHint("Cedula Calidad");
@@ -274,7 +280,7 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
                             toastError("Ingresar la cedula de la persona que inspecciona");
                         }else{
                             //Verificamos el numero de documentos de la persona en la base da datos
-                            personaCalidad = conexion.obtenerPermisoPersona(RevisionTerminadoTrefilacion.this,CeLog,"mod_revision_calidad_trefilacion" );
+                            personaCalidad = conexion.obtenerPermisoPersona(RevisionTerminadoRecocido.this,CeLog,"mod_revision_calidad_recocido" );
                             permiso = personaCalidad.getNit();
                             //Verificamos que la persona sea de calidad
                             if (!permiso.equals("")){
@@ -329,7 +335,7 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
     @SuppressLint("SetTextI18n")
     private void realizarRevision() throws SQLException {
         //Creamos una lista para almacenar todas las consultas que se realizaran en la base de datos
-        listRevisionTrefi = new ArrayList<>();
+        listRevisionReco = new ArrayList<>();
 
         if (paso==0){
             // Obtén la fecha y hora actual
@@ -343,41 +349,56 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
             // Convierte la fecha actual en un String con el formato definido
             fechaActualString = formatoFecha.format(fechaActual);
 
-            String sql_revision= "INSERT INTO jd_revision_calidad_trefilacion(fecha_hora,revisor,estado,traccion_1,diametro_1,traccion_2,diametro_2,traccion_3,diametro_3)VALUES('" + fechaActualString + "','" + personaCalidad.getNit() + "','A'," + traccion1 + "," + diametro1 + "," + traccion2 + "," + diametro2 + "," + traccion3 + "," + diametro3 + ")";
+            String sql_revision= "INSERT INTO jd_revision_calidad_recocido(fecha_hora,revisor,estado,traccion_1,diametro_1,traccion_2,diametro_2,traccion_3,diametro_3)VALUES('" + fechaActualString + "','" + personaCalidad.getNit() + "','A','" + traccion1 + "','" + diametro1 + "','" + traccion2 + "','" + diametro2 + "','" + traccion3 + "','" + diametro3 + "')";
 
             try {
                 //Se ejecuta el sql_revision en la base de datos
-                paso = objOperacionesDb.ejecutarInsertJjprgproduccion(sql_revision,RevisionTerminadoTrefilacion.this);
+                paso = objOperacionesDb.ejecutarInsertJjprgproduccion(sql_revision,RevisionTerminadoRecocido.this);
             }catch (Exception e){
-                Toast.makeText(RevisionTerminadoTrefilacion.this, e.getMessage(), Toast.LENGTH_SHORT).show();
+                Toast.makeText(RevisionTerminadoRecocido.this, e.getMessage(), Toast.LENGTH_SHORT).show();
             }
         }
 
         if (paso==1){
             //se adicionan los campos recepcionado, nit_recepcionado y fecha_recepcionado a la tabla.
-            String obtenerId = "select id_revision from jd_revision_calidad_trefilacion where fecha_hora='" + fechaActualString + "'";
-            numero_revision = conexion.obtenerIdRevision(RevisionTerminadoTrefilacion.this, obtenerId );
-            for(int i=0;i<ListaTrefiRollosRecep.size();i++){
-                String cod_orden = ListaTrefiRollosRecep.get(i).getCod_orden();
-                String id_detalle = ListaTrefiRollosRecep.get(i).getId_detalle();
-                String id_rollo = ListaTrefiRollosRecep.get(i).getId_rollo();
+            String obtenerId = "select id_revision from jd_revision_calidad_recocido where fecha_hora='" + fechaActualString + "'";
+            numero_revision = conexion.obtenerIdRevision(RevisionTerminadoRecocido.this, obtenerId );
+            String sql_rollo;
+            if (tipo.equals("construccion")){
+                String cod_orden = ListaRecoRollosRecep.get(0).getCod_orden();
+                String id_detalle = ListaRecoRollosRecep.get(0).getId_detalle();
 
-                String sql_rollo= "UPDATE J_rollos_tref SET id_revision="+ numero_revision +" WHERE cod_orden='"+ cod_orden +"' AND id_detalle='"+id_detalle+"' AND id_rollo='"+id_rollo+"'";
+                sql_rollo = "UPDATE JB_rollos_rec SET id_revision="+ numero_revision +" WHERE cod_orden_rec='"+ cod_orden +"' and id_detalle_rec='" + id_detalle + "'";
 
                 try {
                     //Se añade el sql a la lista
-                    listRevisionTrefi.add(sql_rollo);
+                    listRevisionReco.add(sql_rollo);
                 }catch (Exception e){
-                    Toast.makeText(RevisionTerminadoTrefilacion.this, e.getMessage(), Toast.LENGTH_SHORT).show();
+                    Toast.makeText(RevisionTerminadoRecocido.this, e.getMessage(), Toast.LENGTH_SHORT).show();
+                }
+            }else{
+                for(int i=0;i<ListaRecoRollosRecep.size();i++){
+                    String cod_orden = ListaRecoRollosRecep.get(i).getCod_orden();
+                    String id_detalle = ListaRecoRollosRecep.get(i).getId_detalle();
+                    String id_rollo = ListaRecoRollosRecep.get(i).getId_rollo();
+
+                    sql_rollo = "UPDATE JB_rollos_rec SET id_revision="+ numero_revision +" WHERE cod_orden_rec='"+ cod_orden +"' AND id_detalle_rec='"+id_detalle+"' AND id_rollo_rec='"+id_rollo+"'";
+
+                    try {
+                        //Se añade el sql a la lista
+                        listRevisionReco.add(sql_rollo);
+                    }catch (Exception e){
+                        Toast.makeText(RevisionTerminadoRecocido.this, e.getMessage(), Toast.LENGTH_SHORT).show();
+                    }
                 }
             }
 
-            if (listRevisionTrefi.size()>0){
+            if (listRevisionReco.size()>0){
                 //Ejecutamos la consultas que llenan los campos de recepción
                 repeticiones = 0;
                 error = revision();
                 if (error.equals("")){
-                    consultarTrefiTerminado();
+                    consultarRecoTerminado();
                     paso=0;
                     toastAcierto("Revision Realizada con Exito! - " + numero_revision);
                 }else{
@@ -385,7 +406,7 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
                     btnRechazado.setEnabled(false);
                     incompleta =  true;
                     AudioError();
-                    AlertDialog.Builder builder = new AlertDialog.Builder(RevisionTerminadoTrefilacion.this);
+                    AlertDialog.Builder builder = new AlertDialog.Builder(RevisionTerminadoRecocido.this);
                     View mView = getLayoutInflater().inflate(R.layout.alertdialog_aceptar,null);
                     TextView alertMensaje = mView.findViewById(R.id.alertMensaje);
                     alertMensaje.setText("Error al realizar la revision en el paso 2! \n'" + error + "'\n ¡Vuelve a intentar realizar la revisión!");
@@ -402,7 +423,7 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
             btnRechazado.setEnabled(false);
             incompleta =  true;
             AudioError();
-            AlertDialog.Builder builder = new AlertDialog.Builder(RevisionTerminadoTrefilacion.this);
+            AlertDialog.Builder builder = new AlertDialog.Builder(RevisionTerminadoRecocido.this);
             View mView = getLayoutInflater().inflate(R.layout.alertdialog_aceptar,null);
             TextView alertMensaje = mView.findViewById(R.id.alertMensaje);
             alertMensaje.setText("Error al realizar la revision en el paso 1! \n'" + error + "'\n ¡Vuelve a intentar realizar la revisión!");
@@ -420,7 +441,7 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
     private String revision() {
         repeticiones = repeticiones + 1;
         if(repeticiones<=5){
-            error = ing_prod_ad.ExecuteSqlTransaction(listRevisionTrefi, ConfiguracionBD.obtenerNombreBD(2), RevisionTerminadoTrefilacion.this);
+            error = ing_prod_ad.ExecuteSqlTransaction(listRevisionReco, ConfiguracionBD.obtenerNombreBD(2), RevisionTerminadoRecocido.this);
             if(error.equals("")){
                 return error;
             }else{
@@ -456,7 +477,7 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
         //Creamos una lista para almacenar todas las consultas que se realizaran en la base de datos
         listTransaccionBodega = new ArrayList<>();
         //Lista donde revertimos la primer consulta si el segundo proceso no se realiza bien
-        listRevisionTrefi = new ArrayList<>();
+        listRevisionReco = new ArrayList<>();
         //Lista donde agregamos las consultas que agrearan el campo trb1
         listTransactionTrb1 = new ArrayList<>();
         //varible para verificar que se registo la recepcion en base de datos
@@ -481,21 +502,21 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
 
             switch (m){
                 case 1:
-                    sql_revisionTransa= "INSERT INTO jd_revision_calidad_trefilacion(fecha_hora,revisor,estado,defecto,traccion_1,tipo_transa)VALUES('" + fechaActualString + "','" + personaCalidad.getNit() + "','R','" + motivo + "'," + traccion1 + ",'TRB1')";
+                    sql_revisionTransa= "INSERT INTO jd_revision_calidad_recocido(fecha_hora,revisor,estado,defecto,traccion_1,tipo_transa)VALUES('" + fechaActualString + "','" + personaCalidad.getNit() + "','R','" + motivo + "','" + traccion1 + "','TRB1')";
                     break;
                 case 2:
-                    sql_revisionTransa= "INSERT INTO jd_revision_calidad_trefilacion(fecha_hora,revisor,estado,defecto,diametro_1,tipo_transa)VALUES('" + fechaActualString + "','" + personaCalidad.getNit() + "','R','" + motivo + "'," + diametro1 + ",'TRB1')";
+                    sql_revisionTransa= "INSERT INTO jd_revision_calidad_recocido(fecha_hora,revisor,estado,defecto,diametro_1,tipo_transa)VALUES('" + fechaActualString + "','" + personaCalidad.getNit() + "','R','" + motivo + "','" + diametro1 + "','TRB1')";
                     break;
                 default:
-                    sql_revisionTransa= "INSERT INTO jd_revision_calidad_trefilacion(fecha_hora,revisor,estado,defecto,tipo_transa)VALUES('" + fechaActualString + "','" + personaCalidad.getNit() + "','R','" + motivo + "','TRB1')";
+                    sql_revisionTransa= "INSERT INTO jd_revision_calidad_recocido(fecha_hora,revisor,estado,defecto,tipo_transa)VALUES('" + fechaActualString + "','" + personaCalidad.getNit() + "','R','" + motivo + "','TRB1')";
                     break;
             }
 
             try {
                 //Se ejecuta el sql_revision en la base de datos
-                paso = objOperacionesDb.ejecutarInsertJjprgproduccion(sql_revisionTransa,RevisionTerminadoTrefilacion.this);
+                paso = objOperacionesDb.ejecutarInsertJjprgproduccion(sql_revisionTransa,RevisionTerminadoRecocido.this);
             }catch (Exception e){
-                Toast.makeText(RevisionTerminadoTrefilacion.this, e.getMessage(), Toast.LENGTH_SHORT).show();
+                Toast.makeText(RevisionTerminadoRecocido.this, e.getMessage(), Toast.LENGTH_SHORT).show();
             }
         }
 
@@ -503,30 +524,30 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
         if (paso==1){
             //se adicionan los campos recepcionado, nit_recepcionado y fecha_recepcionado a la tabla
             String obtenerId;
-            obtenerId = "select id_revision from jd_revision_calidad_trefilacion where fecha_hora='" + fechaActualString + "'";
-            numero_revision = conexion.obtenerIdRevision(RevisionTerminadoTrefilacion.this, obtenerId );
-            for(int i=0;i<ListaTrefiRollosRecep.size();i++){
-                String cod_orden = ListaTrefiRollosRecep.get(i).getCod_orden();
-                String id_detalle = ListaTrefiRollosRecep.get(i).getId_detalle();
-                String id_rollo = ListaTrefiRollosRecep.get(i).getId_rollo();
+            obtenerId = "select id_revision from jd_revision_calidad_recocido where fecha_hora='" + fechaActualString + "'";
+            numero_revision = conexion.obtenerIdRevision(RevisionTerminadoRecocido.this, obtenerId );
+            for(int i=0;i<ListaRecoRollosRecep.size();i++){
+                String cod_orden = ListaRecoRollosRecep.get(i).getCod_orden();
+                String id_detalle = ListaRecoRollosRecep.get(i).getId_detalle();
+                String id_rollo = ListaRecoRollosRecep.get(i).getId_rollo();
 
-                String sql_rollo= "UPDATE J_rollos_tref SET id_revision="+ numero_revision +" WHERE cod_orden='"+ cod_orden +"' AND id_detalle='"+id_detalle+"' AND id_rollo='"+id_rollo+"'";
+                String sql_rollo= "UPDATE JB_rollos_rec SET id_revision="+ numero_revision +" WHERE cod_orden_rec='"+ cod_orden +"' AND id_detalle_rec='"+id_detalle+"' AND id_rollo_rec='"+id_rollo+"'";
 
                 try {
                     //Se añade el sql a la lista
-                    listRevisionTrefi.add(sql_rollo);
+                    listRevisionReco.add(sql_rollo);
                 }catch (Exception e){
-                    Toast.makeText(RevisionTerminadoTrefilacion.this, e.getMessage(), Toast.LENGTH_SHORT).show();
+                    Toast.makeText(RevisionTerminadoRecocido.this, e.getMessage(), Toast.LENGTH_SHORT).show();
                 }
             }
 
-            if (listRevisionTrefi.size()>0){
+            if (listRevisionReco.size()>0){
                 //Ejecutamos la consultas que llenan los campos de recepción
                 repeticiones = 0;
                 error = produccion1();
                 if (error.equals("")){
-                    ListarefeRecepcionados = conexion.trefiRefeRevisados(RevisionTerminadoTrefilacion.this,numero_revision, monthActualString, yearActualString);
-                    numero_transaccion = Integer.valueOf(Obj_ordenprodLn.mover_consecutivo("TRB1", RevisionTerminadoTrefilacion.this));
+                    ListarefeRecepcionados = conexion.recoRefeRevisados(RevisionTerminadoRecocido.this,numero_revision, monthActualString, yearActualString);
+                    numero_transaccion = Integer.valueOf(Obj_ordenprodLn.mover_consecutivo("TRB1", RevisionTerminadoRecocido.this));
                     listTransaccionBodega = traslado_bodega(ListarefeRecepcionados, calendar);
                     //Ejecutamos la lista de consultas para hacer la TRB1
                     paso=2;
@@ -534,10 +555,10 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
                     btnAprobado.setEnabled(false);
                     incompleta =  true;
                     AudioError();
-                    AlertDialog.Builder builder = new AlertDialog.Builder(RevisionTerminadoTrefilacion.this);
+                    AlertDialog.Builder builder = new AlertDialog.Builder(RevisionTerminadoRecocido.this);
                     View mView = getLayoutInflater().inflate(R.layout.alertdialog_aceptar,null);
                     TextView alertMensaje = mView.findViewById(R.id.alertMensaje);
-                    alertMensaje.setText("Error al relacionar la revision #" + numero_revision + " en el paso 2! \n'" + error + "'\n ¡Vuelve a intentarlo de nuevo!");
+                    alertMensaje.setText("Error al relacionar la revision en el paso 2! \n'" + error + "'\n ¡Vuelve a intentarlo de nuevo!");
                     Button btnAceptar = mView.findViewById(R.id.btnAceptar);
                     btnAceptar.setText("Aceptar");
                     builder.setView(mView);
@@ -551,7 +572,7 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
             btnAprobado.setEnabled(false);
             incompleta =  true;
             AudioError();
-            AlertDialog.Builder builder = new AlertDialog.Builder(RevisionTerminadoTrefilacion.this);
+            AlertDialog.Builder builder = new AlertDialog.Builder(RevisionTerminadoRecocido.this);
             View mView = getLayoutInflater().inflate(R.layout.alertdialog_aceptar,null);
             TextView alertMensaje = mView.findViewById(R.id.alertMensaje);
             alertMensaje.setText("Error al realizar la revision en el Paso 1! \n ¡Vuelve a intentarlo de nuevo!");
@@ -569,12 +590,12 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
             error = transaccion();
             if (error.equals("")){
 
-                String sql_trb1= "UPDATE jd_revision_calidad_trefilacion SET num_transa="+ numero_transaccion +" WHERE id_revision='"+ numero_revision +"'";
+                String sql_trb1= "UPDATE jd_revision_calidad_recocido SET num_transa="+ numero_transaccion +" WHERE id_revision='"+ numero_revision +"'";
                 try {
                     //Se añade el sql a la lista
                     listTransactionTrb1.add(sql_trb1);
                 }catch (Exception e){
-                    Toast.makeText(RevisionTerminadoTrefilacion.this, e.getMessage(), Toast.LENGTH_SHORT).show();
+                    Toast.makeText(RevisionTerminadoRecocido.this, e.getMessage(), Toast.LENGTH_SHORT).show();
                 }
 
                 //Ejecutamos la lista de consultas para relacionar la transaccion con la revision
@@ -584,10 +605,10 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
                 btnAprobado.setEnabled(false);
                 incompleta =  true;
                 AudioError();
-                AlertDialog.Builder builder = new AlertDialog.Builder(RevisionTerminadoTrefilacion.this);
+                AlertDialog.Builder builder = new AlertDialog.Builder(RevisionTerminadoRecocido.this);
                 View mView = getLayoutInflater().inflate(R.layout.alertdialog_aceptar,null);
                 TextView alertMensaje = mView.findViewById(R.id.alertMensaje);
-                alertMensaje.setText("Hubo un problema en el paso 3 al realizar la transacción de la revisión #" + numero_revision + " , \n '" + error + "'\n ¡Vuelve a intentar realizar el rechazo de nuevo!");
+                alertMensaje.setText("Hubo un problema al realizar la transacción de la revisión #" + numero_revision + " , \n '" + error + "'\n ¡Vuelve a intentar realizar el rechazo de nuevo!");
                 Button btnAceptar = mView.findViewById(R.id.btnAceptar);
                 btnAceptar.setText("Aceptar");
                 builder.setView(mView);
@@ -597,11 +618,11 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
                     if (isNetworkAvailable()) {
                         /////////////////////////////////////////////////////////////
                         //Correo electronico funciono la transacción
-                        correo = conexion.obtenerCorreo(RevisionTerminadoTrefilacion.this);
+                        correo = conexion.obtenerCorreo(RevisionTerminadoRecocido.this);
                         String email = correo.getCorreo();
                         String pass = correo.getContrasena();
                         subject = "Revision de calidad #" + numero_revision + " incompleta";
-                        textMessage = "La revision #" + numero_revision + " de rechazo de calidad de producto terminado del area de trefilación no se completo y quedo sin transacción \n" +
+                        textMessage = "La revision #" + numero_revision + " de rechazo de calidad de producto terminado del area de recocido no se completo y quedo sin transacción \n" +
                                 "Detalles de la revision: \n" +
                                 "Error: '" + error + "'\n" +
                                 "Numero de rollos: " + leidos + " \n" +
@@ -624,7 +645,7 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
 
                         pdialog = ProgressDialog.show(context,"","Sending Mail...", true);
 
-                        RetreiveFeedTask task = new RetreiveFeedTask();
+                        RevisionTerminadoRecocido.RetreiveFeedTask task = new RevisionTerminadoRecocido.RetreiveFeedTask();
                         task.execute();
                         alertDialog.dismiss();
                     } else {
@@ -641,7 +662,7 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
     private String produccion1() {
         repeticiones = repeticiones + 1;
         if(repeticiones<=5){
-            error = ing_prod_ad.ExecuteSqlTransaction(listRevisionTrefi, ConfiguracionBD.obtenerNombreBD(2), RevisionTerminadoTrefilacion.this);
+            error = ing_prod_ad.ExecuteSqlTransaction(listRevisionReco, ConfiguracionBD.obtenerNombreBD(2), RevisionTerminadoRecocido.this);
             if(error.equals("")){
                 return error;
             }else{
@@ -657,7 +678,7 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
     private String transaccion() {
         repeticiones = repeticiones + 1;
         if(repeticiones<=5){
-            error = ing_prod_ad.ExecuteSqlTransaction(listTransaccionBodega, ConfiguracionBD.obtenerNombreBD(1), RevisionTerminadoTrefilacion.this);
+            error = ing_prod_ad.ExecuteSqlTransaction(listTransaccionBodega, ConfiguracionBD.obtenerNombreBD(1), RevisionTerminadoRecocido.this);
             if(error.equals("")){
                 return error;
             }else{
@@ -673,9 +694,9 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
     private void produccion2() {
         repeticiones = repeticiones + 1;
         if(repeticiones<=5){
-            error = ing_prod_ad.ExecuteSqlTransaction(listTransactionTrb1, ConfiguracionBD.obtenerNombreBD(2), RevisionTerminadoTrefilacion.this);
+            error = ing_prod_ad.ExecuteSqlTransaction(listTransactionTrb1, ConfiguracionBD.obtenerNombreBD(2), RevisionTerminadoRecocido.this);
             if(error.equals("")){
-                consultarTrefiTerminado();
+                consultarRecoTerminado();
                 incompleta = false;
                 btnAprobado.setEnabled(true);
                 btnRechazado.setEnabled(true);
@@ -692,7 +713,7 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
             btnCancelarTrans.setEnabled(false);
             incompleta =  true;
             AudioError();
-            AlertDialog.Builder builder = new AlertDialog.Builder(RevisionTerminadoTrefilacion.this);
+            AlertDialog.Builder builder = new AlertDialog.Builder(RevisionTerminadoRecocido.this);
             View mView = getLayoutInflater().inflate(R.layout.alertdialog_aceptar,null);
             TextView alertMensaje = mView.findViewById(R.id.alertMensaje);
             alertMensaje.setText("Hubo un problema en la relacion de la revision #" + numero_revision + " con la transacción #" + numero_transaccion + ", \n '" + error + "' \n Por favor comunicarse inmediatamente con el área de sistemas, \n para poder continuar con las transacciones, de lo \n contrario no se le permitira continuar");
@@ -715,11 +736,11 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
 
                     // Muestra el mensaje
                     String mensajeFinal = mensaje.toString();
-                    correo = conexion.obtenerCorreo(RevisionTerminadoTrefilacion.this);
+                    correo = conexion.obtenerCorreo(RevisionTerminadoRecocido.this);
                     String email = correo.getCorreo();
                     String pass = correo.getContrasena();
                     subject = "Revision de calidad #" + numero_revision + " sin relación con transacción #" + numero_transaccion;
-                    textMessage = "La revisión #" + numero_revision + " de calidad de producto terminado del area de trefilación se fué incompleta sin la relación \n" +
+                    textMessage = "La revisión #" + numero_revision + " de calidad de producto terminado del area de recocido se fué incompleta sin la relación \n" +
                             "con la transacción # " + numero_transaccion +
                             "Detalles de la Revision: \n" +
                             mensajeFinal +
@@ -744,7 +765,7 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
 
                     pdialog = ProgressDialog.show(context,"","Sending Mail...", true);
 
-                    RetreiveFeedTask task = new RetreiveFeedTask();
+                    RevisionTerminadoRecocido.RetreiveFeedTask task = new RevisionTerminadoRecocido.RetreiveFeedTask();
                     task.execute();
                     alertDialog.dismiss();
                 } else {
@@ -800,7 +821,7 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
     /////////////////////////////////////////////////////////////////////////////////////////////
     //Funcion que genera la lista de consultas que modifican las tablas en la base da datos de Corsan
     //Para generar la transacción
-    private List<Object> traslado_bodega(List<TrefiRecepcionadoRollosModelo> ListarefeRecepcionados, Calendar calendar){
+    private List<Object> traslado_bodega(List<RecoRecepcionadoRollosModelo> ListarefeRecepcionados, Calendar calendar){
         List<Object> listSql;
         @SuppressLint("SimpleDateFormat")
         SimpleDateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss a");
@@ -808,7 +829,7 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
         String usuario = personaCalidad.getNit();
         String notas = "MOVIL fecha:" + fecha + " usuario:" + usuario;
 
-        listSql = objTraslado_bodLn.listaTrasladoBodegaTrefi(ListarefeRecepcionados,numero_transaccion, 2, 4, calendar, notas, usuario, "TRB1", "20",RevisionTerminadoTrefilacion.this);
+        listSql = objTraslado_bodLn.listaTrasladoBodegaReco(ListarefeRecepcionados,numero_transaccion, 2, 4, calendar, notas, usuario, "TRB1", "20",RevisionTerminadoRecocido.this);
         return listSql;
     }
 
@@ -816,33 +837,33 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
     private void consultarTransIncompleta(){
         conexion = new Conexion();
         //Inicializamos la lista de los rollos escaneados
-        ListaTrefiRollosRecep = new ArrayList<>();
-        ListaTrefiRevisado = new ArrayList<>();
+        ListaRecoRollosRecep = new ArrayList<>();
+        ListaRecoRevisado = new ArrayList<>();
 
         //Consultamos si hay rollos con transacciones incompletas
-        id_revision = conexion.consultarReviTrefiIncomple(RevisionTerminadoTrefilacion.this);
+        id_revision = conexion.consultarReviRecoIncomple(RevisionTerminadoRecocido.this, tipo);
 
         if (id_revision.equals(0)){
             /////////////////////////////////////////////////////////////////////////////////////////////
             //Llamamos al metodo para consultar los rollos de galvanizados listos para recoger
-            consultarTrefiTerminado();
+            consultarRecoTerminado();
         }else{
             incompleta = true;
             btnAprobado.setEnabled(false);
             btnRechazado.setEnabled(false);
             btnCancelarTrans.setEnabled(false);
 
-            ListaTrefiRollosRecep = conexion.obtenerReviTrefiTerminado(RevisionTerminadoTrefilacion.this, id_revision);
+            ListaRecoRollosRecep = conexion.obtenerReviRecoTerminado(RevisionTerminadoRecocido.this, id_revision);
 
             //Consultamos los rollos de producción que no se han recepcionado en la base de datos
-            ListaTrefiRevisado = conexion.obtenerTrefiRevision(RevisionTerminadoTrefilacion.this);
+            ListaRecoRevisado = conexion.obtenerRecoRevision(RevisionTerminadoRecocido.this,tipo);
 
             //Enviamos la lista vacia de rollos escaneados al listview
-            TrefiTerminadoAdapter = new listTrefiTerminadoAdapter(RevisionTerminadoTrefilacion.this,R.layout.item_row_trefiterminado,ListaTrefiRollosRecep);
-            listviewTrefiTerminado.setAdapter(TrefiTerminadoAdapter);
+            RecoTerminadoAdapter = new listRecoTerminadoAdapter(RevisionTerminadoRecocido.this,R.layout.item_row_trefiterminado,ListaRecoRollosRecep);
+            listviewRecoTerminado.setAdapter(RecoTerminadoAdapter);
 
             //Enviamos la cantidad de rollos de producción que no se han recepcionado al TextView
-            String totalRollos = String.valueOf(ListaTrefiRevisado.size() + ListaTrefiRollosRecep.size());
+            String totalRollos = String.valueOf(ListaRecoRevisado.size() + ListaRecoRollosRecep.size());
             txtTotal.setText(totalRollos);
 
             //Contamos los rollos leidos y sin leer para mostrarlos en los TextView
@@ -850,7 +871,7 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
             contarLeidos();
 
             AudioError();
-            AlertDialog.Builder builder = new AlertDialog.Builder(RevisionTerminadoTrefilacion.this);
+            AlertDialog.Builder builder = new AlertDialog.Builder(RevisionTerminadoRecocido.this);
             View mView = getLayoutInflater().inflate(R.layout.alertdialog_aceptar,null);
             TextView alertMensaje = mView.findViewById(R.id.alertMensaje);
             alertMensaje.setText("Hay una Transacción incompleta, \n Por favor comunicarse inmediatamente con el área de sistemas, \n para poder continuar con las transacciones, de lo \n contrario no se le permitira continuar");
@@ -867,19 +888,19 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
     /////////////////////////////////////////////////////////////////////////////////////////////
     //Metodo que consulta los rollos que hay en producción que no se han recepcionado e
     //inicializa el listview
-    private void consultarTrefiTerminado() {
+    private void consultarRecoTerminado() {
         conexion = new Conexion();
         //Inicializamos la lista de los rollos escaneados
-        ListaTrefiRollosRecep = new ArrayList<>();
+        ListaRecoRollosRecep = new ArrayList<>();
 
         //Consultamos los rollos de producción que no se han recepcionado en la base de datos
-        ListaTrefiRevisado = conexion.obtenerTrefiRevision(getApplication());
+        ListaRecoRevisado = conexion.obtenerRecoRevision(getApplication(), tipo);
         //Enviamos la lista vacia de rollos escaneados al listview
-        TrefiTerminadoAdapter = new listTrefiTerminadoAdapter(RevisionTerminadoTrefilacion.this,R.layout.item_row_trefiterminado,ListaTrefiRollosRecep);
-        listviewTrefiTerminado.setAdapter(TrefiTerminadoAdapter);
+        RecoTerminadoAdapter = new listRecoTerminadoAdapter(RevisionTerminadoRecocido.this,R.layout.item_row_trefiterminado,ListaRecoRollosRecep);
+        listviewRecoTerminado.setAdapter(RecoTerminadoAdapter);
 
         //Enviamos la cantidad de rollos de producción que no se han recepcionado al TextView
-        String totalRollos = String.valueOf(ListaTrefiRevisado.size());
+        String totalRollos = String.valueOf(ListaRecoRevisado.size());
         txtTotal.setText(totalRollos);
 
         //Contamos los rollos leidos y sin leer para mostrarlos en los TextView
@@ -901,11 +922,11 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
     //Metodo que verifica que el codigo escaneado se encuentre en la lista de rollos de producción
     //No recepcionados
     private void codigoIngresado() throws SQLException {
-        consecutivo = codigoTrefi.getText().toString().trim();
+        consecutivo = codigoReco.getText().toString().trim();
         boolean encontrado = false;
         int position = 0;
-        for (int i=0;i<ListaTrefiRevisado.size();i++){
-            String codigoList = ListaTrefiRevisado.get(i).getCod_orden()+"-"+ListaTrefiRevisado.get(i).getId_detalle()+"-"+ListaTrefiRevisado.get(i).getId_rollo();
+        for (int i=0;i<ListaRecoRevisado.size();i++){
+            String codigoList = ListaRecoRevisado.get(i).getCod_orden()+"-"+ListaRecoRevisado.get(i).getId_detalle()+"-"+ListaRecoRevisado.get(i).getId_rollo();
             if(consecutivo.equals(codigoList)){
                 encontrado = true;
                 position = i;
@@ -915,17 +936,17 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
         //Si el rollos es encontrado o no se muestra mensaje
         if (encontrado){
             //Si el rollo encontrado esta pintado de verde ya fue leido anteriormente
-            if(ListaTrefiRevisado.get(position).getColor().equals("GREEN")){
+            if(ListaRecoRevisado.get(position).getColor().equals("GREEN")){
                 toastError("Rollo Ya leido");
                 AudioError();
                 cargarNuevo();
             }else{
-                if (ListaTrefiRollosRecep.size() > 0){
-                    if (ListaTrefiRollosRecep.get(0).getReferencia().equals(ListaTrefiRevisado.get(position).getReferencia())){
+                if (ListaRecoRollosRecep.size() > 0){
+                    if (ListaRecoRollosRecep.get(0).getCod_orden().equals(ListaRecoRevisado.get(position).getCod_orden()) && ListaRecoRollosRecep.get(0).getId_detalle().equals(ListaRecoRevisado.get(position).getId_detalle())){
                         //Copiamos el rollo encontrado de la lista de producción
-                        trefiRecepcionModelo = ListaTrefiRevisado.get(position);
+                        recoRecepcionModelo = ListaRecoRevisado.get(position);
                         //Agregamos la copia a la de los rollos escaneados
-                        ListaTrefiRollosRecep.add(trefiRecepcionModelo);
+                        ListaRecoRollosRecep.add(recoRecepcionModelo);
                         //Pintamos el rollo de verde en la lista de produccion para no poder volverlo a leer
                         pintarRollo(position);
                         //Contamos los rollos leidos y no leidos
@@ -936,15 +957,15 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
                         //Inicializamos la lectura
                         cargarNuevo();
                     }else{
-                        toastError("No puede leer rollos \n de diferentes referencias \n en una misma revision");
+                        toastError("No puede leer rollos \n de diferentes ordenes \n en una misma revision");
                         AudioError();
                         cargarNuevo();
                     }
                 }else{
                     //Copiamos el rollo encontrado de la lista de producción
-                    trefiRecepcionModelo = ListaTrefiRevisado.get(position);
+                    recoRecepcionModelo = ListaRecoRevisado.get(position);
                     //Agregamos la copia a la de los rollos escaneados
-                    ListaTrefiRollosRecep.add(trefiRecepcionModelo);
+                    ListaRecoRollosRecep.add(recoRecepcionModelo);
                     //Pintamos el rollo de verde en la lista de produccion para no poder volverlo a leer
                     pintarRollo(position);
                     //Contamos los rollos leidos y no leidos
@@ -957,11 +978,11 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
                 }
             }
         }else{
-            String cod_orden = obj_gestion_alambronLn.extraerDatoCodigoBarrasTrefilacion("cod_orden",consecutivo);
-            String id_detalle = obj_gestion_alambronLn.extraerDatoCodigoBarrasTrefilacion("id_detalle",consecutivo);
-            String id_rollo = obj_gestion_alambronLn.extraerDatoCodigoBarrasTrefilacion("id_rollo",consecutivo);
+            String cod_orden = obj_gestion_alambronLn.extraerDatoCodigoBarrasRecocido("cod_orden",consecutivo);
+            String id_detalle = obj_gestion_alambronLn.extraerDatoCodigoBarrasRecocido("id_detalle",consecutivo);
+            String id_rollo = obj_gestion_alambronLn.extraerDatoCodigoBarrasRecocido("id_rollo",consecutivo);
 
-            revisionRollo = conexion.obtenerRolloRevisionTrefi(RevisionTerminadoTrefilacion.this,cod_orden,id_detalle,id_rollo);
+            revisionRollo = conexion.obtenerRolloRevisionReco(RevisionTerminadoRecocido.this,cod_orden,id_detalle,id_rollo);
 
             if (revisionRollo.getId_revision().equals("")){
                 toastError("Rollo no encontrado");
@@ -990,7 +1011,7 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
                 sinLeer++;
             }
         }*/
-        sinLeer = Integer.parseInt((String) txtTotal.getText()) - ListaTrefiRollosRecep.size();
+        sinLeer = Integer.parseInt((String) txtTotal.getText()) - ListaRecoRollosRecep.size();
         txtTotalSinLeer.setText(Integer.toString(sinLeer));
     }
 
@@ -1005,19 +1026,19 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
                 Leido++;
             }
         }*/
-        Leido = ListaTrefiRollosRecep.size();
+        Leido = ListaRecoRollosRecep.size();
         txtRollosLeidos.setText(Integer.toString(Leido));
     }
 
     /////////////////////////////////////////////////////////////////////////////////////////////
     //Metodo que borra el codigo del EditText y cambia la variable "yaentre"
     private void cargarNuevo() {
-        codigoTrefi.setText("");
+        codigoReco.setText("");
         if (yaentre == 0){
             yaentre = 1;
         }else{
             yaentre = 0;
-            codigoTrefi.requestFocus();
+            codigoReco.requestFocus();
         }
     }
 
@@ -1025,9 +1046,9 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
     //Metodo que pinta el rollo encontrado en la lista de producción y muestra en el listView la lista
     //De rollos leidos
     private void pintarRollo(int posicion) {
-        ListaTrefiRevisado.get(posicion).setColor("GREEN");
-        TrefiTerminadoAdapter = new listTrefiTerminadoAdapter(RevisionTerminadoTrefilacion.this,R.layout.item_row_trefiterminado,ListaTrefiRollosRecep);
-        listviewTrefiTerminado.setAdapter(TrefiTerminadoAdapter);
+        ListaRecoRevisado.get(posicion).setColor("GREEN");
+        RecoTerminadoAdapter = new listRecoTerminadoAdapter(RevisionTerminadoRecocido.this,R.layout.item_row_trefiterminado,ListaRecoRollosRecep);
+        listviewRecoTerminado.setAdapter(RecoTerminadoAdapter);
     }
 
     /////////////////////////////////////////////////////////////////////////////////////////////
@@ -1095,8 +1116,8 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
         int sleer = Integer.parseInt(txtTotalSinLeer.getText().toString());
         int total = Integer.parseInt(txtTotal.getText().toString());
         leidos = (total - sleer);
-        //Verificamos que la cantidad de rollos sin leer sea 0 y si hubiera producción en
-        //Trefilación que leer
+        //Verificamos que la cantidad de rollos sin leer sea 0 y si hubiera produccion en
+        //Recocido que leer
         if (sleer == 0 && total > 0) {
             //Mostramos el mensaje para logistica
             alertDialogTransaccion();
@@ -1118,13 +1139,13 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
 
     @SuppressLint("SetTextI18n")
     private void alertDialogTransaccion() {
-        AlertDialog.Builder builder = new AlertDialog.Builder(RevisionTerminadoTrefilacion.this);
+        AlertDialog.Builder builder = new AlertDialog.Builder(RevisionTerminadoRecocido.this);
         View mView = getLayoutInflater().inflate(R.layout.alertdialog_rechazado, null);
         @SuppressLint("CutPasteId") final EditText txtCedulaLogistica = mView.findViewById(R.id.txtCedulaLogistica);
         EditText editTraccion = mView.findViewById(R.id.editTraccion);
         Spinner spinnerRechazo = mView.findViewById(R.id.spinnerRechazo);
-        listaTrefiRechazos = llenarlistaspinner();
-        ArrayAdapter<CharSequence> adapter = new ArrayAdapter(RevisionTerminadoTrefilacion.this, android.R.layout.simple_spinner_dropdown_item, listaTrefiRechazos);
+        listaRecoRechazos = llenarlistaspinner();
+        ArrayAdapter<CharSequence> adapter = new ArrayAdapter(RevisionTerminadoRecocido.this, android.R.layout.simple_spinner_dropdown_item, listaRecoRechazos);
         spinnerRechazo.setAdapter(adapter);
         spinnerRechazo.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
@@ -1160,7 +1181,7 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
                                     AudioError();
                                     toastError("Ingresar la cedula de la persona que inspecciona");
                                 }else{
-                                    personaCalidad = conexion.obtenerPermisoPersona(RevisionTerminadoTrefilacion.this, CeLog,"mod_revision_calidad_trefilacion");
+                                    personaCalidad = conexion.obtenerPermisoPersona(RevisionTerminadoRecocido.this, CeLog,"mod_revision_calidad_recocido");
                                     permiso = personaCalidad.getNit();
                                     //Verificamos que la persona pertenezca al centro de logistica
                                     if (!permiso.equals("")){
@@ -1201,7 +1222,7 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
                                     AudioError();
                                     toastError("Ingresar la cedula de la persona que inspecciona");
                                 }else{
-                                    personaCalidad = conexion.obtenerPermisoPersona(RevisionTerminadoTrefilacion.this, CeLog,"mod_revision_calidad_trefilacion");
+                                    personaCalidad = conexion.obtenerPermisoPersona(RevisionTerminadoRecocido.this, CeLog,"mod_revision_calidad_recocido");
                                     permiso = personaCalidad.getNit();
                                     //Verificamos que la persona pertenezca al centro de logistica
                                     if (!permiso.equals("")){
@@ -1238,7 +1259,7 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
                                 AudioError();
                                 toastError("Ingresar la cedula de la persona que inspecciona");
                             } else {
-                                personaCalidad = conexion.obtenerPermisoPersona(RevisionTerminadoTrefilacion.this, CeLog,"mod_revision_calidad_trefilacion");
+                                personaCalidad = conexion.obtenerPermisoPersona(RevisionTerminadoRecocido.this, CeLog,"mod_revision_calidad_recocido");
                                 permiso = personaCalidad.getNit();
                                 //Verificamos que la persona pertenezca al centro de logistica
                                 if (!permiso.equals("")) {
@@ -1311,5 +1332,6 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
                 break;
         }
     }
+
 
 }

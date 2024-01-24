@@ -48,7 +48,7 @@ public class MainActivity extends AppCompatActivity {
     ImageButton consultar;
 
     Button btnCambiarBD;
-    TextView mensaje;
+    TextView mensaje, txtBD;
 
     //Se declara un objeto conexion
     Conexion conexion;
@@ -80,6 +80,7 @@ public class MainActivity extends AppCompatActivity {
         mensaje = findViewById(R.id.txtMensaje);
         progressBar = findViewById(R.id.progress_bar);
         btnCambiarBD = findViewById(R.id.btnCambiarBD);
+        txtBD = findViewById(R.id.txtBD);
 
         //Se inicializa el objeto conexión
         conexion = new Conexion();
@@ -88,6 +89,12 @@ public class MainActivity extends AppCompatActivity {
         sp = new SoundPool(2, AudioManager.STREAM_MUSIC,1);
         sonido_de_Reproduccion = sp.load(this, R.raw.sonido_error_2,1);
         vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+
+        if(ConfiguracionBD.isModoPrueba()){
+            txtBD.setText("BD_PRUEBA");
+        }else{
+            txtBD.setText("BD_REAL");
+        }
 
         //Se programa el boton consultar
         consultar.setOnClickListener(view -> {
@@ -153,8 +160,10 @@ public class MainActivity extends AppCompatActivity {
                                 Boolean tipo = ConfiguracionBD.isModoPrueba();
                                 if (tipo.equals(true)){
                                     toastAcierto("Base de datos cambiada correctamente a prueba");
+                                    txtBD.setText("BD_PRUEBA");
                                 }else{
                                     toastAcierto("Base de datos cambiada correctamente a real");
+                                    txtBD.setText("BD_REAL");
                                 }
                                 alertDialog.dismiss();
                             }else{
@@ -272,6 +281,20 @@ public class MainActivity extends AppCompatActivity {
         MyHolder.IconTreeItem subChildItem1_2 = new MyHolder.IconTreeItem(R.drawable.ic_folder, "Traslado de Bodega (2-1)");
         TreeNode subChild1_2 = new TreeNode(subChildItem1_2).setViewHolder(new MyHolder(getApplicationContext(), false, R.layout.child, 100));
 
+        //Al darle clic a este elemento en el treeview se abrira una nueva pantalla y se enviaran unos datos
+        subChild1_2.setClickListener((node, value) -> {
+            if (isNetworkAvailable()) {
+                Intent i = new Intent(MainActivity.this,PedidoTrasladoBod2_Bod1.class);
+                i.putExtra("nit_usuario",cd);
+                i.putExtra("bod_origen",2);
+                i.putExtra("bod_destino",1);
+                i.putExtra("modelo","12");
+
+                startActivity(i);
+            } else {
+                toastError("Problemas de conexión a Internet");
+            }
+        });
 
         //SubGrupo3 "Gestion de Alambron"
         //Enviamos el icono y el texto para el SubGrupo
@@ -289,12 +312,14 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        //Agregamos subgrupo1"Gestion de Alambron".
-        //child1.addChild(subChild1_1);
-        //child1.addChild(subChild1_3);
+        //Agregamos subgrupo1"Traslado de Bodega (1-2)".
+        child1.addChild(subChild1_1);
 
-        //Agregamos subgrupo2"Gestion de Alambron".
-        //child1.addChild(subChild1_2);
+        //Agregamos subgrupo2"Traslado de Bodega (2-1)".
+        child1.addChild(subChild1_2);
+
+        //Agregamos subgrupo2"Descargue de Alambron".
+        child1.addChild(subChild1_3);
 
         //Agregamos Grupo"Gestion de Alambron".
         //parent.addChildren(child1);
@@ -426,11 +451,39 @@ public class MainActivity extends AppCompatActivity {
 
         //SubGrupo3"Mesas Empaque"
         //Enviamos el icono y el texto para el SubGrupo
-        MyHolder.IconTreeItem subChildItem5_3 = new MyHolder.IconTreeItem(R.drawable.ic_folder, "Puntilleria");
+        MyHolder.IconTreeItem subChildItem5_3 = new MyHolder.IconTreeItem(R.drawable.ic_folder, "Recocido Industrial");
         TreeNode subChild5_3 = new TreeNode(subChildItem5_3).setViewHolder(new MyHolder(getApplicationContext(), false, R.layout.child, 100));
 
         //Al darle clic a este elemento en el treeview se abrira una nueva pantalla y se enviaran unos datos
         subChild5_3.setClickListener((node, value) -> {
+            Intent intent = new Intent(MainActivity.this, RevisionTerminadoRecocido.class);
+            intent.putExtra("nit_usuario", cd);
+            intent.putExtra("nombre_usuario", nombre_usuario);
+            intent.putExtra("tipo","industrial");
+            startActivity(intent);
+        });
+
+        //SubGrupo3"Mesas Empaque"
+        //Enviamos el icono y el texto para el SubGrupo
+        MyHolder.IconTreeItem subChildItem5_4 = new MyHolder.IconTreeItem(R.drawable.ic_folder, "Recocido Construcción");
+        TreeNode subChild5_4 = new TreeNode(subChildItem5_4).setViewHolder(new MyHolder(getApplicationContext(), false, R.layout.child, 100));
+
+        //Al darle clic a este elemento en el treeview se abrira una nueva pantalla y se enviaran unos datos
+        subChild5_4.setClickListener((node, value) -> {
+            Intent intent = new Intent(MainActivity.this, RevisionTerminadoRecocido.class);
+            intent.putExtra("nit_usuario", cd);
+            intent.putExtra("nombre_usuario", nombre_usuario);
+            intent.putExtra("tipo","construccion");
+            startActivity(intent);
+        });
+
+        //SubGrupo3"Mesas Empaque"
+        //Enviamos el icono y el texto para el SubGrupo
+        MyHolder.IconTreeItem subChildItem5_5 = new MyHolder.IconTreeItem(R.drawable.ic_folder, "Puntilleria");
+        TreeNode subChild5_5 = new TreeNode(subChildItem5_5).setViewHolder(new MyHolder(getApplicationContext(), false, R.layout.child, 100));
+
+        //Al darle clic a este elemento en el treeview se abrira una nueva pantalla y se enviaran unos datos
+        subChild5_5.setClickListener((node, value) -> {
             Intent intent = new Intent(MainActivity.this, ResumenPunti.class);
             intent.putExtra("nit_usuario", cd);
             intent.putExtra("nombre_usuario", nombre_usuario);
@@ -442,6 +495,13 @@ public class MainActivity extends AppCompatActivity {
 
         //Agregamos subgrupo2"Revisión - Calidad: Trefilación".
         child5.addChild(subChild5_2);
+
+        //Agregamos subgrupo2"Revisión - Calidad: Recocido Industrial".
+        child5.addChild(subChild5_3);
+
+        //Agregamos subgrupo2"Revisión - Calidad: Recocido de Construcción".
+        child5.addChild(subChild5_4);
+
 
         //Agregamos subgrupo2"Revisión - Calidad: Mesas Empaque".
         //child5.addChild(subChild5_3); Todavia no hay desarrollado un modulo de calidad para empaque
@@ -456,7 +516,7 @@ public class MainActivity extends AppCompatActivity {
         MyHolder.IconTreeItem childItem6 = new MyHolder.IconTreeItem(R.drawable.ic_folder, "Logistica - Recepción");
         TreeNode child6 = new TreeNode(childItem6).setViewHolder(new MyHolder(getApplicationContext(), false, R.layout.child, 25));
 
-        //SubGrupo1"Logistica - Recepción "
+        //SubGrupo1"Logistica - Recepción"
         //Enviamos el icono y el texto para el SubGrupo
         MyHolder.IconTreeItem subChildItem6_1 = new MyHolder.IconTreeItem(R.drawable.ic_folder, "Galvanizado");
         TreeNode subChild6_1 = new TreeNode(subChildItem6_1).setViewHolder(new MyHolder(getApplicationContext(), false, R.layout.child, 100));
@@ -472,7 +532,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        //SubGrupo2"Logistica - Recepción "
+        //SubGrupo2"Logistica - Recepción"
         //Enviamos el icono y el texto para el SubGrupo
         MyHolder.IconTreeItem subChildItem6_2 = new MyHolder.IconTreeItem(R.drawable.ic_folder, "Trefilación");
         TreeNode subChild6_2 = new TreeNode(subChildItem6_2).setViewHolder(new MyHolder(getApplicationContext(), false, R.layout.child, 100));
@@ -488,27 +548,62 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        //SubGrupo3"Mesas Empaque"
+        //SubGrupo3"Logistica - Recepción "
         //Enviamos el icono y el texto para el SubGrupo
-        MyHolder.IconTreeItem subChildItem6_3 = new MyHolder.IconTreeItem(R.drawable.ic_folder, "Puntilleria");
+        MyHolder.IconTreeItem subChildItem6_3 = new MyHolder.IconTreeItem(R.drawable.ic_folder, "Recocido");
         TreeNode subChild6_3 = new TreeNode(subChildItem6_3).setViewHolder(new MyHolder(getApplicationContext(), false, R.layout.child, 100));
 
         //Al darle clic a este elemento en el treeview se abrira una nueva pantalla y se enviaran unos datos
         subChild6_3.setClickListener((node, value) -> {
+            if (isNetworkAvailable()) {
+                Intent intent = new Intent(MainActivity.this, RecepcionTerminadoRecocido.class);
+                intent.putExtra("nit_usuario", cd);
+                startActivity(intent);
+            } else {
+                toastError("Problemas de conexión a Internet");
+            }
+        });
+
+        //SubGrupo4"Mesas Empaque"
+        //Enviamos el icono y el texto para el SubGrupo
+        MyHolder.IconTreeItem subChildItem6_4 = new MyHolder.IconTreeItem(R.drawable.ic_folder, "Puntilleria");
+        TreeNode subChild6_4 = new TreeNode(subChildItem6_4).setViewHolder(new MyHolder(getApplicationContext(), false, R.layout.child, 100));
+
+        //Al darle clic a este elemento en el treeview se abrira una nueva pantalla y se enviaran unos datos
+        subChild6_4.setClickListener((node, value) -> {
             Intent intent = new Intent(MainActivity.this, ResumenPunti.class);
             intent.putExtra("nit_usuario", cd);
             intent.putExtra("nombre_usuario", nombre_usuario);
             startActivity(intent);
         });
 
+        //SubGrupo6"Logistica - Recepción"
+        //Enviamos el icono y el texto para el SubGrupo
+        MyHolder.IconTreeItem subChildItem6_6 = new MyHolder.IconTreeItem(R.drawable.ic_folder, "Auditoria Logistica");
+        TreeNode subChild6_6 = new TreeNode(subChildItem6_6).setViewHolder(new MyHolder(getApplicationContext(), false, R.layout.child, 100));
+
+        //Al darle clic a este elemento en el treeview se abrira una nueva pantalla y se enviaran unos datos
+        subChild6_6.setClickListener((node, value) -> {
+            Intent intent = new Intent(MainActivity.this, AuditoriaLogistica.class);
+            intent.putExtra("nit_usuario", cd);
+            intent.putExtra("nombre_usuario", nombre_usuario);
+            startActivity(intent);
+        });
+
         //Agregamos subgrupo1"Logistica - Recepción: Galvanizado".
-        //child6.addChild(subChild6_1);
+        child6.addChild(subChild6_1);
 
         //Agregamos subgrupo2"Logistica - Recepción: Trefilación".
-        //child6.addChild(subChild6_2);
+        child6.addChild(subChild6_2);
 
-        //Agregamos subgrupo2"Mesas Empaque".
+        //Agregamos subgrupo3"Logistica - Recepción: Recocido".
+        child6.addChild(subChild6_3);
+
+        //Agregamos subgrupo4"Logistica - Recepción: Mesas Empaque".
         //child6.addChild(subChild6_3);
+
+        //Agregamos subgrupo4"Logistica - Recepción: Auditoria Logistica".
+        child6.addChild(subChild6_6);
 
         //Agregamos Grupo"Logistica - Recepción".
         //parent.addChildren(child1);

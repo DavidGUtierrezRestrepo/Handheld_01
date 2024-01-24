@@ -23,6 +23,21 @@
         android:theme="@style/Theme.Handheld"
         tools:targetApi="31">
         <activity
+            android:name=".AuditoriaLogistica"
+            android:exported="false" />
+        <activity
+            android:name=".EscanerTrasladoBod2_Bod1"
+            android:exported="false" />
+        <activity
+            android:name=".PedidoTrasladoBod2_Bod1"
+            android:exported="false" />
+        <activity
+            android:name=".RecepcionTerminadoRecocido"
+            android:exported="false" />
+        <activity
+            android:name=".RevisionTerminadoRecocido"
+            android:exported="false" />
+        <activity
             android:name=".PruebaSpinner"
             android:exported="false" />
         <activity
