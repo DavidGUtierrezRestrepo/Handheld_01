@@ -3,7 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".RecepcionTerminadoRecocido">
+    tools:context=".RevisionTerminadoGalvanizado">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -23,7 +23,7 @@
                 android:layout_weight="1"
                 android:background="#5B81F3"
                 android:paddingTop="8dp"
-                android:text="@string/TRecepReco"
+                android:text="@string/txtTCGALVA"
                 android:textAlignment="center"
                 android:textColor="#FFFFFF"
                 android:textSize="20sp"
@@ -36,32 +36,6 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:paddingTop="10dp">
-
-            <Space
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_weight="1" />
-
-            <TextView
-                android:id="@+id/tituloRecocido"
-                android:layout_width="299dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:textAlignment="center"
-                android:textSize="16sp"
-                android:textStyle="bold" />
-
-            <Space
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_weight="1" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:paddingTop="20dp">
 
             <Space
                 android:layout_width="wrap_content"
@@ -120,10 +94,11 @@
             android:orientation="horizontal">
 
             <ListView
-                android:id="@+id/listviewRecoTerminado"
+                android:id="@+id/listviewGalvaTerminado"
                 android:layout_width="match_parent"
                 android:layout_height="390dp" />
         </LinearLayout>
+
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -216,19 +191,19 @@
             android:orientation="horizontal">
 
             <Button
-                android:id="@+id/btnCancelarTrans"
-                android:layout_width="98dp"
+                android:id="@+id/btnRechazado"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="10dp"
                 android:layout_weight="1"
-                android:backgroundTint="#979797"
-                android:drawableEnd="@drawable/salida"
-                android:text="@string/btnSalida"
+                android:backgroundTint="#FF2414"
+                android:drawableEnd="@drawable/cancelar"
+                android:text="@string/btnRechazado"
                 android:textColor="#FFFFFF"
                 android:textStyle="bold" />
 
             <Button
-                android:id="@+id/btnTransaEmp"
+                android:id="@+id/btnAprobado"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="10dp"
@@ -236,9 +211,29 @@
                 android:layout_weight="1"
                 android:backgroundTint="#3CBF41"
                 android:drawableEnd="@drawable/cheque"
-                android:text="@string/btnTransaGalv"
+                android:text="@string/btnAprobado"
                 android:textColor="#FBFBFB"
                 android:textStyle="bold" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center">
+
+            <Button
+                android:id="@+id/btnCancelarTrans"
+                android:layout_width="175sp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:backgroundTint="#979797"
+                android:drawableEnd="@drawable/salida"
+                android:text="@string/btnSalida"
+                android:textColor="#FFFFFF"
+                android:textStyle="bold" />
+
 
         </LinearLayout>
     </LinearLayout>

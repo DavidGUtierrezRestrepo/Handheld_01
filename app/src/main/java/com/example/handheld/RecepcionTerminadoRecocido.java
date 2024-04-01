@@ -6,6 +6,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import android.annotation.SuppressLint;
 import android.app.ProgressDialog;
 import android.content.Context;
+import android.content.Intent;
 import android.media.AudioManager;
 import android.media.SoundPool;
 import android.net.ConnectivityManager;
@@ -33,10 +34,12 @@ import com.example.handheld.ClasesOperativas.Gestion_alambronLn;
 import com.example.handheld.ClasesOperativas.Ing_prod_ad;
 import com.example.handheld.ClasesOperativas.ObjTraslado_bodLn;
 import com.example.handheld.ClasesOperativas.Obj_ordenprodLn;
+import com.example.handheld.ClasesOperativas.objOperacionesDb;
 import com.example.handheld.atv.holder.adapters.listRecoTerminadoAdapter;
 import com.example.handheld.conexionDB.Conexion;
 import com.example.handheld.conexionDB.ConfiguracionBD;
 import com.example.handheld.modelos.CorreoModelo;
+import com.example.handheld.modelos.PermisoPersonaModelo;
 import com.example.handheld.modelos.PersonaModelo;
 import com.example.handheld.modelos.RecoRecepcionModelo;
 import com.example.handheld.modelos.RecoRecepcionadoRollosModelo;
@@ -62,11 +65,11 @@ import javax.mail.internet.MimeMessage;
 public class RecepcionTerminadoRecocido extends AppCompatActivity implements AdapterView.OnItemClickListener {
     //se declaran las variables de los elementos del Layout
     EditText codigoReco;
-    TextView txtTotal, txtTotalSinLeer, txtRollosLeidos;
+    TextView txtTotal, txtTotalSinLeer, txtRollosLeidos, tituloRecocido;
     Button btnTransaReco, btnCancelarTrans;
 
     //se declaran las variables donde estaran los datos que vienen de la anterior clase
-    String nit_usuario;
+    String nit_usuario, tipo;
 
     //Se declaran los elementos necesarios para el list view
     ListView listviewRecoTerminado;
@@ -81,14 +84,26 @@ public class RecepcionTerminadoRecocido extends AppCompatActivity implements Ada
     //Se inicializa variables necesarias en la clase
     int yaentre = 0, leidos;
     String consecutivo, error, fechaTransaccion, cod_orden,id_detalle,id_rollo;
-    Integer numero_transaccion, repeticiones;
+    Integer numero_transaccion, repeticiones, paso = 0, numero_recepcion;
+
+    String permiso = "";
     String centro = "";
 
+    //Definimos las variables que seran utilizadas en la transaccion recepcion
+    String fechaActualString, monthActualString ,yearActualString;
+    Calendar calendar;
+
+    ////////////////////////////////////////////////////////////////////////////////
     Boolean incompleta = false;
     PersonaModelo personaLogistica;
 
+    PermisoPersonaModelo personaProduccion;
     CorreoModelo correo;
     ObjTraslado_bodLn objTraslado_bodLn = new ObjTraslado_bodLn();
+
+    objOperacionesDb ObjOperacionesDB = new objOperacionesDb();
+
+    Obj_ordenprodLn obj_ordenprodLn = new Obj_ordenprodLn();
 
     Gestion_alambronLn obj_gestion_alambronLn = new Gestion_alambronLn();
     Ing_prod_ad ing_prod_ad = new Ing_prod_ad();
@@ -114,6 +129,8 @@ public class RecepcionTerminadoRecocido extends AppCompatActivity implements Ada
     String[] rec;
     String subject, textMessage;
 
+    Boolean bloqueado = false;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -126,11 +143,17 @@ public class RecepcionTerminadoRecocido extends AppCompatActivity implements Ada
         txtRollosLeidos = findViewById(R.id.txtRollosLeidos);
         btnTransaReco = findViewById(R.id.btnTransaEmp);
         btnCancelarTrans = findViewById(R.id.btnCancelarTrans);
+        tituloRecocido = findViewById(R.id.tituloRecocido);
 
         //Recibimos los datos desde la class PedidoInventraio
         nit_usuario = getIntent().getStringExtra("nit_usuario");
-        //fecha_inicio = getIntent().getStringExtra("fecha_inicio"); //YA NO SE RECIBE FECHA INICIO
-        //fecha_final = getIntent().getStringExtra("fecha_final"); //YA NO SE RECIBE FECHA FINAL
+        tipo = getIntent().getStringExtra("tipo");
+
+        if (tipo.equals("industrial")){
+            tituloRecocido.setText(R.string.TMenuRecepRecoIndu);
+        } else if (tipo.equals("construccion")) {
+            tituloRecocido.setText(R.string.TMenuRecepRecoCons);
+        }
 
         //Definimos los elementos necesarios para el list view
         listviewRecoTerminado = findViewById(R.id.listviewRecoTerminado);
@@ -151,14 +174,6 @@ public class RecepcionTerminadoRecocido extends AppCompatActivity implements Ada
                 "isabel.gomez@corsan.com.co",
                 "auditoria@corsan.com.co"
         };
-
-        /////////////////////////////////////////////////////////////////////////////////////////////
-        //Llamamos al metodo para consultar los rollos de galvanizados listos para recoger
-        consultarTransIncompleta();
-
-        /////////////////////////////////////////////////////////////////////////////////////////////
-        //Se establece el foco en el edit text
-        codigoReco.requestFocus();
 
         /////////////////////////////////////////////////////////////////////////////////////////////
         //Se programa para que al presionar (enter) en el EditText inicie el proceso
@@ -223,6 +238,89 @@ public class RecepcionTerminadoRecocido extends AppCompatActivity implements Ada
                 }
             }
         });
+
+        ingresarCedulas();
+    }
+
+    private void ingresarCedulas() {
+        conexion = new Conexion();
+        AlertDialog.Builder builder = new AlertDialog.Builder(RecepcionTerminadoRecocido.this);
+        View mView = getLayoutInflater().inflate(R.layout.alertdialog_cedularecepciona,null);
+        final EditText txtCedulaProduccion = mView.findViewById(R.id.txtCedulaLogistica);
+        txtCedulaProduccion.setHint("Cedula Producción");
+        TextView txtMrollos = mView.findViewById(R.id.txtMrollos);
+        txtMrollos.setVisibility(View.GONE);
+        TextView txtMensajeCedula = mView.findViewById(R.id.textView6);
+        txtMensajeCedula.setText(R.string.ingresarCeduProd);
+        Button btnAceptar = mView.findViewById(R.id.btnAceptar);
+        Button btnCancelar = mView.findViewById(R.id.btnCancelar);
+        ProgressBar Barraprogreso = mView.findViewById(R.id.progress_bar);
+        builder.setView(mView);
+        AlertDialog alertDialog = builder.create();
+        btnAceptar.setOnClickListener(v12 -> {
+            if (isNetworkAvailable()) {
+                String CeProdu = txtCedulaProduccion.getText().toString().trim();
+                if (CeProdu.equals("")){
+                    AudioError();
+                    toastError("Ingresar la cedula de la persona que entrega");
+                }else{
+                    // Verificamos el numero de documentos de la persona en la base de datos
+                    personaProduccion = conexion.obtenerPermisoPersonaAlambre(RecepcionTerminadoRecocido.this, CeProdu, "entrega");
+                    permiso = personaProduccion.getPermiso();
+
+                    // Verificamos que la persona sea de logistica
+                    if (permiso.equals("E")) {
+                        Barraprogreso.setVisibility(View.VISIBLE);
+                        Handler handler = new Handler(Looper.getMainLooper());
+                        new Thread(() -> {
+                            try {
+                                runOnUiThread(() -> {
+                                    // Código a ejecutar cuando el permiso es "E"
+                                    nit_usuario = CeProdu;
+
+                                    // Llamamos al metodo para consultar los rollos de galvanizados listos para recoger
+                                    consultarTransIncompleta();
+
+                                    Barraprogreso.setVisibility(View.GONE);
+                                    alertDialog.dismiss();
+
+                                    // Se establece el foco en el edit text
+                                    codigoReco.requestFocus();
+
+                                    closeTecladoMovil();
+                                });
+                            } catch (Exception e) {
+                                handler.post(() -> {
+                                    AudioError();
+                                    toastError(e.getMessage());
+                                    Barraprogreso.setVisibility(View.GONE);
+                                });
+                            }
+                        }).start();
+                        closeTecladoMovil();
+                    }else{
+                        if (permiso == null){
+                            txtCedulaProduccion.setText("");
+                            AudioError();
+                            toastError("Persona no encontrada");
+                        }else{
+                            txtCedulaProduccion.setText("");
+                            AudioError();
+                            toastError("La cedula ingresada no pertenece a producción!");
+                        }
+                    }
+                }
+            } else {
+                toastError("Problemas de conexión a Internet");
+            }
+        });
+        btnCancelar.setOnClickListener(v -> {
+            Intent intent = new Intent(RecepcionTerminadoRecocido.this, MainActivity.class);
+            intent.putExtra("nit_usuario", nit_usuario);
+            startActivity(intent);
+        });
+        alertDialog.setCancelable(false);
+        alertDialog.show();
     }
 
     //Alert dialog Transacción
@@ -293,6 +391,95 @@ public class RecepcionTerminadoRecocido extends AppCompatActivity implements Ada
         alertDialog.show();
     }
 
+    //Alert dialog Transacción
+    @SuppressLint("SetTextI18n")
+    private void alertDialogEliminar(int position){
+        AlertDialog.Builder builder = new AlertDialog.Builder(RecepcionTerminadoRecocido.this);
+        View mView = getLayoutInflater().inflate(R.layout.alertdialog_eliminar,null);
+        @SuppressLint({"MissingInflatedId", "LocalSuppress"}) EditText txtCedulaLogistica = mView.findViewById(R.id.txtCedulaLogistica);
+        Button btnAceptar = mView.findViewById(R.id.btnAceptar);
+        Button btnCancelar = mView.findViewById(R.id.btnCancelar);
+        builder.setView(mView);
+        AlertDialog alertDialog = builder.create();
+        btnAceptar.setOnClickListener(v12 -> {
+            if(isNetworkAvailable()){
+                String CeLog = txtCedulaLogistica.getText().toString().trim();
+                if (CeLog.equals("")){
+                    toastError("Ingresar la cedula de la persona que recepciona");
+                }else{
+                    if(CeLog.equals(nit_usuario)){
+                        toastError("La Cedula de la persona que recepciona no puede ser igual al de la persona que entrega");
+                    }else{
+                        //Verificamos el numero de documentos de la persona en la base da datos
+                        personaLogistica = conexion.obtenerPersona(RecepcionTerminadoRecocido.this,CeLog );
+                        centro = personaLogistica.getCentro();
+                        //Verificamos que la persona sea de logistica
+                        if (centro.equals("3500")){
+                            // Obtén la fecha y hora actual
+                            Date fechaActual = new Date();
+                            calendar = Calendar.getInstance();
+                            // Define el formato de la fecha y hora que deseas obtener
+                            @SuppressLint("SimpleDateFormat") SimpleDateFormat formatoFecha = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+                            // Convierte la fecha actual en un String con el formato definido
+                            fechaActualString = formatoFecha.format(fechaActual);
+                            Integer ejecutar = 0;
+
+                            String sql = "INSERT INTO jd_novedad_recepcion_recocido (nit_prod_entrega,nit_log_recibe,fecha_hora) " +
+                                    "VALUES ('" + nit_usuario + "','" + personaLogistica.getNit() + "','" + fechaActualString + "')";
+
+                            ejecutar = Obj_ordenprodLn.realizarUpdateProduccion(sql, RecepcionTerminadoRecocido.this);
+
+                            if (ejecutar.equals(1)){
+
+                                ejecutar = 0;
+                                String sql_novedad = "Select id_novedad from jd_novedad_recepcion_recocido where fecha_hora = '" + fechaActualString + "'";
+                                Integer id_novedad = conexion.obtenerIdNovedad(RecepcionTerminadoRecocido.this,sql_novedad);
+
+                                recoRecepcionModelo = ListaRecoRollosRecep.get(position);
+                                String sql_relacion_novedad_rollo = "UPDATE JB_rollos_rec SET id_novedad = " + id_novedad + " where cod_orden_rec='" + recoRecepcionModelo.getCod_orden() + "' and id_detalle_rec='" + recoRecepcionModelo.getId_detalle() + "' and id_rollo_rec='" + recoRecepcionModelo.getId_rollo() + "'";
+                                ejecutar = Obj_ordenprodLn.realizarUpdateProduccion(sql_relacion_novedad_rollo, RecepcionTerminadoRecocido.this);
+                                if (ejecutar.equals(1)){
+                                    ListaRecoRollosRecep.remove(position);
+
+                                    RecoTerminadoAdapter = new listRecoTerminadoAdapter(RecepcionTerminadoRecocido.this,R.layout.item_row_trefiterminado,ListaRecoRollosRecep);
+                                    listviewRecoTerminado.setAdapter(RecoTerminadoAdapter);
+
+                                    toastAcierto("Rollo rechazado");
+                                    //Contamos los rollos leidos y no leidos
+                                    contarSinLeer();
+                                    contarLeidos();
+                                    alertDialog.dismiss();
+
+                                }else {
+                                    toastError("Problemas para rechazar rollo, vuelve a intentarlo");
+                                    alertDialog.dismiss();
+                                }
+                            }else{
+                                toastError("Problemas para rechazar rollo, vuelve a intentarlo");
+                                alertDialog.dismiss();
+                            }
+                        }else{
+                            if (centro.equals("")){
+                                txtCedulaLogistica.setText("");
+                                AudioError();
+                                toastError("Persona no encontrada");
+                            }else{
+                                txtCedulaLogistica.setText("");
+                                AudioError();
+                                toastError("La cedula ingresada no pertenece a logistica!");
+                            }
+                        }
+                    }
+                }
+            }else{
+                toastError("Problemas de conexión a Internet");
+            }
+        });
+        btnCancelar.setOnClickListener(v1 -> alertDialog.dismiss());
+        alertDialog.setCancelable(false);
+        alertDialog.show();
+    }
+
     /////////////////////////////////////////////////////////////////////////////////////////////
     //Funcion que genera todas las listas de consultas en la base de datos, las ejecuta generando
     //Una TRB1 en el sistema de bodega 2 a bodega 3 con los rollos leidos
@@ -302,96 +489,36 @@ public class RecepcionTerminadoRecocido extends AppCompatActivity implements Ada
         listTransactionReco = new ArrayList<>();
         //Creamos una lista para almacenar todas las consultas que se realizaran en la base de datos
         List<Object> listTransaccionBodega;
-        //Lista donde revertimos la primer consulta si el segundo proceso no se realiza bien
-        //List<Object> listTransactionError = new ArrayList<>(); se comenta porque se decide no revertir la primera consulta sino terminar las incompletas
 
+        if (paso.equals(0)){
+            // Obtén la fecha y hora actual
+            Date fechaActual = new Date();
+            calendar = Calendar.getInstance();
 
-        // Obtén la fecha y hora actual
-        Date fechaActual = new Date();
-        Calendar calendar = Calendar.getInstance();
+            // Define el formato de la fecha y hora que deseas obtener
+            @SuppressLint("SimpleDateFormat") SimpleDateFormat formatoFecha = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+            @SuppressLint("SimpleDateFormat") SimpleDateFormat formatoFechaTransaccion = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss a");
+            @SuppressLint("SimpleDateFormat") SimpleDateFormat formatoMonth = new SimpleDateFormat("MM");
+            @SuppressLint("SimpleDateFormat") SimpleDateFormat formatoYear = new SimpleDateFormat("yyyy");
 
-        // Define el formato de la fecha y hora que deseas obtener
-        @SuppressLint("SimpleDateFormat") SimpleDateFormat formatoFecha = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        @SuppressLint("SimpleDateFormat") SimpleDateFormat formatoFechaTransaccion = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss a");
-        @SuppressLint("SimpleDateFormat") SimpleDateFormat formatoMonth = new SimpleDateFormat("MM");
-        @SuppressLint("SimpleDateFormat") SimpleDateFormat formatoYear = new SimpleDateFormat("yyyy");
+            // Convierte la fecha actual en un String con el formato definido
+            fechaActualString = formatoFecha.format(fechaActual);
+            fechaTransaccion = formatoFechaTransaccion.format(fechaActual);
+            monthActualString = formatoMonth.format(fechaActual);
+            yearActualString = formatoYear.format(fechaActual);
 
-        // Convierte la fecha actual en un String con el formato definido
-        String fechaActualString = formatoFecha.format(fechaActual);
-        fechaTransaccion = formatoFechaTransaccion.format(fechaActual);
-        String monthActualString = formatoMonth.format(fechaActual);
-        String yearActualString = formatoYear.format(fechaActual);
-
-        //se adicionan los campos recepcionado, nit_recepcionado y fecha_recepcionado a la tabla
-        for(int i=0;i<ListaRecoRollosRecep.size();i++){
-            String cod_orden = ListaRecoRollosRecep.get(i).getCod_orden();
-            String id_detalle = ListaRecoRollosRecep.get(i).getId_detalle();
-            String id_rollo = ListaRecoRollosRecep.get(i).getId_rollo();
-
-            String sql_rollo= "UPDATE J_rollos_tref SET recepcionado='SI', nit_recepcionado='"+ nit_usuario +"', fecha_recepcion='"+ fechaActualString +"', nit_entrega='"+ personaLogistica.getNit() +"' WHERE cod_orden='"+ cod_orden +"' AND id_detalle='"+id_detalle+"' AND id_rollo='"+id_rollo+"'";
+            String sql_registroRecepcion = "INSERT INTO jd_detalle_recepcion_recocido(nit_prod_entrega,nit_log_recibe,fecha_recepcion)VALUES('" + nit_usuario + "','" + personaLogistica.getNit() + "','" + fechaActualString + "')";
 
             try {
-                //Se añade el sql a la lista
-                listTransactionReco.add(sql_rollo);
-            }catch (Exception e){
-                Toast.makeText(RecepcionTerminadoRecocido.this, e.getMessage(), Toast.LENGTH_SHORT).show();
-            }
-        }
-
-        if (listTransactionReco.size()>0){
-            //Ejecutamos la consultas que llenan los campos de recepción
-            repeticiones = 0;
-            error = ciclo1();
-            if (error.equals("")){
-                ListarefeRecepcionados = conexion.recoRefeRecepcionados(RecepcionTerminadoRecocido.this,fechaActualString, monthActualString, yearActualString);
-                numero_transaccion = Integer.valueOf(Obj_ordenprodLn.mover_consecutivo("TRB1", RecepcionTerminadoRecocido.this));
-                listTransaccionBodega = traslado_bodega(ListarefeRecepcionados, calendar);
-                //Ejecutamos la lista de consultas para hacer la TRB1
-                error = ing_prod_ad.ExecuteSqlTransaction(listTransaccionBodega, ConfiguracionBD.obtenerNombreBD(1), RecepcionTerminadoRecocido.this);
-                if (error.equals("")){
-                    for(int u=0;u<ListaRecoRollosRecep.size();u++){
-                        String cod_orden = ListaRecoRollosRecep.get(u).getCod_orden();
-                        String id_detalle = ListaRecoRollosRecep.get(u).getId_detalle();
-                        String id_rollo = ListaRecoRollosRecep.get(u).getId_rollo();
-                        String sql_trb1= "UPDATE J_rollos_tref SET trb1="+ numero_transaccion +" WHERE cod_orden='"+ cod_orden +"' AND id_detalle='"+id_detalle+"' AND id_rollo='"+id_rollo+"'";
-                        try {
-                            //Se añade el sql a la lista
-                            listTransactionTrb1.add(sql_trb1);
-                        }catch (Exception e){
-                            Toast.makeText(RecepcionTerminadoRecocido.this, e.getMessage(), Toast.LENGTH_SHORT).show();
-                        }
-                    }
-                    repeticiones = 0;
-                    ciclo3();
-                }else{
-                    incompleta =  true;
-                    AudioError();
-                    AlertDialog.Builder builder = new AlertDialog.Builder(RecepcionTerminadoRecocido.this);
-                    View mView = getLayoutInflater().inflate(R.layout.alertdialog_aceptar,null);
-                    TextView alertMensaje = mView.findViewById(R.id.alertMensaje);
-                    alertMensaje.setText("Hubo un error en el paso 2 de la transacción. \n'" + error + "'\n ¡Vuelve a intentar realizar la transacción!");
-                    Button btnAceptar = mView.findViewById(R.id.btnAceptar);
-                    builder.setView(mView);
-                    AlertDialog alertDialog = builder.create();
-                    btnAceptar.setOnClickListener(v -> {
-                        if (isNetworkAvailable()) {
-                            repeticiones = 0;
-                            reanudarTransacion();
-                            alertDialog.dismiss();
-                        } else {
-                            toastError("Problemas de conexión a Internet");
-                        }
-                    });
-                    alertDialog.setCancelable(false);
-                    alertDialog.show();
-                }
-            }else{
+                //Se ejecuta el sql_revision en la base de datos
+                paso = ObjOperacionesDB.ejecutarInsertJjprgproduccion(sql_registroRecepcion, RecepcionTerminadoRecocido.this);
+            } catch (Exception e) {
                 incompleta =  true;
                 AudioError();
                 AlertDialog.Builder builder = new AlertDialog.Builder(RecepcionTerminadoRecocido.this);
                 View mView = getLayoutInflater().inflate(R.layout.alertdialog_aceptar,null);
                 TextView alertMensaje = mView.findViewById(R.id.alertMensaje);
-                alertMensaje.setText("Hubo un error en el paso 1 de la transacción. \n'" + error + "'\n ¡Vuelve a intentar realizar la transacción!");
+                alertMensaje.setText("Hubo un error en el paso 1 de la recepción. \n'" + error + "'\n ¡Vuelve a intentar realizar la transacción!");
                 Button btnAceptar = mView.findViewById(R.id.btnAceptar);
                 btnAceptar.setText("Aceptar");
                 builder.setView(mView);
@@ -400,6 +527,93 @@ public class RecepcionTerminadoRecocido extends AppCompatActivity implements Ada
                 alertDialog.setCancelable(false);
                 alertDialog.show();
             }
+        }
+
+        if (paso.equals(1)){
+            String obtenerId = "select id_recepcion from jd_detalle_recepcion_recocido where fecha_recepcion='" + fechaActualString + "'";
+            numero_recepcion = conexion.obtenerIdRecepcion(RecepcionTerminadoRecocido.this, obtenerId );
+            //se adicionan los campos recepcionado, nit_recepcionado y fecha_recepcionado a la tabla
+            for(int i=0;i<ListaRecoRollosRecep.size();i++){
+                String cod_orden_rec = ListaRecoRollosRecep.get(i).getCod_orden();
+                String id_detalle_rec = ListaRecoRollosRecep.get(i).getId_detalle();
+                String id_rollo_rec = ListaRecoRollosRecep.get(i).getId_rollo();
+
+                String sql_rollo= "UPDATE JB_rollos_rec SET id_recepcion='"+ numero_recepcion +"' WHERE cod_orden_rec='"+ cod_orden_rec +"' AND id_detalle_rec='"+ id_detalle_rec +"' AND id_rollo_rec='"+ id_rollo_rec +"'";
+
+                try {
+                    //Se añade el sql a la lista
+                    listTransactionReco.add(sql_rollo);
+                }catch (Exception e){
+                    Toast.makeText(RecepcionTerminadoRecocido.this, e.getMessage(), Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            if (listTransactionReco.size()>0){
+                //Ejecutamos la consultas que llenan los campos de recepción
+                repeticiones = 0;
+                error = ciclo1();
+                if (error.equals("")){
+                    paso = 2;
+                }else{
+                    incompleta =  true;
+                    AudioError();
+                    AlertDialog.Builder builder = new AlertDialog.Builder(RecepcionTerminadoRecocido.this);
+                    View mView = getLayoutInflater().inflate(R.layout.alertdialog_aceptar,null);
+                    TextView alertMensaje = mView.findViewById(R.id.alertMensaje);
+                    alertMensaje.setText("Hubo un error en el paso 2 de la transacción. \n'" + error + "'\n ¡Vuelve a intentar realizar la transacción!");
+                    Button btnAceptar = mView.findViewById(R.id.btnAceptar);
+                    btnAceptar.setText("Aceptar");
+                    builder.setView(mView);
+                    AlertDialog alertDialog = builder.create();
+                    btnAceptar.setOnClickListener(v -> alertDialog.dismiss());
+                    alertDialog.setCancelable(false);
+                    alertDialog.show();
+                }
+            }
+        }
+
+        if (paso.equals(2)){
+            ListarefeRecepcionados = conexion.recoRefeRecepcionados(RecepcionTerminadoRecocido.this,fechaActualString, monthActualString, yearActualString);
+            numero_transaccion = Integer.valueOf(Obj_ordenprodLn.mover_consecutivo("TRB1", RecepcionTerminadoRecocido.this));
+            listTransaccionBodega = traslado_bodega(ListarefeRecepcionados, calendar);
+            //Ejecutamos la lista de consultas para hacer la TRB1
+            error = ing_prod_ad.ExecuteSqlTransaction(listTransaccionBodega, ConfiguracionBD.obtenerNombreBD(1), RecepcionTerminadoRecocido.this);
+            if (error.equals("")){
+                paso = 3;
+            }else{
+                incompleta =  true;
+                AudioError();
+                AlertDialog.Builder builder = new AlertDialog.Builder(RecepcionTerminadoRecocido.this);
+                View mView = getLayoutInflater().inflate(R.layout.alertdialog_aceptar,null);
+                TextView alertMensaje = mView.findViewById(R.id.alertMensaje);
+                alertMensaje.setText("Hubo un error en el paso 3 de la transacción. \n'" + error + "'\n ¡Vuelve a intentar realizar la transacción!");
+                Button btnAceptar = mView.findViewById(R.id.btnAceptar);
+                builder.setView(mView);
+                AlertDialog alertDialog = builder.create();
+                btnAceptar.setOnClickListener(v -> {
+                    if (isNetworkAvailable()) {
+                        repeticiones = 0;
+                        reanudarTransacion();
+                        alertDialog.dismiss();
+                    } else {
+                        toastError("Problemas de conexión a Internet");
+                    }
+                });
+                alertDialog.setCancelable(false);
+                alertDialog.show();
+            }
+        }
+
+        if (paso.equals(3)){
+            String sql_trb1= "UPDATE jd_detalle_recepcion_recocido SET trb1="+ numero_transaccion +" WHERE id_recepcion='"+ numero_recepcion +"'";
+            try {
+                //Se añade el sql a la lista
+                listTransactionTrb1.add(sql_trb1);
+            }catch (Exception e){
+                Toast.makeText(RecepcionTerminadoRecocido.this, e.getMessage(), Toast.LENGTH_SHORT).show();
+            }
+            repeticiones = 0;
+            ciclo3();
         }
     }
 
@@ -422,12 +636,24 @@ public class RecepcionTerminadoRecocido extends AppCompatActivity implements Ada
     private void reanudarTransacion(){
         if (repeticiones<=4){
             listReanudarTransa = new ArrayList<>();
+
+            Integer id_recepcion = conexion.obtenerIdRecepcion(RecepcionTerminadoRecocido.this,"select id_recepcion from jd_detalle_recepcion_recocido where fecha_recepcion = '" + fechaActualString + "'");
+
+            String sqlAnularRecepcion = "update jd_detalle_recepcion_recocido set trb1 = 0 where id_recepcion= " + id_recepcion.toString() + "";
+
+            try {
+                //Se añade el sql a la lista - esto es un
+                listReanudarTransa.add(sqlAnularRecepcion);
+            } catch (Exception e) {
+                Toast.makeText(RecepcionTerminadoRecocido.this, e.getMessage(), Toast.LENGTH_SHORT).show();
+            }
+
             for(int i=0;i<ListaRecoRollosRecep.size();i++) {
                 String cod_orden = ListaRecoRollosRecep.get(i).getCod_orden();
                 String id_detalle = ListaRecoRollosRecep.get(i).getId_detalle();
                 String id_rollo = ListaRecoRollosRecep.get(i).getId_rollo();
 
-                String sql_rollo = "UPDATE J_rollos_tref SET recepcionado=null, nit_recepcionado=null, fecha_recepcion=null, nit_entrega=null WHERE cod_orden='" + cod_orden + "' AND id_detalle='" + id_detalle + "' AND id_rollo='" + id_rollo + "'";
+                String sql_rollo = "UPDATE JB_rollos_rec SET id_recepcion=null WHERE cod_orden_rec='" + cod_orden + "' AND id_detalle_rec='" + id_detalle + "' AND id_rollo_rec='" + id_rollo + "'";
 
                 try {
                     //Se añade el sql a la lista - esto es un
@@ -526,7 +752,10 @@ public class RecepcionTerminadoRecocido extends AppCompatActivity implements Ada
             if(error.equals("")){
                 consultarRecoTerminado();
                 incompleta = false;
+                paso = 0;
+                bloqueado = false;
                 toastAcierto("Transaccion Realizada con Exito! --" + numero_transaccion);
+
             }else{
                 incompleta = true;
                 ciclo3();
@@ -539,7 +768,7 @@ public class RecepcionTerminadoRecocido extends AppCompatActivity implements Ada
             AlertDialog.Builder builder = new AlertDialog.Builder(RecepcionTerminadoRecocido.this);
             View mView = getLayoutInflater().inflate(R.layout.alertdialog_aceptar,null);
             TextView alertMensaje = mView.findViewById(R.id.alertMensaje);
-            alertMensaje.setText("Hubo un problema en el paso 3 de la transacción #" + numero_transaccion + " de los " + leidos + " Rollos leidos, \n '" + error + "' \n Por favor comunicarse inmediatamente con el área de sistemas, \n para poder continuar con las transacciones, de lo \n contrario no se le permitira continuar");
+            alertMensaje.setText("Hubo un problema en el paso 4 de la transacción #" + numero_transaccion + " de los " + leidos + " Rollos leidos, \n '" + error + "' \n Por favor comunicarse inmediatamente con el área de sistemas, \n para poder continuar con las transacciones, de lo \n contrario no se le permitira continuar");
             Button btnAceptar = mView.findViewById(R.id.btnAceptar);
             btnAceptar.setText("Aceptar");
             builder.setView(mView);
@@ -562,7 +791,7 @@ public class RecepcionTerminadoRecocido extends AppCompatActivity implements Ada
                     correo = conexion.obtenerCorreo(RecepcionTerminadoRecocido.this);
                     String email = correo.getCorreo();
                     String pass = correo.getContrasena();
-                    subject = "Error en el paso 3 de la transacción Control en Piso Recocido";
+                    subject = "Error en el paso 4 de la transacción Control en Piso Recocido";
                     textMessage = "La transacción #" + numero_transaccion + " de recepcion de producto terminado del area de Recocido se fué incompleta \n" +
                             "Detalles de la transacción: \n" +
                             mensajeFinal +
@@ -686,7 +915,7 @@ public class RecepcionTerminadoRecocido extends AppCompatActivity implements Ada
             alertDialog.show();
 
             //Consultamos los rollos de producción que no se han recepcionado en la base de datos
-            ListaRecoTerminado = conexion.obtenerRecoTerminado(getApplication());
+            ListaRecoTerminado = conexion.obtenerRecoTerminado(getApplication(), tipo);
             //Enviamos la lista vacia de rollos escaneados al listview
             RecoTerminadoAdapter = new listRecoTerminadoAdapter(RecepcionTerminadoRecocido.this,R.layout.item_row_trefiterminado,ListaRecoRollosRecep);
             listviewRecoTerminado.setAdapter(RecoTerminadoAdapter);
@@ -710,7 +939,7 @@ public class RecepcionTerminadoRecocido extends AppCompatActivity implements Ada
         ListaRecoRollosRecep = new ArrayList<>();
 
         //Consultamos los rollos de producción que no se han recepcionado en la base de datos
-        ListaRecoTerminado = conexion.obtenerRecoTerminado(getApplication());
+        ListaRecoTerminado = conexion.obtenerRecoTerminado(getApplication(),tipo);
         //Enviamos la lista vacia de rollos escaneados al listview
         RecoTerminadoAdapter = new listRecoTerminadoAdapter(RecepcionTerminadoRecocido.this,R.layout.item_row_trefiterminado,ListaRecoRollosRecep);
         listviewRecoTerminado.setAdapter(RecoTerminadoAdapter);
@@ -742,91 +971,104 @@ public class RecepcionTerminadoRecocido extends AppCompatActivity implements Ada
         consecutivo = codigoReco.getText().toString().trim();
         boolean encontrado = false;
         int position = 0;
-        if (isNetworkAvailable()) {
-            for (int i=0;i<ListaRecoTerminado.size();i++){
-                String codigoList = ListaRecoTerminado.get(i).getCod_orden()+"-"+ListaRecoTerminado.get(i).getId_detalle()+"-"+ListaRecoTerminado.get(i).getId_rollo();
-                if(consecutivo.equals(codigoList)){
-                    encontrado = true;
-                    position = i;
-                    break;
+        if (bloqueado.equals(false)){
+            if (isNetworkAvailable()) {
+                for (int i=0;i<ListaRecoTerminado.size();i++){
+                    String codigoList = ListaRecoTerminado.get(i).getCod_orden()+"-"+ListaRecoTerminado.get(i).getId_detalle()+"-"+ListaRecoTerminado.get(i).getId_rollo();
+                    if(consecutivo.equals(codigoList)){
+                        encontrado = true;
+                        position = i;
+                        break;
+                    }
                 }
-            }
-            //Si el rollos es encontrado o no se muestra mensaje
-            if (encontrado){
-                //Si el rollo encontrado esta pintado de verde ya fue leido anteriormente
-                if(ListaRecoTerminado.get(position).getColor().equals("GREEN")){
-                    toastError("Rollo Ya leido");
-                    AudioError();
-                    cargarNuevo();
-                }else{
-                    //Copiamos el rollo encontrado de la lista de producción
-                    recoRecepcionModelo = ListaRecoTerminado.get(position);
-                    //Agregamos la copia a la de los rollos escaneados
-                    ListaRecoRollosRecep.add(recoRecepcionModelo);
-                    //Pintamos el rollo de verde en la lista de produccion para no poder volverlo a leer
-                    pintarRollo(position);
-                    //Contamos los rollos leidos y no leidos
-                    contarSinLeer();
-                    contarLeidos();
-                    //Mostramos mensaje
-                    toastAcierto("Rollo encontrado");
-                    //Inicializamos la lectura
-                    cargarNuevo();
-                }
-            }else{
-                RolloRecoTransa TransRollo;
-                cod_orden = obj_gestion_alambronLn.extraerDatoCodigoBarrasRecocido("cod_orden", consecutivo);
-                id_detalle = obj_gestion_alambronLn.extraerDatoCodigoBarrasRecocido("id_detalle", consecutivo);
-                id_rollo = obj_gestion_alambronLn.extraerDatoCodigoBarrasRecocido("id_rollo", consecutivo);
-                TransRollo = conexion.obtenerRolloTransReco(RecepcionTerminadoRecocido.this,cod_orden,id_detalle,id_rollo);
-                if (!TransRollo.getCod_orden().equals("")){
-                    if (TransRollo.getEstado().equals("R")){
+                //Si el rollos es encontrado o no se muestra mensaje
+                if (encontrado){
+                    //Si el rollo encontrado esta pintado de verde ya fue leido anteriormente
+                    if(ListaRecoTerminado.get(position).getColor().equals("GREEN")){
+                        toastError("Rollo Ya leido");
                         AudioError();
                         cargarNuevo();
-                        AlertDialog.Builder builder = new AlertDialog.Builder(RecepcionTerminadoRecocido.this);
-                        View mView = getLayoutInflater().inflate(R.layout.alertdialog_aceptar,null);
-                        TextView alertMensaje = mView.findViewById(R.id.alertMensaje);
-                        alertMensaje.setText("Rollo rechazado por calidad \n ¡Este rollo no puede ser entregado a Logistica!");
-                        Button btnAceptar = mView.findViewById(R.id.btnAceptar);
-                        btnAceptar.setText("Aceptar");
-                        builder.setView(mView);
-                        AlertDialog alertDialog = builder.create();
-                        btnAceptar.setOnClickListener(v -> {
-                            alertDialog.dismiss();
-                        });
-                        alertDialog.setCancelable(false);
-                        alertDialog.show();
-                    } else if (TransRollo.getEstado().equals("A") && !TransRollo.getTrb1().equals("")) {
-                        AudioError();
-                        cargarNuevo();
-                        AlertDialog.Builder builder = new AlertDialog.Builder(RecepcionTerminadoRecocido.this);
-                        View mView = getLayoutInflater().inflate(R.layout.alertdialog_aceptar,null);
-                        TextView alertMensaje = mView.findViewById(R.id.alertMensaje);
-                        alertMensaje.setText("Rollo ya transladado a bodega 3 \n Fecha:" + TransRollo.getFecha_recepcion() + " \n Transacción: " + TransRollo.getTrb1());
-                        Button btnAceptar = mView.findViewById(R.id.btnAceptar);
-                        btnAceptar.setText("Aceptar");
-                        builder.setView(mView);
-                        AlertDialog alertDialog = builder.create();
-                        btnAceptar.setOnClickListener(v -> {
-                            alertDialog.dismiss();
-                        });
-                        alertDialog.setCancelable(false);
-                        alertDialog.show();
                     }else{
-                        toastError("Actualiza el modulo, \n para encontrar el rollo");
-                        AudioError();
+                        //Copiamos el rollo encontrado de la lista de producción
+                        recoRecepcionModelo = ListaRecoTerminado.get(position);
+
+                        if (tipo.equals("construcción")){
+                            ListaRecoRollosRecep = conexion.obtenerRecoTerminadoLeido(getApplication(),tipo,recoRecepcionModelo.getCod_orden(),recoRecepcionModelo.getId_detalle());
+
+                            bloqueado = true;
+                        }else{
+                            //Agregamos la copia a la de los rollos escaneados
+                            ListaRecoRollosRecep.add(recoRecepcionModelo);
+                        }
+
+                        //Pintamos el rollo de verde en la lista de produccion para no poder volverlo a leer
+                        pintarRollo(position);
+                        //Contamos los rollos leidos y no leidos
+                        contarSinLeer();
+                        contarLeidos();
+                        //Mostramos mensaje
+                        toastAcierto("Rollo encontrado");
+                        //Inicializamos la lectura
                         cargarNuevo();
                     }
                 }else{
-                    toastError("Rollo no encontrado");
-                    AudioError();
-                    cargarNuevo();
+                    RolloRecoTransa TransRollo;
+                    cod_orden = obj_gestion_alambronLn.extraerDatoCodigoBarrasRecocido("cod_orden", consecutivo);
+                    id_detalle = obj_gestion_alambronLn.extraerDatoCodigoBarrasRecocido("id_detalle", consecutivo);
+                    id_rollo = obj_gestion_alambronLn.extraerDatoCodigoBarrasRecocido("id_rollo", consecutivo);
+                    TransRollo = conexion.obtenerRolloTransReco(RecepcionTerminadoRecocido.this,cod_orden,id_detalle,id_rollo,tipo);
+                    if (!TransRollo.getCod_orden().equals("")){
+                        if (TransRollo.getEstado().equals("R")){
+                            AudioError();
+                            cargarNuevo();
+                            AlertDialog.Builder builder = new AlertDialog.Builder(RecepcionTerminadoRecocido.this);
+                            View mView = getLayoutInflater().inflate(R.layout.alertdialog_aceptar,null);
+                            TextView alertMensaje = mView.findViewById(R.id.alertMensaje);
+                            alertMensaje.setText("Rollo rechazado por calidad \n ¡Este rollo no puede ser entregado a Logistica!");
+                            Button btnAceptar = mView.findViewById(R.id.btnAceptar);
+                            btnAceptar.setText("Aceptar");
+                            builder.setView(mView);
+                            AlertDialog alertDialog = builder.create();
+                            btnAceptar.setOnClickListener(v -> {
+                                alertDialog.dismiss();
+                            });
+                            alertDialog.setCancelable(false);
+                            alertDialog.show();
+                        } else if (TransRollo.getEstado().equals("A") && !TransRollo.getTrb1().equals("")) {
+                            AudioError();
+                            cargarNuevo();
+                            AlertDialog.Builder builder = new AlertDialog.Builder(RecepcionTerminadoRecocido.this);
+                            View mView = getLayoutInflater().inflate(R.layout.alertdialog_aceptar,null);
+                            TextView alertMensaje = mView.findViewById(R.id.alertMensaje);
+                            alertMensaje.setText("Rollo ya transladado a bodega 3 \n Fecha:" + TransRollo.getFecha_recepcion() + " \n Transacción: " + TransRollo.getTrb1());
+                            Button btnAceptar = mView.findViewById(R.id.btnAceptar);
+                            btnAceptar.setText("Aceptar");
+                            builder.setView(mView);
+                            AlertDialog alertDialog = builder.create();
+                            btnAceptar.setOnClickListener(v -> {
+                                alertDialog.dismiss();
+                            });
+                            alertDialog.setCancelable(false);
+                            alertDialog.show();
+                        }else{
+                            toastError("Actualiza el modulo, \n para encontrar el rollo");
+                            AudioError();
+                            cargarNuevo();
+                        }
+                    }else{
+                        toastError("Rollo no encontrado");
+                        AudioError();
+                        cargarNuevo();
+                    }
                 }
+            } else {
+                cargarNuevo();
+                toastError("Problemas de conexión a Internet");
             }
-        } else {
-            cargarNuevo();
-            toastError("Problemas de conexión a Internet");
+        }else{
+            toastError("No se pueden leer mas rollos, terminar transaccion de la carga leida");
         }
+
     }
 
     //Se realiza para realizar transaccion rollo a rollo, pero despues se cambia de idea
@@ -906,7 +1148,9 @@ public class RecepcionTerminadoRecocido extends AppCompatActivity implements Ada
     /////////////////////////////////////////////////////////////////////////////////////////////
     @Override
     public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-
+        if (tipo.equals("construcción")){
+            alertDialogEliminar(position);
+        }
     }
 
     //METODO PARA CERRAR LA APLICACION

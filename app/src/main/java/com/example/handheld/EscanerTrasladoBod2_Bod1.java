@@ -266,14 +266,14 @@ public class EscanerTrasladoBod2_Bod1 extends AppCompatActivity implements Adapt
                     personaRecibe = conexion.obtenerPermisoPersonaAlambron(EscanerTrasladoBod2_Bod1.this,CeRecibe,"entrega" );
                     String permisoEntrega = personaEntrega.getPermiso();
                     String permisoRecibe = personaRecibe.getPermiso();
-                    if(permisoEntrega.equals("E")){
-                        if(permisoRecibe.equals("R")){
+                    if(permisoEntrega.equals("R")){
+                        if(permisoRecibe.equals("E")){
                             alertDialog.dismiss();
                         }else{
-                            toastError("La cedula de la persona que entrega no corresponde a una de las permitidas");
+                            toastError("La cedula de la persona que recibe no corresponde a un montacarguista");
                         }
                     }else{
-                        toastError("La cedula de la persona que recibe no corresponde a un montacarguista");
+                        toastError("La cedula de la persona que entrega no corresponde a una de las permitidas");
                     }
                 }
             }

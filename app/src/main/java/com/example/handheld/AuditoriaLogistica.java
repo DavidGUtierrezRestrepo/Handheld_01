@@ -18,8 +18,10 @@ import android.widget.Toast;
 
 import com.example.handheld.ClasesOperativas.Gestion_alambronLn;
 import com.example.handheld.conexionDB.Conexion;
+import com.example.handheld.modelos.DatosRecepcionLogistica;
 import com.example.handheld.modelos.DatosRevisionCalidad;
 import com.example.handheld.modelos.RolloGalvInfor;
+import com.example.handheld.modelos.RolloRecoInfor;
 import com.example.handheld.modelos.RolloTrefiInfor;
 
 import java.nio.channels.OverlappingFileLockException;
@@ -167,6 +169,7 @@ public class AuditoriaLogistica extends AppCompatActivity {
                                 descReviFecha.setText(getString(R.string.noDisponible));
                                 descReviInspector.setText(getString(R.string.noDisponible));
                                 descReviEstado.setText(getString(R.string.noDisponible));
+                                toastAcierto("Rollo encontrado");
                             }
                         }
                     }
@@ -270,6 +273,121 @@ public class AuditoriaLogistica extends AppCompatActivity {
                                     //Enviamos todos los datos a la pantalla
                                     descRecepEntrega.setText(conexion.obtenerNombrePersona(AuditoriaLogistica.this,rolloTrefiInfor.getEntrega()));
                                     descRecepRecibe.setText(conexion.obtenerNombrePersona(AuditoriaLogistica.this,rolloTrefiInfor.getRecibe()));
+                                    toastAcierto("Rollo encontrado");
+                                }
+                            }
+                        }
+                    }
+                    cargarNuevo();
+                }else{
+                    toastError("Error! El tiquete no es de esta área o esta defectuoso");
+                    limpiarDatos();
+                    cargarNuevo();
+                }
+                break;
+            case "Recocido Industrial":
+                conexion = new Conexion();
+                RolloRecoInfor rolloRecoInfor;
+                int verificarCodigoReco = 0;
+                consecutivo = escanerCodigo.getText().toString().trim();
+                //Se verifica que el codigo sea de galvanizado, esto se hace porque el codigo de
+                //galvanizado solo cuenta con dos datos en su codigo de barras
+                for (int i = 0;i<= consecutivo.length()-1;i++){
+                    if (consecutivo.charAt(i) == '-'){
+                        verificarCodigoReco += 1;
+                    }
+                }
+                if (verificarCodigoReco == 2){
+                    //Una vez verificado que el tiquete es de galvanizado traemos la información del rollo que haya en la base de datos
+                    String cod_orden = obj_gestion_alambronLn.extraerDatoCodigoBarrasRecocido("cod_orden", consecutivo);
+                    String id_detalle = obj_gestion_alambronLn.extraerDatoCodigoBarrasRecocido("id_detalle", consecutivo);
+                    String id_rollo = obj_gestion_alambronLn.extraerDatoCodigoBarrasRecocido("id_rollo", consecutivo);
+                    rolloRecoInfor = conexion.obtenerInforRolloReco(AuditoriaLogistica.this,cod_orden,id_detalle,id_rollo);
+                    //Verificamos que si haya traido información de la base de datos una vez busco el rollo
+                    if (rolloRecoInfor.getCod_orden().equals("")){
+                        toastError("¡Rollo no encontrado en la base de datos!");
+                        limpiarDatos();
+                    }else{
+                        //Verificamos que el rollo no este anulado
+                        if(rolloRecoInfor.getAnulado() != null){
+                            toastError("¡Este rollo es no conforme!");
+                            limpiarDatos();
+                        }else{
+                            if (rolloRecoInfor.getId_revision() == null){
+                                toastError("A este rollo aún no se le ha realizado revisión de calidad");
+                                limpiarDatos();
+                            }else{
+                                DatosRevisionCalidad datosRevisionCalidad;
+                                datosRevisionCalidad = conexion.obtenerDatosRevisionReco(AuditoriaLogistica.this,rolloRecoInfor.getId_revision());
+                                rolloRecoInfor.setFecha_revision(datosRevisionCalidad.getFecha_revision());
+                                rolloRecoInfor.setRevisor(conexion.obtenerNombrePersona(AuditoriaLogistica.this,datosRevisionCalidad.getRevisor()));
+                                rolloRecoInfor.setEstado(datosRevisionCalidad.getEstado());
+                                descReviId.setText(rolloRecoInfor.getId_revision());
+                                ///////////////////////////////////////////////////////////////////////////
+                                //Vamos a modificar el formato de la fecha de recepción a uno mas legible
+
+                                // Crear un objeto SimpleDateFormat para el formato original
+                                SimpleDateFormat formatoOriginalTrefiRevi = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.S", Locale.getDefault());
+
+                                try {
+                                    // Parsear la fecha original
+                                    Date fechaOriginal = formatoOriginalTrefiRevi.parse(rolloRecoInfor.getFecha_revision());
+
+                                    // Crear un nuevo objeto SimpleDateFormat para el formato deseado
+                                    SimpleDateFormat formatoDeseado = new SimpleDateFormat("dd-MM-yyyy hh:mm a", Locale.getDefault());
+
+                                    // Formatear la fecha en el nuevo formato
+                                    assert fechaOriginal != null;
+                                    String fechaFormateada = formatoDeseado.format(fechaOriginal);
+                                    descReviFecha.setText(fechaFormateada);
+
+                                } catch (ParseException e) {
+                                    e.printStackTrace();
+                                }
+                                descReviInspector.setText(rolloRecoInfor.getRevisor());
+                                descReviEstado.setText(rolloRecoInfor.getEstado());
+                                //Verificamos que el rollo tenga información de recepción
+                                if(rolloRecoInfor.getId_recepcion() == null){
+                                    toastError("Este rollo no se ha recepcionado aún");
+                                    descRecepId.setText(getString(R.string.noDisponible));
+                                    descRecepFecha.setText(getString(R.string.noDisponible));
+                                    descRecepEntrega.setText(getString(R.string.noDisponible));
+                                    descRecepRecibe.setText(getString(R.string.noDisponible));
+                                }else{
+
+                                    DatosRecepcionLogistica datosRecepcionLogistica;
+                                    datosRecepcionLogistica = conexion.obtenerDatosRecepReco(AuditoriaLogistica.this,rolloRecoInfor.getId_recepcion());
+                                    rolloRecoInfor.setNum_transa(datosRecepcionLogistica.getNum_transa());
+                                    rolloRecoInfor.setFecha_recepcion(datosRecepcionLogistica.getFecha_recepcion());
+                                    rolloRecoInfor.setEntrega(datosRecepcionLogistica.getEntrega());
+                                    rolloRecoInfor.setRecibe(datosRecepcionLogistica.getRecibe());
+
+                                    ///////////////////////////////////////////////////////////////////////////
+                                    //Vamos a modificar el formato de la fecha de recepción a uno mas legible
+
+                                    descRecepId.setText(rolloRecoInfor.getNum_transa());
+                                    // Crear un objeto SimpleDateFormat para el formato original
+                                    SimpleDateFormat formatoOriginalTrefiRecep = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.S", Locale.getDefault());
+
+                                    try {
+                                        // Parsear la fecha original
+                                        Date fechaOriginal = formatoOriginalTrefiRecep.parse(rolloRecoInfor.getFecha_recepcion());
+
+                                        // Crear un nuevo objeto SimpleDateFormat para el formato deseado
+                                        SimpleDateFormat formatoDeseado = new SimpleDateFormat("dd-MM-yyyy hh:mm a", Locale.getDefault());
+
+                                        // Formatear la fecha en el nuevo formato
+                                        assert fechaOriginal != null;
+                                        String fechaFormateada = formatoDeseado.format(fechaOriginal);
+                                        descRecepFecha.setText(fechaFormateada);
+
+                                    } catch (ParseException e) {
+                                        e.printStackTrace();
+                                    }
+                                    //Enviamos todos los datos a la pantalla
+                                    descRecepEntrega.setText(conexion.obtenerNombrePersona(AuditoriaLogistica.this,rolloRecoInfor.getEntrega()));
+                                    descRecepRecibe.setText(conexion.obtenerNombrePersona(AuditoriaLogistica.this,rolloRecoInfor.getRecibe()));
+                                    toastAcierto("Rollo encontrado");
                                 }
                             }
                         }
@@ -304,6 +422,7 @@ public class AuditoriaLogistica extends AppCompatActivity {
         listaAreas.add("Seleccione área");
         listaAreas.add("Galvanizado");
         listaAreas.add("Trefilación");
+        listaAreas.add("Recocido Industrial");
         //listaAreas.add("Recocido");
 
         return listaAreas;
@@ -336,6 +455,20 @@ public class AuditoriaLogistica extends AppCompatActivity {
         View view = layoutInflater.inflate(R.layout.custom_toast_per_no_encon, findViewById(R.id.ll_custom_toast_per_no_encon));
         TextView txtMensaje = view.findViewById(R.id.txtMensajeToast1);
         txtMensaje.setText(msg);
+
+        Toast toast = new Toast(getApplicationContext());
+        toast.setGravity(Gravity.CENTER_VERTICAL | Gravity.BOTTOM,0,200);
+        toast.setDuration(Toast.LENGTH_SHORT);
+        toast.setView(view);
+        toast.show();
+    }
+
+    public void toastAcierto(String msg){
+        LayoutInflater layoutInflater = getLayoutInflater();
+        View view = layoutInflater.inflate(R.layout.custom_toast_acierto, findViewById(R.id.ll_custom_toast_acierto));
+        @SuppressLint({"MissingInflatedId", "LocalSuppress"})
+        TextView txtMens = view.findViewById(R.id.txtMensa);
+        txtMens.setText(msg);
 
         Toast toast = new Toast(getApplicationContext());
         toast.setGravity(Gravity.CENTER_VERTICAL | Gravity.BOTTOM,0,200);

@@ -236,7 +236,7 @@ public class RecepcionTerminadoTrefilacion extends AppCompatActivity implements 
         TextView txtMrollos = mView.findViewById(R.id.txtMrollos);
         txtMrollos.setVisibility(View.GONE);
         TextView txtMensajeCedula = mView.findViewById(R.id.textView6);
-        txtMensajeCedula.setText("Ingrese la cedula persona producción");
+        txtMensajeCedula.setText(R.string.ingresarCeduProd);
         Button btnAceptar = mView.findViewById(R.id.btnAceptar);
         Button btnCancelar = mView.findViewById(R.id.btnCancelar);
         ProgressBar Barraprogreso = mView.findViewById(R.id.progress_bar);

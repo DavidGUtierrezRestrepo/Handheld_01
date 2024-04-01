@@ -44,10 +44,17 @@
 
     //String Utilizado en el layout "activity_revision_terminado_trefilacion"
     <string name="txtTCTrefi">REVISION CALIDAD TREFILACIÓN</string>
+    //String Utilizado en el layout "activity_revision_terminado_galvanizado"
+    <string name="txtTCGALVA">REVISION CALIDAD GALVANIZADO</string>
     //String Utilizado en el layout "activity_revision_terminado_recocido"
     <string name="txtTCReco">REVISION CALIDAD RECOCIDO</string>
     <string name="btnRechazado">RECHAZADO</string>
     <string name="btnAprobado">APROBADO</string>
+
+    //String utilizado en el layout "activity_recepcion_terminado_recocido"
+    <string name="TRecepReco">RECEPCIÓN LOGIST RECOCIDO</string>
+    <string name="TMenuRecepRecoIndu">RECOCIDO INDUSTRIAL</string>
+    <string name="TMenuRecepRecoCons">RECOCIDO DE CONSTRUCCIÓN</string>
 
     <string name="txtTRGalva">RECEPCIÓN LOGIST GALVANIZADO</string>
 
@@ -101,5 +108,8 @@
 
     //Strings utilizados en el layout "AuditoriaLogistica"
     <string name="noDisponible">No Disponible</string>
+
+    //String para ingresar documento de producción en las recepciones
+    <string name="ingresarCeduProd">Ingrese la cedula persona producción</string>
 
 </resources>

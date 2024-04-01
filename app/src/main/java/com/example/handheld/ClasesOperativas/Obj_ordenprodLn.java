@@ -29,6 +29,17 @@ public class Obj_ordenprodLn {
         return Integer.toString(numero);
     }
 
+    public static Integer realizarUpdateProduccion(String sql, Context context) {
+        int numero = 0;
+        try {
+            numero = objOperacionesDb.ejecutarUpdateDbProduccion(sql, context);
+
+        } catch (Exception e) {
+            Toast.makeText(context, "Error base de datos", Toast.LENGTH_SHORT).show();
+        }
+        return numero;
+    }
+
     //Se verifica si se hizo cierre en el mes actual para ingresar produccion conm fecha del mes proximo
     public Boolean insertarProxMes(String codigo, Context context ){
         //Calcula la fecha actual

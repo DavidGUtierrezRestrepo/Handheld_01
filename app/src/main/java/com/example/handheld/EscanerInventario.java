@@ -5,7 +5,6 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
-import android.content.Intent;
 import android.media.AudioManager;
 import android.media.SoundPool;
 import android.net.ConnectivityManager;

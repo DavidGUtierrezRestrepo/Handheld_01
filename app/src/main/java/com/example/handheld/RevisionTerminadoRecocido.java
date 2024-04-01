@@ -143,9 +143,9 @@ public class RevisionTerminadoRecocido extends AppCompatActivity {
         tipo = getIntent().getStringExtra("tipo");
 
         if (tipo.equals("industrial")){
-            tituloRecocido.setText("RECOCIDO INDUSTRIAL");
+            tituloRecocido.setText(R.string.TMenuRecepRecoIndu);
         } else if (tipo.equals("construccion")) {
-            tituloRecocido.setText("RECOCIDO DE CONSTRUCCIÓN");
+            tituloRecocido.setText(R.string.TMenuRecepRecoCons);
         }
 
         //Definimos los elementos necesarios para el list view
@@ -368,7 +368,7 @@ public class RevisionTerminadoRecocido extends AppCompatActivity {
                 String cod_orden = ListaRecoRollosRecep.get(0).getCod_orden();
                 String id_detalle = ListaRecoRollosRecep.get(0).getId_detalle();
 
-                sql_rollo = "UPDATE JB_rollos_rec SET id_revision="+ numero_revision +" WHERE cod_orden_rec='"+ cod_orden +"' and id_detalle_rec='" + id_detalle + "'";
+                sql_rollo = "UPDATE JB_rollos_rec SET id_revision="+ numero_revision +" WHERE cod_orden_rec='"+ cod_orden +"' and id_detalle_rec='" + id_detalle + "' and id_revision is null";
 
                 try {
                     //Se añade el sql a la lista
@@ -886,7 +886,7 @@ public class RevisionTerminadoRecocido extends AppCompatActivity {
     }
 
     /////////////////////////////////////////////////////////////////////////////////////////////
-    //Metodo que consulta los rollos que hay en producción que no se han recepcionado e
+    //Metodo que consulta los rollos que hay en producción que no se han recepcionado
     //inicializa el listview
     private void consultarRecoTerminado() {
         conexion = new Conexion();
