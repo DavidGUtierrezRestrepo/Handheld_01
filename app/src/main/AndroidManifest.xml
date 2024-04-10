@@ -23,6 +23,15 @@
         android:theme="@style/Theme.Handheld"
         tools:targetApi="31">
         <activity
+            android:name=".RecepcionTerminadoPuasReferencias"
+            android:exported="false" />
+        <activity
+            android:name=".RecepcionTerminadoPuasOperarios"
+            android:exported="false" />
+        <activity
+            android:name=".RecepcionTerminadoPuas"
+            android:exported="false" />
+        <activity
             android:name=".RevisionTerminadoGalvanizado"
             android:exported="false" />
         <activity

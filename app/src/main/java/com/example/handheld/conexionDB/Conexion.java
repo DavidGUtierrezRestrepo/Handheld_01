@@ -20,12 +20,16 @@ import com.example.handheld.modelos.GalvRecepcionadoRollosModelo;
 import com.example.handheld.modelos.InventarioModelo;
 import com.example.handheld.modelos.LectorCodCargueModelo;
 import com.example.handheld.modelos.MesasModelo;
+import com.example.handheld.modelos.OperariosPuasRecepcionModelo;
 import com.example.handheld.modelos.PedidoModelo;
 import com.example.handheld.modelos.PermisoPersonaModelo;
 import com.example.handheld.modelos.Persona;
 import com.example.handheld.modelos.PersonaModelo;
+import com.example.handheld.modelos.PuaRecepcionModelo;
+import com.example.handheld.modelos.PuasRecepcionadoRollosModelo;
 import com.example.handheld.modelos.RecoRecepcionModelo;
 import com.example.handheld.modelos.RecoRecepcionadoRollosModelo;
+import com.example.handheld.modelos.ReferenciasPuasRecepcionModelo;
 import com.example.handheld.modelos.RolloGalvInfor;
 import com.example.handheld.modelos.RolloGalvTransa;
 import com.example.handheld.modelos.RolloGalvaRevisionModelo;
@@ -803,6 +807,55 @@ public class Conexion {
         return pedidos;
     }
 
+    public List<OperariosPuasRecepcionModelo> obtenerOperariosPuasRecepcion(Context context){
+        List<OperariosPuasRecepcionModelo> pedidos = new ArrayList<>();
+        OperariosPuasRecepcionModelo modelo;
+
+        try {
+            Statement st = conexionBD(ConfiguracionBD.obtenerNombreBD(2), context).createStatement();
+            ResultSet rs = st.executeQuery("select CONVERT(INT, T.nit_operario) as nit, E.nombres as nombre \n" +
+                    "from D_orden_prod_puas_producto T\n" +
+                    "inner join CORSAN.dbo.Jjv_empleados_nombres E on E.nit = T.nit_operario \n" +
+                    "where T.fecha_hora >= '2024-04-08 05:24:23' and T.id_recepcion is null and T.no_conforme is null and T.traslado is null and T.destino is null and T.anular is null\n" +
+                    "group by T.nit_operario, E.nombres");
+            while (rs.next()){
+                modelo = new OperariosPuasRecepcionModelo();
+                modelo.setNit(rs.getString("nit"));
+                modelo.setNombre(rs.getString("nombre"));
+                pedidos.add(modelo);
+            }
+        }catch (Exception e){
+            Toast.makeText(context, e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+        return pedidos;
+    }
+
+    public List<ReferenciasPuasRecepcionModelo> obtenerReferenciasPuasRecepcion(Context context, String cedula){
+        List<ReferenciasPuasRecepcionModelo> referenciasPuas = new ArrayList<>();
+        ReferenciasPuasRecepcionModelo modelo;
+
+        try {
+            Statement st = conexionBD(ConfiguracionBD.obtenerNombreBD(2), context).createStatement();
+            ResultSet rs = st.executeQuery("select O.prod_final as codigo,R.descripcion,COUNT(T.consecutivo_rollo) as cantidad\n" +
+                    "from D_orden_prod_puas_producto T\n" +
+                    "inner join D_orden_prod_puas O on O.cod_orden = T.nro_orden\n" +
+                    "inner join CORSAN.dbo.referencias R on R.codigo = O.prod_final\n" +
+                    "inner join CORSAN.dbo.Jjv_empleados_nombres E on E.nit = T.nit_operario \n" +
+                    "where T.fecha_hora >= '2024-04-08 05:24:23' and T.id_recepcion is null and T.no_conforme is null and T.traslado is null and T.destino is null and T.anular is null and T.nit_operario='" + cedula + "'\n" +
+                    "group by O.prod_final,R.descripcion");
+            while (rs.next()){
+                modelo = new ReferenciasPuasRecepcionModelo();
+                modelo.setCodigo(rs.getString("codigo"));
+                modelo.setDescripcion(rs.getString("descripcion"));
+                modelo.setCantidad(rs.getString("cantidad"));
+                referenciasPuas.add(modelo);
+            }
+        }catch (Exception e){
+            Toast.makeText(context, e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+        return referenciasPuas;
+    }
+
     public List<PedidoModelo> obtenerPedidosTrasladoB2aB1(Context context){
         List<PedidoModelo> pedidos = new ArrayList<>();
         PedidoModelo modelo;
@@ -874,6 +927,35 @@ public class Conexion {
         return galvTerminado;
     }
 
+    public List<PuaRecepcionModelo> obtenerPuasTerminado(Context context, String cedula, String referencia){
+        List<PuaRecepcionModelo> puasTerminado = new ArrayList<>();
+        PuaRecepcionModelo modelo;
+
+        try {
+            Statement st = conexionBD(ConfiguracionBD.obtenerNombreBD(2), context).createStatement();
+            ResultSet rs = st.executeQuery("select T.nro_orden,T.consecutivo_rollo,O.prod_final as codigo,R.descripcion,T.peso_real as peso\n" +
+                    "from D_orden_prod_puas_producto T\n" +
+                    "inner join D_orden_prod_puas O on O.cod_orden = T.nro_orden\n" +
+                    "inner join CORSAN.dbo.referencias R on R.codigo = O.prod_final\n" +
+                    "inner join CORSAN.dbo.Jjv_empleados_nombres E on E.nit = T.nit_operario \n" +
+                    "where T.fecha_hora >= '2024-04-08 05:24:23' and T.id_recepcion is null and T.no_conforme is null and T.traslado is null and T.destino is null and T.anular is null and T.nit_operario='" + cedula + "' and O.prod_final='" + referencia + "'" +
+                    "order by T.consecutivo_rollo asc");
+            while (rs.next()){
+                modelo = new PuaRecepcionModelo();
+                modelo.setNro_orden(rs.getString("nro_orden"));
+                modelo.setConsecutivo_rollo(rs.getString("consecutivo_rollo"));
+                modelo.setCodigo(rs.getString("codigo"));
+                modelo.setDescripcion(rs.getString("descripcion"));
+                modelo.setPeso(String.valueOf(rs.getInt("peso")));
+                modelo.setColor("GREEN");
+                puasTerminado.add(modelo);
+            }
+        }catch (Exception e){
+            Toast.makeText(context, e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+        return puasTerminado;
+    }
+
     public List<GalvRecepcionModelo> consultarGalvIncomple(Context context){
         List<GalvRecepcionModelo> galvTerminado = new ArrayList<>();
         GalvRecepcionModelo modelo;
@@ -898,6 +980,35 @@ public class Conexion {
             Toast.makeText(context, e.getMessage(), Toast.LENGTH_SHORT).show();
         }
         return galvTerminado;
+    }
+
+    public List<PuaRecepcionModelo> consultarPuasIncomple(Context context){
+        List<PuaRecepcionModelo> puasTerminado = new ArrayList<>();
+        PuaRecepcionModelo modelo;
+
+        try {
+            Statement st = conexionBD(ConfiguracionBD.obtenerNombreBD(2), context).createStatement();
+            ResultSet rs = st.executeQuery("select T.nro_orden,T.consecutivo_rollo,O.prod_final as codigo,R.descripcion,T.peso_real as peso\n" +
+                    "from D_orden_prod_puas_producto T\n" +
+                    "inner join D_orden_prod_puas O on O.cod_orden = T.nro_orden\n" +
+                    "inner join CORSAN.dbo.referencias R on R.codigo = O.prod_final\n" +
+                    "inner join jd_detalle_recepcion_puas Rec on Rec.id_recepcion = T.id_recepcion\n" +
+                    "where T.fecha_hora >= '2024-04-08' and T.id_recepcion is not null and T.no_conforme is null and T.traslado is null \n" +
+                    "and T.destino is null and T.anular is null  and Rec.trb1 is null");
+            while (rs.next()){
+                modelo = new PuaRecepcionModelo();
+                modelo.setNro_orden(rs.getString("nro_orden"));
+                modelo.setConsecutivo_rollo(rs.getString("consecutivo_rollo"));
+                modelo.setCodigo(rs.getString("codigo"));
+                modelo.setDescripcion(rs.getString("descripcion"));
+                modelo.setPeso(String.valueOf(rs.getInt("peso")));
+                modelo.setColor("GREEN");
+                puasTerminado.add(modelo);
+            }
+        }catch (Exception e){
+            Toast.makeText(context, e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+        return puasTerminado;
     }
 
     public Integer consultarReviTrefiIncomple(Context context){
@@ -1698,6 +1809,31 @@ public class Conexion {
 
             while (rs.next()){
                 modelo = new RecoRecepcionadoRollosModelo();
+                modelo.setPeso(rs.getDouble("peso"));
+                modelo.setPromedio(rs.getDouble("promedio"));
+                modelo.setCosto_unitario(rs.getDouble("costo_unitario"));
+                modelo.setReferencia(rs.getString("prod_final"));
+                refeRecepcionados.add(modelo);
+            }
+        }catch (Exception e){
+            Toast.makeText(context, e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+        return refeRecepcionados;
+    }
+
+    public List<PuasRecepcionadoRollosModelo> puasRefeRecepcionados(Context context, String fecha_recepcion, String month, String year){
+        List<PuasRecepcionadoRollosModelo> refeRecepcionados = new ArrayList<>();
+        PuasRecepcionadoRollosModelo modelo;
+
+        try {
+            Statement st = conexionBD(ConfiguracionBD.obtenerNombreBD(2), context).createStatement();
+            ResultSet rs = st.executeQuery("select sum(R.peso_real) as peso, (SELECT p.promedio from corsan.dbo.v_promedio p where codigo = O.prod_final and P.ano = "+ year +" and P.mes = "+ month +")  as promedio, (select costo_unitario from CORSAN.dbo.referencias R where codigo = O.prod_final) as costo_unitario , O.prod_final\n" +
+                    "from D_orden_prod_puas_producto R inner join D_orden_prod_puas O on O.cod_orden = R.nro_orden inner join jd_detalle_recepcion_puas D on D.id_recepcion =  R.id_recepcion\n" +
+                    "where R.id_recepcion is not null and D.fecha_recepcion = '"+ fecha_recepcion +"' and R.no_conforme is null\n" +
+                    "group by O.prod_final");
+
+            while (rs.next()){
+                modelo = new PuasRecepcionadoRollosModelo();
                 modelo.setPeso(rs.getDouble("peso"));
                 modelo.setPromedio(rs.getDouble("promedio"));
                 modelo.setCosto_unitario(rs.getDouble("costo_unitario"));

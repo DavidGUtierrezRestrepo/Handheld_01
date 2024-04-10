@@ -14,6 +14,7 @@ import androidx.annotation.NonNull;
 import com.example.handheld.conexionDB.Conexion;
 import com.example.handheld.modelos.EmpRecepcionadoCajasModelo;
 import com.example.handheld.modelos.GalvRecepcionadoRollosModelo;
+import com.example.handheld.modelos.PuasRecepcionadoRollosModelo;
 import com.example.handheld.modelos.RecoRecepcionadoRollosModelo;
 import com.example.handheld.modelos.TrefiRecepcionadoRollosModelo;
 
@@ -669,6 +670,186 @@ public class ObjTraslado_bodLn {
                     "cantidad_und,cantidad_pedida,maneja_inventario,costo_unitario_sin,cantidad_dos) " +
                     "VALUES(" + swDoc_lin + ",'" + tipo + "'," + num + ",'" + cod + "'," + seq + "," +
                     "'" + sFecha + "'," + nit + "," + peso + ","+ iva +"," + costo_kilo + ",0," + costo_kilo + "," +
+                    "'" + notas + "',0," + bod_orig + ",'UND',1,0,'S',0.0000000000000000,1) ";
+
+            try {
+                listSql.add(sql);
+            }catch (Exception e){
+                Toast.makeText(context, e.getMessage(), Toast.LENGTH_SHORT).show();
+            }
+
+            //'Script para ingresar a referencias_sto (STOCK)
+            listSql.add(actualizarRefSto(peso, costo_kilo, cod, dFec, bod_orig, swDoc_lin));
+            listSql.add(sqlActUltEntradaUltSalida(swDoc_lin, cod));
+
+            //'******************* ----------Se adiciona la Entrada
+
+
+            int valor_unit = 0;
+            seq = seq + 1;
+            swDoc_lin = 12;
+            sql = "INSERT INTO documentos_lin(sw,tipo,numero,codigo,seq,fec,nit,cantidad,porcentaje_iva,valor_unitario,porcentaje_descuento ," +
+                    "costo_unitario,adicional,vendedor,bodega,und,cantidad_und,cantidad_pedida,maneja_inventario,costo_unitario_sin,cantidad_dos) " +
+                    "VALUES(" + swDoc_lin + ",'" + tipo + "'," + num + ",'" + cod + "'," + seq + ",'" + sFecha + "'," + nit + "," + peso +
+                    ",0," + valor_unit +",0, " + costo_kilo + ",'" + notas + "',0," + bod_dest + ",'UND',1,0,'S',0.0000000000000000,1) ";
+
+            try {
+                listSql.add(sql);
+            }catch (Exception e){
+                Toast.makeText(context, e.getMessage(), Toast.LENGTH_SHORT).show();
+            }
+
+            //'Script para ingresar a referencias_sto (STOCK)
+            String actRef = actualizarRefSto(peso, costo_kilo, cod, dFec, bod_dest, swDoc_lin);
+            listSql.add(actRef);
+            String actUlt = sqlActUltEntradaUltSalida(swDoc_lin, cod);
+            listSql.add(actUlt);
+
+        }
+
+        return (listSql);
+    }
+
+    public List<Object> listaTrasladoBodegaPuas(List<PuasRecepcionadoRollosModelo> listInfRerencias, Integer num, Integer bod_orig, Integer bod_dest, Calendar dFec, String notas, String usuario, String tipo, String modelo, Context context){
+        List<Object> listSql = new ArrayList<>();
+        String sFecha_hora;
+        String sFecha;
+        double vrTotalEncabezado = (double) 0;
+
+        int seq;
+        int swDoc_lin;
+
+        @SuppressLint("SimpleDateFormat")
+        SimpleDateFormat dateFormatsFecha_hora = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+        sFecha_hora = dateFormatsFecha_hora.format(dFec.getTime());
+
+        @SuppressLint("SimpleDateFormat")
+        SimpleDateFormat dateFormatsFecha = new SimpleDateFormat("yyyy-MM-dd");
+        sFecha = dateFormatsFecha.format(dFec.getTime());
+
+        Calendar pruebaFec = dFec;
+
+        //For para identificar si hay alguna referecia que debe crearse para el proximo mes
+        for(int y=0; y<listInfRerencias.size();y++){
+            String cod = listInfRerencias.get(y).getReferencia();
+
+
+            if (obj_ordenprodLn.insertarProxMes(cod,context)){
+                pruebaFec.add(Calendar.MONTH, 1);
+                if (pruebaFec.after(dFec)){
+                    dFec.add(Calendar.MONTH, 1);
+
+                    //Capturamos el mes en un String
+                    @SuppressLint("SimpleDateFormat")
+                    SimpleDateFormat dateFormatMoth = new SimpleDateFormat("MM");
+                    String month = dateFormatMoth.format(dFec.getTime());
+
+                    //Capturamos el año en un String
+                    @SuppressLint("SimpleDateFormat")
+                    SimpleDateFormat dateFormatYear = new SimpleDateFormat("yyyy");
+                    String year = dateFormatYear.format(dFec.getTime());
+
+                    sFecha = year + "-" + month + "-01";
+
+                    //Capturamos las horas
+                    @SuppressLint("SimpleDateFormat")
+                    SimpleDateFormat dateFormatHour = new SimpleDateFormat("HH");
+                    String hour = dateFormatHour.format(dFec.getTime());
+
+                    //Capturamos los minutos
+                    @SuppressLint("SimpleDateFormat")
+                    SimpleDateFormat dateFormatMinute = new SimpleDateFormat("mm");
+                    String minute = dateFormatMinute.format(dFec.getTime());
+
+                    //Capturamos los segundos
+                    @SuppressLint("SimpleDateFormat")
+                    SimpleDateFormat dateFormatSeconds = new SimpleDateFormat("ss");
+                    String seconds = dateFormatSeconds.format(dFec.getTime());
+
+                    sFecha_hora = "" + month + "-" + "01" + "-" + year + " " + hour + ":" + minute + ":" + seconds + "";
+
+                    pruebaFec.add(Calendar.MONTH, -1);
+                }else{
+                    pruebaFec.add(Calendar.MONTH, -1);
+                }
+            }
+        }
+
+        //For para verificar una por una si las referencias exiten
+        for(int a=0; a<listInfRerencias.size();a++){
+            String cod = listInfRerencias.get(a).getReferencia();
+
+            if (existe_referencias_sto(cod, bod_dest, dFec, context).equals(false)){
+                try {
+                    listSql.add(crear_referencias_sto(cod, bod_dest, dFec));
+                }catch (Exception e){
+                    Toast.makeText(context, e.getMessage(), Toast.LENGTH_SHORT).show();
+                }
+            }
+        }
+
+        //For para sumar todas los valores de todas las referencias en una variable para el Encabe
+        //Se comenta el codigo debido a que no se guarda el valor de la transaccion
+        /*
+        for(int i=0; i<listInfRerencias.size();i++){
+            Double peso = listInfRerencias.get(i).getPeso();
+            Double promedio =  listInfRerencias.get(i).getPromedio();
+            Double costo_unitario = listInfRerencias.get(i).getCosto_unitario();
+
+            if (promedio == 0){
+                vrTotalEncabezado = vrTotalEncabezado + (peso * costo_unitario);
+            }else{
+                vrTotalEncabezado = vrTotalEncabezado + (peso * promedio);
+            }
+        }*/
+
+        int swDoc = 16;
+        String nit = "890900160";
+        int vendedor = 0;
+        String pc = Build.BRAND +"-"+ Build.MODEL;
+        String sql;
+
+        //Ingresamos el Encabezado a la lista
+        sql = "INSERT INTO  documentos (sw,tipo,numero,nit,fecha,vencimiento,valor_total,vendedor,valor_aplicado" +
+                ",anulado,modelo,notas ,usuario,pc,fecha_hora,bodega,duracion,concepto ,centro_doc,spic) VALUES " +
+                "(" + swDoc + ",'" + tipo + "'," + num + "," + Integer.parseInt(nit) + ",'" + sFecha + "','" + sFecha + "'," +
+                "" + vrTotalEncabezado + "," + vendedor + "," + 0 + ",0 ,'" + modelo + "','" + notas + "','" + usuario + "" +
+                "','" + pc + "','" + sFecha_hora + "'," + bod_orig + ",15,0,0,'S') ";
+
+        try {
+            listSql.add(sql);
+        }catch (Exception e){
+            Toast.makeText(context, e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+
+        seq = 0;
+
+        //For para ingresar a la lista todos los detalles de cada referencia
+        for(int b=0; b<listInfRerencias.size();b++){
+            String cod = listInfRerencias.get(b).getReferencia().trim();
+            Double peso = listInfRerencias.get(b).getPeso();
+            Double promedio =  listInfRerencias.get(b).getPromedio();
+            Double costo_unitario = listInfRerencias.get(b).getCosto_unitario();
+            Double costo_kilo;
+
+            if (promedio==0){
+                costo_kilo = costo_unitario;
+            }else{
+                costo_kilo = promedio;
+            }
+
+            //'******************* ----------Se adiciona la salida
+
+            seq = seq + 1;
+            swDoc_lin = 16;
+
+            Double iva = conexion.obtenerIvaReferencia(context,cod);
+
+            sql = "INSERT INTO documentos_lin(sw,tipo,numero,codigo,seq,fec,nit,cantidad,porcentaje_iva," +
+                    "valor_unitario,porcentaje_descuento,costo_unitario,adicional,vendedor,bodega,und," +
+                    "cantidad_und,cantidad_pedida,maneja_inventario,costo_unitario_sin,cantidad_dos) " +
+                    "VALUES(" + swDoc_lin + ",'" + tipo + "'," + num + ",'" + cod + "'," + seq + "," +
+                    "'" + sFecha + "'," + nit + "," + peso + ","+ iva +",0,0," + costo_kilo + "," +
                     "'" + notas + "',0," + bod_orig + ",'UND',1,0,'S',0.0000000000000000,1) ";
 
             try {
