@@ -23,6 +23,48 @@
         android:theme="@style/Theme.Handheld"
         tools:targetApi="31">
         <activity
+            android:name=".EscanerTrasladoMateriaPrimaSav"
+            android:exported="false" />
+        <activity
+            android:name=".PedidoMateriaPrimaSav"
+            android:exported="false" />
+        <activity
+            android:name=".EscanerTrasladoMateriaPrimaSar"
+            android:exported="false" />
+        <activity
+            android:name=".PedidoMateriaPrimaSar"
+            android:exported="false" />
+        <activity
+            android:name=".EscanerTrasladoMateriaPrimaScae"
+            android:exported="false" />
+        <activity
+            android:name=".PedidoMateriaPrimaScae"
+            android:exported="false" />
+        <activity
+            android:name=".EscanerTrasladoMateriaPrimaScal"
+            android:exported="false" />
+        <activity
+            android:name=".PedidoMateriaPrimaScal"
+            android:exported="false" />
+        <activity
+            android:name=".EscanerTrasladoMateriaPrimaPuas"
+            android:exported="false" />
+        <activity
+            android:name=".PedidoMateriaPrimaPuas"
+            android:exported="false" />
+        <activity
+            android:name=".EscanerDevolucionMateriaPrimaPuntilleria"
+            android:exported="false" />
+        <activity
+            android:name=".PedidoDevolucionMateriaPrimaPuntilleria"
+            android:exported="false" />
+        <activity
+            android:name=".EscanerTrasladoMateriaPrimaPuntilleria"
+            android:exported="false" />
+        <activity
+            android:name=".PedidoMateriaPrimaPuntilleria"
+            android:exported="false" />
+        <activity
             android:name=".RecepcionTerminadoPuasReferencias"
             android:exported="false" />
         <activity

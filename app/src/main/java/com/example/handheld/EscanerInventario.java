@@ -39,6 +39,7 @@ import com.example.handheld.conexionDB.ConfiguracionBD;
 import com.example.handheld.modelos.CorreoModelo;
 import com.example.handheld.modelos.GalvRecepcionModelo;
 import com.example.handheld.modelos.GalvRecepcionadoRollosModelo;
+import com.example.handheld.modelos.PermisoPersonaModelo;
 import com.example.handheld.modelos.PersonaModelo;
 import com.example.handheld.modelos.RolloGalvTransa;
 
@@ -67,7 +68,7 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
     Button btnTransaGalv, btnCancelarTrans;
 
     //se declaran las variables donde estaran los datos que vienen de la anterior clase
-    String nit_usuario;
+    String nit_usuario, CeLog;
 
     //Se declaran los elementos necesarios para el list view
     ListView listviewGalvTerminado;
@@ -83,10 +84,13 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
     int yaentre = 0, leidos;
     String consecutivo, error, fechaTransaccion, nro_orden,nro_rollo;
     Integer numero_transaccion, repeticiones;
+
+    String permiso = "";
     String centro = "";
 
     Boolean incompleta = false;
     PersonaModelo personaLogistica;
+    PermisoPersonaModelo personaProduccion;
     CorreoModelo correo;
     ObjTraslado_bodLn objTraslado_bodLn = new ObjTraslado_bodLn();
     Gestion_alambronLn obj_gestion_alambronLn = new Gestion_alambronLn();
@@ -152,14 +156,6 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
         };
 
         /////////////////////////////////////////////////////////////////////////////////////////////
-        //Llamamos al metodo para consultar si hay alguna transaccion incompleta
-        consultarTransIncompleta();
-
-        /////////////////////////////////////////////////////////////////////////////////////////////
-        //Se establece el foco en el edit text
-        codigoGalva.requestFocus();
-
-        /////////////////////////////////////////////////////////////////////////////////////////////
         //Se programa para que al presionar (enter) en el EditText inicie el proceso
         codigoGalva.setOnKeyListener((v, keyCode, event) -> {
             if (keyCode == KeyEvent.KEYCODE_ENTER) {
@@ -222,6 +218,85 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
                 }
             }
         });
+
+        ingresarCedulaProduccion();
+    }
+
+    @SuppressLint("SetTextI18n")
+    private void ingresarCedulaProduccion() {
+        conexion = new Conexion();
+        AlertDialog.Builder builder = new AlertDialog.Builder(EscanerInventario.this);
+        View mView = getLayoutInflater().inflate(R.layout.alertdialog_cedularecepciona,null);
+        final EditText txtCedulaProduccion = mView.findViewById(R.id.txtCedulaLogistica);
+        txtCedulaProduccion.setHint("Cedula Producción");
+        TextView textMensaje = mView.findViewById(R.id.textView6);
+        textMensaje.setText("Ingrese la cedula persona producción");
+        TextView txtMrollos = mView.findViewById(R.id.txtMrollos);
+        txtMrollos.setVisibility(View.GONE);
+        Button btnAceptar = mView.findViewById(R.id.btnAceptar);
+        Button btnCancelar = mView.findViewById(R.id.btnCancelar);
+        builder.setView(mView);
+        AlertDialog alertDialog = builder.create();
+        btnAceptar.setOnClickListener(v12 -> {
+            if (isNetworkAvailable()) {
+                String CeProdu = txtCedulaProduccion.getText().toString().trim();
+                if (CeProdu.equals("")){
+                    AudioError();
+                    toastError("Ingresar la cedula de la persona que entrega producción");
+                }else{
+                    //Verificamos el numero de documentos de la persona en la base da datos
+                    personaProduccion = conexion.obtenerPermisoPersonaGalvanizado(EscanerInventario.this, CeProdu, "entrega");
+                    permiso = personaProduccion.getPermiso();
+
+                    //Verificamos que la persona sea de logistica
+                    if (permiso.equals("E")){
+                        Handler handler = new Handler(Looper.getMainLooper());
+                        new Thread(() -> {
+                            try {
+                                runOnUiThread(() -> {
+                                    // Código a ejecutar cuando el permiso es "E"
+                                    nit_usuario = CeProdu;
+
+                                    // Llamamos al metodo para consultar los rollos de galvanizados listos para recoger
+                                    consultarTransIncompleta();
+
+                                    alertDialog.dismiss();
+
+                                    //Se establece el foco en el edit text
+                                    codigoGalva.requestFocus();
+
+                                    closeTecladoMovil();
+                                });
+                            } catch (Exception e) {
+                                handler.post(() -> {
+                                    AudioError();
+                                    toastError(e.getMessage());
+                                });
+                            }
+                        }).start();
+                        closeTecladoMovil();
+                    }else{
+                        if (permiso == null){
+                            txtCedulaProduccion.setText("");
+                            AudioError();
+                            toastError("Persona no encontrada");
+                        }else{
+                            txtCedulaProduccion.setText("");
+                            AudioError();
+                            toastError("La cedula ingresada no pertenece a producción!");
+                        }
+                    }
+                }
+            } else {
+                toastError("Problemas de conexión a Internet");
+            }
+        });
+        btnCancelar.setOnClickListener(v -> {
+            alertDialog.dismiss();
+            finish();
+        });
+        alertDialog.setCancelable(false);
+        alertDialog.show();
     }
 
     @SuppressLint("SetTextI18n")
@@ -238,7 +313,7 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
         AlertDialog alertDialog = builder.create();
         btnAceptar.setOnClickListener(v12 -> {
             if (isNetworkAvailable()) {
-                String CeLog = txtCedulaLogistica.getText().toString().trim();
+                CeLog = txtCedulaLogistica.getText().toString().trim();
                 if (CeLog.equals("")){
                     AudioError();
                     toastError("Ingresar la cedula de la persona que recepciona");
@@ -685,8 +760,9 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
         @SuppressLint("SimpleDateFormat")
         SimpleDateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss a");
         String fecha = dateFormat.format(calendar.getTime());
-        String usuario = nit_usuario;
-        String notas = "MOVIL fecha:" + fecha + " usuario:" + usuario;
+        String nombre_usuario = conexion.obtenerNombrePersona(EscanerInventario.this,CeLog);
+        String usuario = CeLog;
+        String notas = "MOVIL fecha: " + fecha + " usuario: " + nombre_usuario;
 
         listSql = objTraslado_bodLn.listaTrasladoBodegaGalv(ListarefeRecepcionados,numero_transaccion, 17, 3, calendar, notas, usuario, "TRB1", "30",EscanerInventario.this);
         return listSql;

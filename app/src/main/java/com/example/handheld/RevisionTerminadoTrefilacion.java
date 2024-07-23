@@ -85,7 +85,7 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
     Conexion conexion;
 
     //Se inicializa variables necesarias en la clase
-    String consecutivo, motivo, traccion1, diametro1,traccion2,diametro2,traccion3,diametro3, permiso = "", error, fechaActualString, monthActualString, yearActualString, CeLog;
+    String consecutivo, motivo, traccion1, diametro1,traccion2,diametro2,traccion3,diametro3,pesoReal,pesoRequerido,apariencia, permiso = "", error, fechaActualString, monthActualString, yearActualString, CeLog;
     Integer numero_transaccion, numero_revision, repeticiones, paso = 0, yaentre = 0, id_revision;
 
     Calendar calendar;
@@ -431,18 +431,24 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
         return error;
     }
 
+    //Llenamos una lista con los motivos de rechazo
     private ArrayList<String> llenarlistaspinner(){
         listaRechazos = new ArrayList<>();
 
         listaRechazos.add("Seleccione motivo rechazo");
-        listaRechazos.add("Piel de naranja");
+        listaRechazos.add("Fuera de Medida");
         listaRechazos.add("Baja/Alta tracción");
-        listaRechazos.add("Poroso");
+        listaRechazos.add("Piel de naranja");
         listaRechazos.add("Daño por montacarga");
         listaRechazos.add("Rayado");
         listaRechazos.add("Tallado");
         listaRechazos.add("Oxidación");
-        listaRechazos.add("Fuera de Medida");
+        listaRechazos.add("Mal conformado");
+        listaRechazos.add("Peso");
+        listaRechazos.add("Soldadura");
+        listaRechazos.add("Apariencia");
+        listaRechazos.add("Excedente de producción");
+
 
         return listaRechazos;
     }
@@ -484,6 +490,12 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
                     break;
                 case 2:
                     sql_revisionTransa= "INSERT INTO jd_revision_calidad_trefilacion(fecha_hora,revisor,estado,defecto,diametro_1,tipo_transa)VALUES('" + fechaActualString + "','" + personaCalidad.getNit() + "','R','" + motivo + "'," + diametro1 + ",'TRB1')";
+                    break;
+                case 3:
+                    sql_revisionTransa= "INSERT INTO jd_revision_calidad_trefilacion(fecha_hora,revisor,estado,defecto,peso_real,peso_requerido,tipo_transa)VALUES('" + fechaActualString + "','" + personaCalidad.getNit() + "','R','" + motivo + "'," + pesoReal + "," + pesoRequerido + ",'TRB1')";
+                    break;
+                case 4:
+                    sql_revisionTransa= "INSERT INTO jd_revision_calidad_trefilacion(fecha_hora,revisor,estado,defecto,tipo_transa)VALUES('" + fechaActualString + "','" + personaCalidad.getNit() + "','R','Apariencia: " + apariencia + "','TRB1')";
                     break;
                 default:
                     sql_revisionTransa= "INSERT INTO jd_revision_calidad_trefilacion(fecha_hora,revisor,estado,defecto,tipo_transa)VALUES('" + fechaActualString + "','" + personaCalidad.getNit() + "','R','" + motivo + "','TRB1')";
@@ -899,6 +911,7 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
     /////////////////////////////////////////////////////////////////////////////////////////////
     //Metodo que verifica que el codigo escaneado se encuentre en la lista de rollos de producción
     //No recepcionados
+    @SuppressLint("SetTextI18n")
     private void codigoIngresado() throws SQLException {
         consecutivo = codigoTrefi.getText().toString().trim();
         boolean encontrado = false;
@@ -921,19 +934,25 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
             }else{
                 if (ListaTrefiRollosRecep.size() > 0){
                     if (ListaTrefiRollosRecep.get(0).getReferencia().equals(ListaTrefiRevisado.get(position).getReferencia())){
-                        //Copiamos el rollo encontrado de la lista de producción
-                        trefiRecepcionModelo = ListaTrefiRevisado.get(position);
-                        //Agregamos la copia a la de los rollos escaneados
-                        ListaTrefiRollosRecep.add(trefiRecepcionModelo);
-                        //Pintamos el rollo de verde en la lista de produccion para no poder volverlo a leer
-                        pintarRollo(position);
-                        //Contamos los rollos leidos y no leidos
-                        contarSinLeer();
-                        contarLeidos();
-                        //Mostramos mensaje
-                        toastAcierto("Rollo encontrado");
-                        //Inicializamos la lectura
-                        cargarNuevo();
+                        if (ListaTrefiRollosRecep.get(0).getCod_orden().equals(ListaTrefiRevisado.get(position).getCod_orden())){
+                            //Copiamos el rollo encontrado de la lista de producción
+                            trefiRecepcionModelo = ListaTrefiRevisado.get(position);
+                            //Agregamos la copia a la de los rollos escaneados
+                            ListaTrefiRollosRecep.add(trefiRecepcionModelo);
+                            //Pintamos el rollo de verde en la lista de produccion para no poder volverlo a leer
+                            pintarRollo(position);
+                            //Contamos los rollos leidos y no leidos
+                            contarSinLeer();
+                            contarLeidos();
+                            //Mostramos mensaje
+                            toastAcierto("Rollo encontrado");
+                            //Inicializamos la lectura
+                            cargarNuevo();
+                        }else{
+                            toastError("No puede leer rollos \n de diferentes ordenes \n en una misma revision");
+                            AudioError();
+                            cargarNuevo();
+                        }
                     }else{
                         toastError("No puede leer rollos \n de diferentes referencias \n en una misma revision");
                         AudioError();
@@ -967,13 +986,37 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
                 AudioError();
                 cargarNuevo();
             } else if (revisionRollo.getEstado().equals("A")) {
-                toastError("Este rollo ya fue autorizado");
                 AudioError();
                 cargarNuevo();
+                AlertDialog.Builder builder = new AlertDialog.Builder(RevisionTerminadoTrefilacion.this);
+                View mView = getLayoutInflater().inflate(R.layout.alertdialog_aceptar,null);
+                TextView alertMensaje = mView.findViewById(R.id.alertMensaje);
+                alertMensaje.setText("Rollo ya Autorizado \n Fecha: " + revisionRollo.getFecha_hora());
+                Button btnAceptar = mView.findViewById(R.id.btnAceptar);
+                btnAceptar.setText("Aceptar");
+                builder.setView(mView);
+                AlertDialog alertDialog = builder.create();
+                btnAceptar.setOnClickListener(v -> {
+                    alertDialog.dismiss();
+                });
+                alertDialog.setCancelable(false);
+                alertDialog.show();
             } else if (revisionRollo.getEstado().equals("R")) {
-                toastError("Este rollo ya fue rechazado");
                 AudioError();
                 cargarNuevo();
+                AlertDialog.Builder builder = new AlertDialog.Builder(RevisionTerminadoTrefilacion.this);
+                View mView = getLayoutInflater().inflate(R.layout.alertdialog_aceptar,null);
+                TextView alertMensaje = mView.findViewById(R.id.alertMensaje);
+                alertMensaje.setText("Rollo ya Rechazado \n Fecha: " + revisionRollo.getFecha_hora());
+                Button btnAceptar = mView.findViewById(R.id.btnAceptar);
+                btnAceptar.setText("Aceptar");
+                builder.setView(mView);
+                AlertDialog alertDialog = builder.create();
+                btnAceptar.setOnClickListener(v -> {
+                    alertDialog.dismiss();
+                });
+                alertDialog.setCancelable(false);
+                alertDialog.show();
             }
         }
     }
@@ -1121,6 +1164,8 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
         View mView = getLayoutInflater().inflate(R.layout.alertdialog_rechazado, null);
         @SuppressLint("CutPasteId") final EditText txtCedulaLogistica = mView.findViewById(R.id.txtCedulaLogistica);
         EditText editTraccion = mView.findViewById(R.id.editTraccion);
+        EditText editPeso = mView.findViewById(R.id.editPeso);
+        EditText editApariencia = mView.findViewById(R.id.editApariencia);
         Spinner spinnerRechazo = mView.findViewById(R.id.spinnerRechazo);
         listaTrefiRechazos = llenarlistaspinner();
         ArrayAdapter<CharSequence> adapter = new ArrayAdapter(RevisionTerminadoTrefilacion.this, android.R.layout.simple_spinner_dropdown_item, listaTrefiRechazos);
@@ -1232,6 +1277,94 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
                                 }
                             }
                             break;
+                        case "Peso":
+                            if(editTraccion.getText().toString().equals("")) {
+                                AudioError();
+                                toastError("Por favor ingresar Peso Requerido");
+                            }else{
+                                if (editPeso.getText().toString().equals("")){
+                                    AudioError();
+                                    toastError("Por favor ingresar Peso Real");
+                                }else{
+                                    if (CeLog.equals("")) {
+                                        AudioError();
+                                        toastError("Ingresar la cedula de la persona que inspecciona");
+                                    }else{
+                                        personaCalidad = conexion.obtenerPermisoPersona(RevisionTerminadoTrefilacion.this, CeLog,"mod_revision_calidad_trefilacion");
+                                        permiso = personaCalidad.getNit();
+                                        //Verificamos que la persona pertenezca al centro de logistica
+                                        if (!permiso.equals("")){
+                                            pesoRequerido = editTraccion.getText().toString();
+                                            pesoReal = editPeso.getText().toString();
+                                            Barraprogreso.setVisibility(View.VISIBLE);
+                                            Handler handler = new Handler(Looper.getMainLooper());
+                                            new Thread(() -> {
+                                                try {
+                                                    runOnUiThread(() -> realizarTransaccion(3));
+                                                    handler.post(() -> {
+                                                        Barraprogreso.setVisibility(View.GONE);
+                                                        alertDialogTransaccion.dismiss();
+                                                        closeTecladoMovil();
+                                                    });
+                                                } catch (Exception e) {
+                                                    handler.post(() -> {
+                                                        toastError(e.getMessage());
+                                                        Barraprogreso.setVisibility(View.GONE);
+                                                        alertDialogTransaccion.dismiss();
+                                                    });
+                                                }
+                                            }).start();
+                                            closeTecladoMovil();
+                                        }else{
+                                            txtCedulaLogistica.setText("");
+                                            AudioError();
+                                            toastError("La cedula ingresada no tiene permiso para hacer revisiones de calidad!");
+                                        }
+                                    }
+                                }
+                            }
+                            break;
+                        case "Apariencia":
+                            if(editApariencia.getText().toString().equals("")) {
+                                AudioError();
+                                toastError("Por favor ingresar descripcion Apariencia");
+                            }else{
+                                if (CeLog.equals("")) {
+                                    AudioError();
+                                    toastError("Ingresar la cedula de la persona que inspecciona");
+                                }else{
+                                    personaCalidad = conexion.obtenerPermisoPersona(RevisionTerminadoTrefilacion.this, CeLog,"mod_revision_calidad_trefilacion");
+                                    permiso = personaCalidad.getNit();
+                                    //Verificamos que la persona pertenezca al centro de logistica
+                                    if (!permiso.equals("")){
+                                        apariencia = editApariencia.getText().toString();
+                                        Barraprogreso.setVisibility(View.VISIBLE);
+                                        Handler handler = new Handler(Looper.getMainLooper());
+                                        new Thread(() -> {
+                                            try {
+                                                runOnUiThread(() -> realizarTransaccion(4));
+                                                handler.post(() -> {
+                                                    Barraprogreso.setVisibility(View.GONE);
+                                                    alertDialogTransaccion.dismiss();
+                                                    closeTecladoMovil();
+                                                });
+                                            } catch (Exception e) {
+                                                handler.post(() -> {
+                                                    toastError(e.getMessage());
+                                                    Barraprogreso.setVisibility(View.GONE);
+                                                    alertDialogTransaccion.dismiss();
+                                                });
+                                            }
+                                        }).start();
+                                        closeTecladoMovil();
+                                    }else{
+                                        txtCedulaLogistica.setText("");
+                                        AudioError();
+                                        toastError("La cedula ingresada no tiene permiso para hacer revisiones de calidad!");
+                                    }
+                                }
+                            }
+                            break;
                         default:
                             if (CeLog.equals("")) {
                                 AudioError();
@@ -1245,7 +1378,7 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
                                     Handler handler = new Handler(Looper.getMainLooper());
                                     new Thread(() -> {
                                         try {
-                                            runOnUiThread(() -> realizarTransaccion(3));
+                                            runOnUiThread(() -> realizarTransaccion(5));
                                             handler.post(() -> {
                                                 Barraprogreso.setVisibility(View.GONE);
                                                 alertDialogTransaccion.dismiss();
@@ -1285,28 +1418,77 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
     private void actualizarAlertDialog(String selectedOption, View mView){
         TextView txtTraccion = mView.findViewById(R.id.txtTraccion);
         EditText editTraccion = mView.findViewById(R.id.editTraccion);
+        TextView txtPeso = mView.findViewById(R.id.txtPeso);
+        EditText editPeso = mView.findViewById(R.id.editPeso);
+        TextView txtApariencia = mView.findViewById(R.id.txtApariencia);
+        EditText editApariencia = mView.findViewById(R.id.editApariencia);
         switch (selectedOption) {
             case "Fuera de Medida":
                 txtTraccion.setVisibility(View.VISIBLE);
                 txtTraccion.setText("Diametro:");
                 editTraccion.setVisibility(View.VISIBLE);
+                editTraccion.setText("");
+                txtPeso.setVisibility(View.GONE);
+                editPeso.setVisibility(View.GONE);
+                editPeso.setText("");
+                txtApariencia.setVisibility(View.GONE);
+                editApariencia.setVisibility(View.GONE);
+                editApariencia.setText("");
                 break;
             case "Baja/Alta tracción":
                 txtTraccion.setVisibility(View.VISIBLE);
                 txtTraccion.setText("Tracción:");
                 editTraccion.setVisibility(View.VISIBLE);
+                editTraccion.setText("");
+                txtPeso.setVisibility(View.GONE);
+                editPeso.setVisibility(View.GONE);
+                editPeso.setText("");
+                txtApariencia.setVisibility(View.GONE);
+                editApariencia.setVisibility(View.GONE);
+                editApariencia.setText("");
+                break;
+            case "Peso":
+                txtTraccion.setVisibility(View.VISIBLE);
+                txtTraccion.setText("Requerido:");
+                editTraccion.setVisibility(View.VISIBLE);
+                editTraccion.setText("");
+                txtPeso.setVisibility(View.VISIBLE);
+                editPeso.setVisibility(View.VISIBLE);
+                editPeso.setText("");
+                txtApariencia.setVisibility(View.GONE);
+                editApariencia.setVisibility(View.GONE);
+                editApariencia.setText("");
+                break;
+            case "Apariencia":
+                txtTraccion.setVisibility(View.GONE);
+                editTraccion.setVisibility(View.GONE);
+                editTraccion.setText("");
+                txtPeso.setVisibility(View.GONE);
+                editPeso.setVisibility(View.GONE);
+                editPeso.setText("");
+                txtApariencia.setVisibility(View.VISIBLE);
+                editApariencia.setVisibility(View.VISIBLE);
+                editApariencia.setText("");
                 break;
             case "Seleccione motivo rechazo":
-            case "Poroso":
             case "Piel de naranja":
             case "Daño por montacarga":
             case "Rayado":
             case "Tallado":
             case "Oxidación":
+            case "Mal conformado":
+            case "Soldadura":
+            case "Excedente de producción":
             default:
                 txtTraccion.setVisibility(View.GONE);
                 editTraccion.setVisibility(View.GONE);
                 editTraccion.setText("");
+                txtPeso.setVisibility(View.GONE);
+                editPeso.setVisibility(View.GONE);
+                editPeso.setText("");
+                txtApariencia.setVisibility(View.GONE);
+                editApariencia.setVisibility(View.GONE);
+                editApariencia.setText("");
                 break;
         }
     }

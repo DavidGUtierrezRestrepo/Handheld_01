@@ -27,7 +27,7 @@ import java.util.List;
 public class RecepcionTerminadoPuasReferencias extends AppCompatActivity implements AdapterView.OnItemClickListener {
 
     //Se declaran los elementos del layout
-    TextView txtNomOperario,txtDocuOperario;
+    TextView txtNomOperario,txtDocuOperario,txtCodigoOperario;
     Button btnSalir, btnActualizar;
 
     //Se declaran los elementos necesarios para el list view
@@ -36,8 +36,7 @@ public class RecepcionTerminadoPuasReferencias extends AppCompatActivity impleme
     ListAdapter RefereciasAdapter;
 
     //Declaramos la variables necesarias recibiendo los datos enviados por la anterior clase
-    String nit_operario;
-    String nombre_operario;
+    String nit_operario, nombre_operario, codigo;
 
     //Se declara un objeto conexion
     Conexion conexion;
@@ -50,15 +49,18 @@ public class RecepcionTerminadoPuasReferencias extends AppCompatActivity impleme
         //Definimos los elemetos del layout en la clase
         txtNomOperario = findViewById(R.id.txtNomOperario);
         txtDocuOperario = findViewById(R.id.txtDocuOperario);
+        txtCodigoOperario = findViewById(R.id.txtTCodigoOperario);
         btnSalir = findViewById(R.id.btnSalir);
         btnActualizar = findViewById(R.id.btnVolver);
 
         //Definimos la variables necesarias recibiendo los datos enviados por la anterior clase
         nit_operario = getIntent().getStringExtra("nit");
         nombre_operario = getIntent().getStringExtra("nombre");
+        codigo = getIntent().getStringExtra("codigo");
 
         txtDocuOperario.setText(nit_operario);
         txtNomOperario.setText(nombre_operario);
+        txtCodigoOperario.setText(codigo);
 
         //Definimos los elementos necesarios para el list view
         listviewReferenciasOperariosPuas = findViewById(R.id.listviewReferenciasPuas);

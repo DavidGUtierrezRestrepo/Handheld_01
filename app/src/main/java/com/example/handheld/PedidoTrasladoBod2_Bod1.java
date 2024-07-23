@@ -91,7 +91,7 @@ public class PedidoTrasladoBod2_Bod1 extends AppCompatActivity implements Adapte
     //METODO PARA CERRAR LA APLICACION
     @SuppressLint("")
     public void salir(View view){
-        finishAffinity();
+        finish();
     }
 
     //Metodo "Al presionar algun elemento del listview"

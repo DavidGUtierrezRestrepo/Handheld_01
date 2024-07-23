@@ -279,8 +279,8 @@ public class EscanerTrasladoBod2_Bod1 extends AppCompatActivity implements Adapt
             }
         });
         btnCancelar.setOnClickListener(v -> {
-            Intent i = new Intent(EscanerTrasladoBod2_Bod1.this,MainActivity.class);
-            startActivity(i);
+            alertDialog.dismiss();
+            finish();
         });
         alertDialog.setCancelable(false);
         alertDialog.show();

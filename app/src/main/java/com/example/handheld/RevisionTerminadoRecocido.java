@@ -85,7 +85,7 @@ public class RevisionTerminadoRecocido extends AppCompatActivity {
     Conexion conexion;
 
     //Se inicializa variables necesarias en la clase
-    String consecutivo, motivo, traccion1, diametro1,traccion2,diametro2,traccion3,diametro3, permiso = "", error, fechaActualString, monthActualString, yearActualString, CeLog;
+    String consecutivo, motivo, traccion1, diametro1,traccion2,diametro2,traccion3,diametro3,pesoReal,pesoRequerido,apariencia, permiso = "", error, fechaActualString, monthActualString, yearActualString, CeLog;
     Integer numero_transaccion, numero_revision, repeticiones, paso = 0, yaentre = 0, id_revision;
 
     Calendar calendar;
@@ -457,14 +457,18 @@ public class RevisionTerminadoRecocido extends AppCompatActivity {
         listaRechazos = new ArrayList<>();
 
         listaRechazos.add("Seleccione motivo rechazo");
-        listaRechazos.add("Piel de naranja");
+        listaRechazos.add("Fuera de Medida");
         listaRechazos.add("Baja/Alta tracción");
-        listaRechazos.add("Poroso");
+        listaRechazos.add("Piel de naranja");
         listaRechazos.add("Daño por montacarga");
         listaRechazos.add("Rayado");
         listaRechazos.add("Tallado");
         listaRechazos.add("Oxidación");
-        listaRechazos.add("Fuera de Medida");
+        listaRechazos.add("Mal conformado");
+        listaRechazos.add("Peso");
+        listaRechazos.add("Soldadura");
+        listaRechazos.add("Apariencia");
+        listaRechazos.add("Excedente de producción");
 
         return listaRechazos;
     }
@@ -506,6 +510,12 @@ public class RevisionTerminadoRecocido extends AppCompatActivity {
                     break;
                 case 2:
                     sql_revisionTransa= "INSERT INTO jd_revision_calidad_recocido(fecha_hora,revisor,estado,defecto,diametro_1,tipo_transa)VALUES('" + fechaActualString + "','" + personaCalidad.getNit() + "','R','" + motivo + "','" + diametro1 + "','TRB1')";
+                    break;
+                case 3:
+                    sql_revisionTransa= "INSERT INTO jd_revision_calidad_recocido(fecha_hora,revisor,estado,defecto,peso_real,peso_requerido,tipo_transa)VALUES('" + fechaActualString + "','" + personaCalidad.getNit() + "','R','" + motivo + "'," + pesoReal + "," + pesoRequerido + ",'TRB1')";
+                    break;
+                case 4:
+                    sql_revisionTransa= "INSERT INTO jd_revision_calidad_recocido(fecha_hora,revisor,estado,defecto,tipo_transa)VALUES('" + fechaActualString + "','" + personaCalidad.getNit() + "','R','Apariencia: " + apariencia + "','TRB1')";
                     break;
                 default:
                     sql_revisionTransa= "INSERT INTO jd_revision_calidad_recocido(fecha_hora,revisor,estado,defecto,tipo_transa)VALUES('" + fechaActualString + "','" + personaCalidad.getNit() + "','R','" + motivo + "','TRB1')";
@@ -921,6 +931,7 @@ public class RevisionTerminadoRecocido extends AppCompatActivity {
     /////////////////////////////////////////////////////////////////////////////////////////////
     //Metodo que verifica que el codigo escaneado se encuentre en la lista de rollos de producción
     //No recepcionados
+    @SuppressLint("SetTextI18n")
     private void codigoIngresado() throws SQLException {
         consecutivo = codigoReco.getText().toString().trim();
         boolean encontrado = false;
@@ -988,16 +999,123 @@ public class RevisionTerminadoRecocido extends AppCompatActivity {
                 toastError("Rollo no encontrado");
                 AudioError();
                 cargarNuevo();
-            } else if (revisionRollo.getEstado().equals("A")) {
-                toastError("Este rollo ya fue autorizado");
+            } else if (revisionRollo.getEstado().equals("A") && revisionRollo.getId_recepcion() != null) {
                 AudioError();
                 cargarNuevo();
+                AlertDialog.Builder builder = new AlertDialog.Builder(RevisionTerminadoRecocido.this);
+                View mView = getLayoutInflater().inflate(R.layout.alertdialog_anular,null);
+                @SuppressLint({"MissingInflatedId", "LocalSuppress"}) TextView alertMensaje = mView.findViewById(R.id.alertMensaje);
+                alertMensaje.setText("Rollo ya Autorizado \n Fecha: " + revisionRollo.getFecha_hora() + " \n Ya fue recepcionado por logistica");
+                @SuppressLint({"MissingInflatedId", "LocalSuppress"}) Button btnAceptar = mView.findViewById(R.id.btnAceptar);
+                @SuppressLint({"MissingInflatedId", "LocalSuppress"}) Button btnAnular = mView.findViewById(R.id.btnAnular);
+                btnAceptar.setText("Aceptar");
+                builder.setView(mView);
+                AlertDialog alertDialog = builder.create();
+                btnAceptar.setOnClickListener(v -> {
+                    alertDialog.dismiss();
+                });
+                btnAnular.setOnClickListener(v -> {
+                    toastError("No se puede anular porque logistica ya recepcionó");
+                });
+                alertDialog.setCancelable(false);
+                alertDialog.show();
+            } else if (revisionRollo.getEstado().equals("A") && revisionRollo.getId_recepcion() == null) {
+                AudioError();
+                cargarNuevo();
+                AlertDialog.Builder builder = new AlertDialog.Builder(RevisionTerminadoRecocido.this);
+                View mView = getLayoutInflater().inflate(R.layout.alertdialog_anular,null);
+                @SuppressLint({"MissingInflatedId", "LocalSuppress"}) TextView alertMensaje = mView.findViewById(R.id.alertMensaje);
+                alertMensaje.setText("Rollo ya Autorizado \n Fecha: " + revisionRollo.getFecha_hora());
+                @SuppressLint({"MissingInflatedId", "LocalSuppress"}) Button btnAceptar = mView.findViewById(R.id.btnAceptar);
+                @SuppressLint({"MissingInflatedId", "LocalSuppress"}) Button btnAnular = mView.findViewById(R.id.btnAnular);
+                btnAceptar.setText("Aceptar");
+                builder.setView(mView);
+                AlertDialog alertDialog = builder.create();
+                btnAceptar.setOnClickListener(v -> {
+                    alertDialog.dismiss();
+                });
+                btnAnular.setOnClickListener(v -> {
+                    alertDialog.dismiss();
+                    alertDialogEliminar(cod_orden,id_detalle,id_rollo);
+                });
+                alertDialog.setCancelable(false);
+                alertDialog.show();
             } else if (revisionRollo.getEstado().equals("R")) {
-                toastError("Este rollo ya fue rechazado");
+                AudioError();
+                cargarNuevo();
+                AlertDialog.Builder builder = new AlertDialog.Builder(RevisionTerminadoRecocido.this);
+                View mView = getLayoutInflater().inflate(R.layout.alertdialog_aceptar,null);
+                TextView alertMensaje = mView.findViewById(R.id.alertMensaje);
+                alertMensaje.setText("Rollo ya Rechazado \n Fecha: " + revisionRollo.getFecha_hora());
+                Button btnAceptar = mView.findViewById(R.id.btnAceptar);
+                btnAceptar.setText("Aceptar");
+                builder.setView(mView);
+                AlertDialog alertDialog = builder.create();
+                btnAceptar.setOnClickListener(v -> {
+                    alertDialog.dismiss();
+                });
+                alertDialog.setCancelable(false);
+                alertDialog.show();
+            } else if (revisionRollo.getEstado().isEmpty()){
+                toastError("Actualiza el modulo, \n para encontrar el rollo");
                 AudioError();
                 cargarNuevo();
             }
         }
+    }
+
+    //Alert dialog Transacción
+    @SuppressLint("SetTextI18n")
+    private void alertDialogEliminar(String cod_orden,String id_detalle,String id_rollo){
+        AlertDialog.Builder builder = new AlertDialog.Builder(RevisionTerminadoRecocido.this);
+        View mView = getLayoutInflater().inflate(R.layout.alertdialog_eliminar,null);
+        @SuppressLint({"MissingInflatedId", "LocalSuppress"}) TextView txtMrechazo = mView.findViewById(R.id.txtMrechazo);
+        txtMrechazo.setText("¿Desea anular la revision de calidad del rollo seleccionado?");
+        @SuppressLint({"MissingInflatedId", "LocalSuppress"}) TextView textView6 = mView.findViewById(R.id.textView6);
+        textView6.setText("Ingrese la cedula persona calidad");
+        @SuppressLint({"MissingInflatedId", "LocalSuppress"}) EditText txtCedulaLogistica = mView.findViewById(R.id.txtCedulaLogistica);
+        txtCedulaLogistica.setHint("Cedula Calidad");
+        Button btnAceptar = mView.findViewById(R.id.btnAceptar);
+        Button btnCancelar = mView.findViewById(R.id.btnCancelar);
+        builder.setView(mView);
+        AlertDialog alertDialog = builder.create();
+        btnAceptar.setOnClickListener(v12 -> {
+            if(isNetworkAvailable()){
+                String CeLog = txtCedulaLogistica.getText().toString().trim();
+                if (CeLog.equals("")){
+                    toastError("Ingresar la cedula de la persona de calidad");
+                }else{
+                    //Verificamos el numero de documentos de la persona en la base da datos
+                    personaCalidad = conexion.obtenerPermisoPersona(RevisionTerminadoRecocido.this,CeLog,"mod_revision_calidad_recocido" );
+                    permiso = personaCalidad.getNit();
+                    //Verificamos que la persona sea de calidad
+                    if (!permiso.equals("")){
+                        Integer ejecutar = 0;
+
+                        String sql = "UPDATE JB_rollos_rec set id_revision=null where cod_orden_rec='" + cod_orden + "' and id_detalle_rec='" + id_detalle + "' and id_rollo_rec='" + id_rollo + "'";
+
+                        ejecutar = Obj_ordenprodLn.realizarUpdateProduccion(sql, RevisionTerminadoRecocido.this);
+
+                        if (ejecutar.equals(1)){
+                            toastAcierto("Se anulo la revision de calidad del rollo correctamente");
+                            alertDialog.dismiss();
+                        }else{
+                            toastError("Problemas para rechazar rollo, vuelve a intentarlo");
+                            alertDialog.dismiss();
+                        }
+                    }else{
+                        txtCedulaLogistica.setText("");
+                        AudioError();
+                        toastError("La cedula ingresada no tiene permiso para hacer revisiones de calidad!");
+                    }
+                }
+            }else{
+                toastError("Problemas de conexión a Internet");
+            }
+        });
+        btnCancelar.setOnClickListener(v1 -> alertDialog.dismiss());
+        alertDialog.setCancelable(false);
+        alertDialog.show();
     }
 
     /////////////////////////////////////////////////////////////////////////////////////////////
@@ -1143,6 +1261,8 @@ public class RevisionTerminadoRecocido extends AppCompatActivity {
         View mView = getLayoutInflater().inflate(R.layout.alertdialog_rechazado, null);
         @SuppressLint("CutPasteId") final EditText txtCedulaLogistica = mView.findViewById(R.id.txtCedulaLogistica);
         EditText editTraccion = mView.findViewById(R.id.editTraccion);
+        EditText editPeso = mView.findViewById(R.id.editPeso);
+        EditText editApariencia = mView.findViewById(R.id.editApariencia);
         Spinner spinnerRechazo = mView.findViewById(R.id.spinnerRechazo);
         listaRecoRechazos = llenarlistaspinner();
         ArrayAdapter<CharSequence> adapter = new ArrayAdapter(RevisionTerminadoRecocido.this, android.R.layout.simple_spinner_dropdown_item, listaRecoRechazos);
@@ -1254,6 +1374,94 @@ public class RevisionTerminadoRecocido extends AppCompatActivity {
                                 }
                             }
                             break;
+                        case "Peso":
+                            if(editTraccion.getText().toString().equals("")) {
+                                AudioError();
+                                toastError("Por favor ingresar Peso Requerido");
+                            }else{
+                                if (editPeso.getText().toString().equals("")){
+                                    AudioError();
+                                    toastError("Por favor ingresar Peso Real");
+                                }else{
+                                    if (CeLog.equals("")) {
+                                        AudioError();
+                                        toastError("Ingresar la cedula de la persona que inspecciona");
+                                    }else{
+                                        personaCalidad = conexion.obtenerPermisoPersona(RevisionTerminadoRecocido.this, CeLog,"mod_revision_calidad_trefilacion");
+                                        permiso = personaCalidad.getNit();
+                                        //Verificamos que la persona pertenezca al centro de logistica
+                                        if (!permiso.equals("")){
+                                            pesoRequerido = editTraccion.getText().toString();
+                                            pesoReal = editPeso.getText().toString();
+                                            Barraprogreso.setVisibility(View.VISIBLE);
+                                            Handler handler = new Handler(Looper.getMainLooper());
+                                            new Thread(() -> {
+                                                try {
+                                                    runOnUiThread(() -> realizarTransaccion(3));
+                                                    handler.post(() -> {
+                                                        Barraprogreso.setVisibility(View.GONE);
+                                                        alertDialogTransaccion.dismiss();
+                                                        closeTecladoMovil();
+                                                    });
+                                                } catch (Exception e) {
+                                                    handler.post(() -> {
+                                                        toastError(e.getMessage());
+                                                        Barraprogreso.setVisibility(View.GONE);
+                                                        alertDialogTransaccion.dismiss();
+                                                    });
+                                                }
+                                            }).start();
+                                            closeTecladoMovil();
+                                        }else{
+                                            txtCedulaLogistica.setText("");
+                                            AudioError();
+                                            toastError("La cedula ingresada no tiene permiso para hacer revisiones de calidad!");
+                                        }
+                                    }
+                                }
+                            }
+                            break;
+                        case "Apariencia":
+                            if(editApariencia.getText().toString().equals("")) {
+                                AudioError();
+                                toastError("Por favor ingresar descripcion Apariencia");
+                            }else{
+                                if (CeLog.equals("")) {
+                                    AudioError();
+                                    toastError("Ingresar la cedula de la persona que inspecciona");
+                                }else{
+                                    personaCalidad = conexion.obtenerPermisoPersona(RevisionTerminadoRecocido.this, CeLog,"mod_revision_calidad_trefilacion");
+                                    permiso = personaCalidad.getNit();
+                                    //Verificamos que la persona pertenezca al centro de logistica
+                                    if (!permiso.equals("")){
+                                        apariencia = editApariencia.getText().toString();
+                                        Barraprogreso.setVisibility(View.VISIBLE);
+                                        Handler handler = new Handler(Looper.getMainLooper());
+                                        new Thread(() -> {
+                                            try {
+                                                runOnUiThread(() -> realizarTransaccion(4));
+                                                handler.post(() -> {
+                                                    Barraprogreso.setVisibility(View.GONE);
+                                                    alertDialogTransaccion.dismiss();
+                                                    closeTecladoMovil();
+                                                });
+                                            } catch (Exception e) {
+                                                handler.post(() -> {
+                                                    toastError(e.getMessage());
+                                                    Barraprogreso.setVisibility(View.GONE);
+                                                    alertDialogTransaccion.dismiss();
+                                                });
+                                            }
+                                        }).start();
+                                        closeTecladoMovil();
+                                    }else{
+                                        txtCedulaLogistica.setText("");
+                                        AudioError();
+                                        toastError("La cedula ingresada no tiene permiso para hacer revisiones de calidad!");
+                                    }
+                                }
+                            }
+                            break;
                         default:
                             if (CeLog.equals("")) {
                                 AudioError();
@@ -1267,7 +1475,7 @@ public class RevisionTerminadoRecocido extends AppCompatActivity {
                                     Handler handler = new Handler(Looper.getMainLooper());
                                     new Thread(() -> {
                                         try {
-                                            runOnUiThread(() -> realizarTransaccion(3));
+                                            runOnUiThread(() -> realizarTransaccion(5));
                                             handler.post(() -> {
                                                 Barraprogreso.setVisibility(View.GONE);
                                                 alertDialogTransaccion.dismiss();
@@ -1307,31 +1515,78 @@ public class RevisionTerminadoRecocido extends AppCompatActivity {
     private void actualizarAlertDialog(String selectedOption, View mView){
         TextView txtTraccion = mView.findViewById(R.id.txtTraccion);
         EditText editTraccion = mView.findViewById(R.id.editTraccion);
+        TextView txtPeso = mView.findViewById(R.id.txtPeso);
+        EditText editPeso = mView.findViewById(R.id.editPeso);
+        TextView txtApariencia = mView.findViewById(R.id.txtApariencia);
+        EditText editApariencia = mView.findViewById(R.id.editApariencia);
         switch (selectedOption) {
             case "Fuera de Medida":
                 txtTraccion.setVisibility(View.VISIBLE);
                 txtTraccion.setText("Diametro:");
                 editTraccion.setVisibility(View.VISIBLE);
+                editTraccion.setText("");
+                txtPeso.setVisibility(View.GONE);
+                editPeso.setVisibility(View.GONE);
+                editPeso.setText("");
+                txtApariencia.setVisibility(View.GONE);
+                editApariencia.setVisibility(View.GONE);
+                editApariencia.setText("");
                 break;
             case "Baja/Alta tracción":
                 txtTraccion.setVisibility(View.VISIBLE);
                 txtTraccion.setText("Tracción:");
                 editTraccion.setVisibility(View.VISIBLE);
+                editTraccion.setText("");
+                txtPeso.setVisibility(View.GONE);
+                editPeso.setVisibility(View.GONE);
+                editPeso.setText("");
+                txtApariencia.setVisibility(View.GONE);
+                editApariencia.setVisibility(View.GONE);
+                editApariencia.setText("");
+                break;
+            case "Peso":
+                txtTraccion.setVisibility(View.VISIBLE);
+                txtTraccion.setText("Requerido:");
+                editTraccion.setVisibility(View.VISIBLE);
+                editTraccion.setText("");
+                txtPeso.setVisibility(View.VISIBLE);
+                editPeso.setVisibility(View.VISIBLE);
+                editPeso.setText("");
+                txtApariencia.setVisibility(View.GONE);
+                editApariencia.setVisibility(View.GONE);
+                editApariencia.setText("");
+                break;
+            case "Apariencia":
+                txtTraccion.setVisibility(View.GONE);
+                editTraccion.setVisibility(View.GONE);
+                editTraccion.setText("");
+                txtPeso.setVisibility(View.GONE);
+                editPeso.setVisibility(View.GONE);
+                editPeso.setText("");
+                txtApariencia.setVisibility(View.VISIBLE);
+                editApariencia.setVisibility(View.VISIBLE);
+                editApariencia.setText("");
                 break;
             case "Seleccione motivo rechazo":
-            case "Poroso":
             case "Piel de naranja":
             case "Daño por montacarga":
             case "Rayado":
             case "Tallado":
             case "Oxidación":
+            case "Mal conformado":
+            case "Soldadura":
+            case "Excedente de producción":
             default:
                 txtTraccion.setVisibility(View.GONE);
                 editTraccion.setVisibility(View.GONE);
                 editTraccion.setText("");
+                txtPeso.setVisibility(View.GONE);
+                editPeso.setVisibility(View.GONE);
+                editPeso.setText("");
+                txtApariencia.setVisibility(View.GONE);
+                editApariencia.setVisibility(View.GONE);
+                editApariencia.setText("");
                 break;
         }
     }
-
-
 }

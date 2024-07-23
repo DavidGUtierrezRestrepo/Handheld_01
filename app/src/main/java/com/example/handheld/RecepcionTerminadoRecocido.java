@@ -315,9 +315,8 @@ public class RecepcionTerminadoRecocido extends AppCompatActivity implements Ada
             }
         });
         btnCancelar.setOnClickListener(v -> {
-            Intent intent = new Intent(RecepcionTerminadoRecocido.this, MainActivity.class);
-            intent.putExtra("nit_usuario", nit_usuario);
-            startActivity(intent);
+            alertDialog.dismiss();
+            finish();
         });
         alertDialog.setCancelable(false);
         alertDialog.show();
@@ -632,6 +631,7 @@ public class RecepcionTerminadoRecocido extends AppCompatActivity implements Ada
         return error;
     }
 
+    //Esta funcion cancela una transaccion cuando esta quedo a medias
     @SuppressLint("SetTextI18n")
     private void reanudarTransacion(){
         if (repeticiones<=4){
@@ -681,7 +681,7 @@ public class RecepcionTerminadoRecocido extends AppCompatActivity implements Ada
             AlertDialog.Builder builder = new AlertDialog.Builder(RecepcionTerminadoRecocido.this);
             View mView = getLayoutInflater().inflate(R.layout.alertdialog_aceptar,null);
             TextView alertMensaje = mView.findViewById(R.id.alertMensaje);
-            alertMensaje.setText("No se pudo cancelar el paso 1 de la transacción, \n '" + error + "'\n Por favor comunicarse inmediatamente con el área de sistemas, \n para poder continuar con las transacciones, de lo \n contrario no se le permitira continuar");
+            alertMensaje.setText("No se pudo cancelar el paso 3 de la transacción, \n '" + error + "'\n Por favor comunicarse inmediatamente con el área de sistemas, \n para poder continuar con las transacciones, de lo \n contrario no se le permitira continuar");
             Button btnAceptar = mView.findViewById(R.id.btnAceptar);
             btnAceptar.setText("Aceptar");
             builder.setView(mView);
@@ -992,7 +992,8 @@ public class RecepcionTerminadoRecocido extends AppCompatActivity implements Ada
                         //Copiamos el rollo encontrado de la lista de producción
                         recoRecepcionModelo = ListaRecoTerminado.get(position);
 
-                        if (tipo.equals("construcción")){
+                        if (tipo.equals("construccion")){
+                            //Esta consulta busca todos los rollos de la carga para mostralos en pantalla
                             ListaRecoRollosRecep = conexion.obtenerRecoTerminadoLeido(getApplication(),tipo,recoRecepcionModelo.getCod_orden(),recoRecepcionModelo.getId_detalle());
 
                             bloqueado = true;
@@ -1017,8 +1018,24 @@ public class RecepcionTerminadoRecocido extends AppCompatActivity implements Ada
                     id_detalle = obj_gestion_alambronLn.extraerDatoCodigoBarrasRecocido("id_detalle", consecutivo);
                     id_rollo = obj_gestion_alambronLn.extraerDatoCodigoBarrasRecocido("id_rollo", consecutivo);
                     TransRollo = conexion.obtenerRolloTransReco(RecepcionTerminadoRecocido.this,cod_orden,id_detalle,id_rollo,tipo);
-                    if (!TransRollo.getCod_orden().equals("")){
-                        if (TransRollo.getEstado().equals("R")){
+                    if (TransRollo.getCod_orden() != null && !TransRollo.getCod_orden().equals("")){
+                        if (TransRollo.getEstado() == null){
+                            AudioError();
+                            cargarNuevo();
+                            AlertDialog.Builder builder = new AlertDialog.Builder(RecepcionTerminadoRecocido.this);
+                            View mView = getLayoutInflater().inflate(R.layout.alertdialog_aceptar,null);
+                            TextView alertMensaje = mView.findViewById(R.id.alertMensaje);
+                            alertMensaje.setText("Rollo NO revisado por calidad \n ¡Este rollo no puede ser entregado a Logistica!");
+                            Button btnAceptar = mView.findViewById(R.id.btnAceptar);
+                            btnAceptar.setText("Aceptar");
+                            builder.setView(mView);
+                            AlertDialog alertDialog = builder.create();
+                            btnAceptar.setOnClickListener(v -> {
+                                alertDialog.dismiss();
+                            });
+                            alertDialog.setCancelable(false);
+                            alertDialog.show();
+                        }else if (TransRollo.getEstado().equals("R")){
                             AudioError();
                             cargarNuevo();
                             AlertDialog.Builder builder = new AlertDialog.Builder(RecepcionTerminadoRecocido.this);
@@ -1034,13 +1051,13 @@ public class RecepcionTerminadoRecocido extends AppCompatActivity implements Ada
                             });
                             alertDialog.setCancelable(false);
                             alertDialog.show();
-                        } else if (TransRollo.getEstado().equals("A") && !TransRollo.getTrb1().equals("")) {
+                        } else if (TransRollo.getEstado().equals("A") && TransRollo.getTrb1() != null) {
                             AudioError();
                             cargarNuevo();
                             AlertDialog.Builder builder = new AlertDialog.Builder(RecepcionTerminadoRecocido.this);
                             View mView = getLayoutInflater().inflate(R.layout.alertdialog_aceptar,null);
                             TextView alertMensaje = mView.findViewById(R.id.alertMensaje);
-                            alertMensaje.setText("Rollo ya transladado a bodega 3 \n Fecha:" + TransRollo.getFecha_recepcion() + " \n Transacción: " + TransRollo.getTrb1());
+                            alertMensaje.setText("Rollo ya transladado a bodega 3 \n Fecha: " + TransRollo.getFecha_recepcion() + " \n Transacción #" + TransRollo.getTrb1());
                             Button btnAceptar = mView.findViewById(R.id.btnAceptar);
                             btnAceptar.setText("Aceptar");
                             builder.setView(mView);
@@ -1066,6 +1083,7 @@ public class RecepcionTerminadoRecocido extends AppCompatActivity implements Ada
                 toastError("Problemas de conexión a Internet");
             }
         }else{
+            cargarNuevo();
             toastError("No se pueden leer mas rollos, terminar transaccion de la carga leida");
         }
 
@@ -1148,7 +1166,7 @@ public class RecepcionTerminadoRecocido extends AppCompatActivity implements Ada
     /////////////////////////////////////////////////////////////////////////////////////////////
     @Override
     public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-        if (tipo.equals("construcción")){
+        if (tipo.equals("construccion")){
             alertDialogEliminar(position);
         }
     }

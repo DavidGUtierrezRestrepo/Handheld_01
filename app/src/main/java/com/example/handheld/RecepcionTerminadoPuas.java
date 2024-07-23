@@ -62,7 +62,7 @@ public class RecepcionTerminadoPuas extends AppCompatActivity implements Adapter
     Button btnTransaPuas, btnCancelarTrans;
 
     //se declaran las variables donde estaran los datos que vienen de la anterior clase
-    String nit_usuario;
+    String nit_usuario, CeLog;
     String referencia,nombre_operario;
 
     //Se declaran los elementos necesarios para el list view
@@ -182,7 +182,7 @@ public class RecepcionTerminadoPuas extends AppCompatActivity implements Adapter
         AlertDialog alertDialog = builder.create();
         btnAceptar.setOnClickListener(v12 -> {
             if (isNetworkAvailable()) {
-                String CeLog = txtCedulaLogistica.getText().toString().trim();
+                CeLog = txtCedulaLogistica.getText().toString().trim();
                 if (CeLog.equals("")){
                     AudioError();
                     toastError("Ingresar la cedula de la persona que recepciona");
@@ -349,7 +349,7 @@ public class RecepcionTerminadoPuas extends AppCompatActivity implements Adapter
                 btnAceptar.setOnClickListener(v -> {
                     if (isNetworkAvailable()) {
                         repeticiones = 0;
-                        reanudarTransacion();
+                        //reanudarTransacion();
                         alertDialog.dismiss();
                     } else {
                         toastError("Problemas de conexión a Internet");
@@ -417,6 +417,7 @@ public class RecepcionTerminadoPuas extends AppCompatActivity implements Adapter
             error = ing_prod_ad.ExecuteSqlTransaction(listReanudarTransa,ConfiguracionBD.obtenerNombreBD(2),RecepcionTerminadoPuas.this);
             repeticiones = repeticiones + 1;
             if (error.equals("")){
+                paso = 0;
                 toastAcierto("Transacción Cancelada correctamente");
 
                 incompleta = false;
@@ -433,7 +434,7 @@ public class RecepcionTerminadoPuas extends AppCompatActivity implements Adapter
             AlertDialog.Builder builder = new AlertDialog.Builder(RecepcionTerminadoPuas.this);
             View mView = getLayoutInflater().inflate(R.layout.alertdialog_aceptar,null);
             TextView alertMensaje = mView.findViewById(R.id.alertMensaje);
-            alertMensaje.setText("No se pudo cancelar el paso 1 de la transacción, \n '" + error + "'\n Por favor comunicarse inmediatamente con el área de sistemas, \n para poder continuar con las transacciones, de lo \n contrario no se le permitira continuar");
+            alertMensaje.setText("No se pudo cancelar la transacción, \n '" + error + "'\n Por favor comunicarse inmediatamente con el área de sistemas, \n para poder continuar con las transacciones, de lo \n contrario no se le permitira continuar");
             Button btnAceptar = mView.findViewById(R.id.btnAceptar);
             btnAceptar.setText("Aceptar");
             builder.setView(mView);
@@ -458,8 +459,8 @@ public class RecepcionTerminadoPuas extends AppCompatActivity implements Adapter
                     correo = conexion.obtenerCorreo(RecepcionTerminadoPuas.this);
                     String email = correo.getCorreo();
                     String pass = correo.getContrasena();
-                    subject = "El paso 1 de una transacción en Control en Piso Puas no se pudo cancelar";
-                    textMessage = "El paso 1 de la Transacción de recepcion de producto terminado del area de Puas no se pudo cancelar correctamente \n" +
+                    subject = "Una transacción en Control en Piso Puas no se pudo cancelar";
+                    textMessage = "El paso 3 de la Transacción de recepcion de producto terminado del area de Puas no se pudo cancelar correctamente \n" +
                             "Detalles de la recepción: \n" +
                             mensajeFinal +
                             "Error: '" + error + "'\n" +
@@ -670,10 +671,11 @@ public class RecepcionTerminadoPuas extends AppCompatActivity implements Adapter
         @SuppressLint("SimpleDateFormat")
         SimpleDateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss a");
         String fecha = dateFormat.format(calendar.getTime());
-        String usuario = nit_usuario;
-        String notas = "MOVIL fecha:" + fecha + " usuario:" + usuario;
+        String nombre_usuario = conexion.obtenerNombrePersona(RecepcionTerminadoPuas.this,CeLog);
+        String usuario = CeLog;
+        String notas = "MOVIL fecha:" + fecha + " usuario: " + nombre_usuario;
 
-        listSql = objTraslado_bodLn.listaTrasladoBodegaPuas(ListarefeRecepcionados,numero_transaccion, 2, 3, calendar, notas, usuario, "TRB1", "11",RecepcionTerminadoPuas.this);
+        listSql = objTraslado_bodLn.listaTrasladoBodegaPuas(ListarefeRecepcionados,numero_transaccion, 2, 3, calendar, notas, usuario, "TRB1", "11",RecepcionTerminadoPuas.this, ListaPuasTerminado);
         return listSql;
     }
 
@@ -688,7 +690,7 @@ public class RecepcionTerminadoPuas extends AppCompatActivity implements Adapter
 
         if (ListaPuasTerminado.isEmpty()){
             /////////////////////////////////////////////////////////////////////////////////////////////
-            //Llamamos al metodo para consultar los rollos de puas listos para recoger
+            //Llamamos al metodo para consultar los rollos de puas listos para recoger 
             consultarPuasTerminado();
         }else{
             incompleta = true;
@@ -697,7 +699,7 @@ public class RecepcionTerminadoPuas extends AppCompatActivity implements Adapter
             AlertDialog.Builder builder = new AlertDialog.Builder(RecepcionTerminadoPuas.this);
             View mView = getLayoutInflater().inflate(R.layout.alertdialog_aceptar,null);
             TextView alertMensaje = mView.findViewById(R.id.alertMensaje);
-            alertMensaje.setText("Hay una transaccion anterior incompleta , \n Por favor comunicarse inmediatamente con el área de sistemas, \n para poder continuar con las transacciones, de lo \n contrario no se le permitira continuar");
+            alertMensaje.setText("Hay una transaccion anterior incompleta , \nPor favor comunicarse inmediatamente con el área de sistemas, \n para poder continuar con las transacciones, de lo \n contrario no se le permitira continuar");
             Button btnAceptar = mView.findViewById(R.id.btnAceptar);
             btnAceptar.setText("Aceptar");
             builder.setView(mView);

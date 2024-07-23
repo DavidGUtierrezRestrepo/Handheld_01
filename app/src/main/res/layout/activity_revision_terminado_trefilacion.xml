@@ -96,7 +96,8 @@
             <ListView
                 android:id="@+id/listviewTrefiTerminado"
                 android:layout_width="match_parent"
-                android:layout_height="390dp" />
+                android:layout_height="370dp" />
+
         </LinearLayout>
 
 
@@ -200,6 +201,7 @@
                 android:drawableEnd="@drawable/cancelar"
                 android:text="@string/btnRechazado"
                 android:textColor="#FFFFFF"
+                android:textSize="12sp"
                 android:textStyle="bold" />
 
             <Button
@@ -213,6 +215,7 @@
                 android:drawableEnd="@drawable/cheque"
                 android:text="@string/btnAprobado"
                 android:textColor="#FBFBFB"
+                android:textSize="12sp"
                 android:textStyle="bold" />
 
         </LinearLayout>

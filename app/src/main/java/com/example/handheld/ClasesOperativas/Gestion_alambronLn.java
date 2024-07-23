@@ -61,6 +61,34 @@ public class Gestion_alambronLn {
         return respuesta.toString();
     }
 
+    public String extraerDatoCodigoBarrasMateriaPrima(String dato, String codigoBarra){
+        Integer numSeparador = 0;
+        int contSeparador = 0;
+        StringBuilder respuesta = new StringBuilder();
+        switch (dato){
+            case "num_consecutivo":
+                numSeparador = 0;
+                break;
+            case "detalle":
+                numSeparador = 1;
+                break;
+            case "id_rollo":
+                numSeparador = 2;
+                break;
+        }
+        for (int i = 0; i <= codigoBarra.length() - 1; i++){
+            if (numSeparador.equals(contSeparador)){
+                if (codigoBarra.charAt(i) != '-'){
+                    respuesta.append(codigoBarra.charAt(i));
+                }
+            }
+            if (codigoBarra.charAt(i) == '-'){
+                contSeparador += 1;
+            }
+        }
+        return respuesta.toString();
+    }
+
     public String extraerDatoCodigoBarrasRecocido(String dato, String codigoBarra){
         Integer numSeparador = 0;
         int contSeparador = 0;

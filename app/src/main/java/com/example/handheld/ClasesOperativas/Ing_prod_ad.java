@@ -64,7 +64,7 @@ public class Ing_prod_ad {
                 } catch (SQLException ex) {
                     con.rollback();
                     isError.set(true); // Establecer isError en true si ocurre algún error
-                    errorMessage.set(ex.getMessage()); // Almacenar el mensaje de error específico
+                    errorMessage.set(ex.getMessage()); // Almacenar el mensaje de error específico-
                 }
             } catch (SQLException ex) {
                 isError.set(true); // Establecer isError en true si ocurre algún error

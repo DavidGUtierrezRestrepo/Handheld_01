@@ -22,6 +22,9 @@
 
     //Strings Utilizados en el layout "activity_pedidos Translados alambron"
     <string name="txtMovimientosPedido">PEDIDO TRASLADO BOD_1 A BOD2 </string>
+    <string name="txtMovimientosPedidoMateriaPrimaPuntilleria">PEDIDO MATERIA PRIMA PUNTILLERIA</string>
+    <string name="txtMovimientosPedidoMateriaPrimaPuas">PEDIDO MATERIA PRIMA PUAS</string>
+    <string name="txtPedidoDevolucionMateriaPrimaPuntilleria">PEDIDO DEVOLUCION MATERIA PRIMA PUNTILLERIA</string>
     <string name="txtMovimientosPedidosBod2_Bod1">PEDIDO TRASLADO BOD_2 A BOD1 </string>
     <string name="btnActualizar">Actualizar</string>
     <string name="btnSalir">Salir</string>

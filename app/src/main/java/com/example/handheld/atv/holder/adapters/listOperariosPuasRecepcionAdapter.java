@@ -46,6 +46,8 @@ public class listOperariosPuasRecepcionAdapter extends ArrayAdapter<OperariosPua
         TextView textoNombreOperarioPuas = view.findViewById(R.id.txtNomOperario);
         textoNombreOperarioPuas.setText(modelo.getNombre());
 
+        TextView textCodigoOperarioPuas = view.findViewById(R.id.txtTCodigoOperario);
+        textCodigoOperarioPuas.setText(modelo.getCodigo());
 
         return view;
     }

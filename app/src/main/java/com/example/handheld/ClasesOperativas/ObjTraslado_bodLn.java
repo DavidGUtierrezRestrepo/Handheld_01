@@ -14,6 +14,7 @@ import androidx.annotation.NonNull;
 import com.example.handheld.conexionDB.Conexion;
 import com.example.handheld.modelos.EmpRecepcionadoCajasModelo;
 import com.example.handheld.modelos.GalvRecepcionadoRollosModelo;
+import com.example.handheld.modelos.PuaRecepcionModelo;
 import com.example.handheld.modelos.PuasRecepcionadoRollosModelo;
 import com.example.handheld.modelos.RecoRecepcionadoRollosModelo;
 import com.example.handheld.modelos.TrefiRecepcionadoRollosModelo;
@@ -31,18 +32,494 @@ public class ObjTraslado_bodLn {
     Obj_ordenprodLn obj_ordenprodLn = new Obj_ordenprodLn();
     Conexion conexion = new Conexion();
 
-    public List<Object> listaTransaccionDatable_traslado_bodega(Integer num, String cod, Integer bod_orig, Integer bod_dest, Calendar dFec, String notas, String usuario, Double cantidad, String tipo, String modelo, Double costo_kilo, Context context){
+    public List<Object> listaTransaccionDatable_traslado_puas(Integer num, String cod, Integer bodega, Calendar dFec, String notas, String usuario, Double cantidad, String tipo, Double costo_kilo, Context context){
         String sql;
-        String sql_lin_salida = "";
-        String sql_lin_entrada = "";
         int seq = 0;
-        @SuppressLint("SimpleDateFormat")
-        SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy");
-        String fecha_hora = dateFormat.format(dFec.getTime());
         List<Object> listSql = new ArrayList<>();;
         String nit = "890900160";
         double vrTotal = costo_kilo * cantidad;
-        Double costo_total = costo_kilo * cantidad;
+        int vendedor = 0;
+        String pc = Build.BRAND +"-"+ Build.MODEL;
+        String sFecha_hora = "";
+        String sFecha = "";
+        int swDoc = conexion.consultarSwTipo(context,tipo);
+        int swDoc_lin = conexion.consultarSwTipo(context,tipo);
+        double vr_unitario = costo_kilo;
+
+        if (obj_ordenprodLn.insertarProxMes(cod,context)){
+            dFec.add(Calendar.MONTH, 1);
+
+            //Capturamos el mes en un String
+            @SuppressLint("SimpleDateFormat")
+            SimpleDateFormat dateFormatMoth = new SimpleDateFormat("MM");
+            String month = dateFormatMoth.format(dFec.getTime());
+
+            //Capturamos el año en un String
+            @SuppressLint("SimpleDateFormat")
+            SimpleDateFormat dateFormatYear = new SimpleDateFormat("yyyy");
+            String year = dateFormatYear.format(dFec.getTime());
+
+            sFecha = year + "-" + month + "-01";
+
+            //Capturamos las horas
+            @SuppressLint("SimpleDateFormat")
+            SimpleDateFormat dateFormatHour = new SimpleDateFormat("HH");
+            String hour = dateFormatHour.format(dFec.getTime());
+
+            //Capturamos los minutos
+            @SuppressLint("SimpleDateFormat")
+            SimpleDateFormat dateFormatMinute = new SimpleDateFormat("mm");
+            String minute = dateFormatMinute.format(dFec.getTime());
+
+            //Capturamos los segundos
+            @SuppressLint("SimpleDateFormat")
+            SimpleDateFormat dateFormatSeconds = new SimpleDateFormat("ss");
+            String seconds = dateFormatSeconds.format(dFec.getTime());
+
+            sFecha_hora =  year + "-" + month + "-" + "01" + " " + hour + ":" + minute + ":" + seconds + "";
+
+
+        }else{
+            Calendar calendar = Calendar.getInstance();
+            @SuppressLint("SimpleDateFormat")
+            SimpleDateFormat dateFormatsFecha_hora = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+            sFecha_hora = dateFormatsFecha_hora.format(calendar.getTime());
+
+            @SuppressLint("SimpleDateFormat")
+            SimpleDateFormat dateFormatsFecha = new SimpleDateFormat("yyyy-MM-dd");
+            sFecha = dateFormatsFecha.format(calendar.getTime());
+        }
+
+        if (swDoc == 11){
+            swDoc_lin = swDoc;
+        } else if (swDoc == 12) {
+            swDoc_lin = 3;
+        }
+        seq = 1;
+        sql = "INSERT INTO  documentos (sw,tipo,numero,nit,fecha,vencimiento,valor_total,vendedor,valor_aplicado" +
+                ",anulado,modelo,notas ,usuario,pc,fecha_hora,bodega,duracion,concepto ,centro_doc,spic) VALUES " +
+                "(" + swDoc + ",'" + tipo + "'," + num + "," + Integer.parseInt(nit) + ",'" + sFecha + "','" + sFecha + "'," +
+                "" + vrTotal + "," + vendedor + "," + 0 + ",0 ,'01','" + notas + "','" + usuario + "" +
+                "','" + pc + "','" + sFecha_hora + "'," + bodega + ",15,0,0,'S') ";
+
+        try {
+            listSql.add(sql);
+        }catch (Exception e){
+            Toast.makeText(context, e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+
+        sql = "INSERT INTO documentos_lin(sw,tipo,numero,codigo,seq,fec,nit,cantidad,porcentaje_iva," +
+                "valor_unitario,porcentaje_descuento,costo_unitario,adicional,vendedor,bodega,und," +
+                "cantidad_und,cantidad_pedida,maneja_inventario,costo_unitario_sin,cantidad_dos) " +
+                "VALUES(" + swDoc_lin + ",'" + tipo + "'," + num + ",'" + cod + "'," + seq + "," +
+                "'" + sFecha + "'," + nit + "," + cantidad + ",16," + vr_unitario + ",0," + costo_kilo + "," +
+                "'" + notas + "',0," + bodega + ",'UND',1,0,'S',0.0000000000000000,1) ";
+
+        try {
+            listSql.add(sql);
+        }catch (Exception e){
+            Toast.makeText(context, e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+
+        //'Script para ingresar a referencias_sto (STOCK)
+        listSql.add(actualizarRefSto(cantidad, costo_kilo, cod, dFec, bodega, swDoc));
+        listSql.add(sqlActUltEntradaUltSalida(swDoc, cod));
+
+        return (listSql);
+    }
+
+    public List<Object> listaTransaccionDatable_traslado_scal(Integer num, String cod, Integer bodega, Calendar dFec, String notas, String usuario, Double cantidad, String tipo, Double costo_kilo, Context context){
+        String sql;
+        int seq = 0;
+        List<Object> listSql = new ArrayList<>();;
+        String nit = "890900160";
+        double vrTotal = costo_kilo * cantidad;
+        int vendedor = 0;
+        String pc = Build.BRAND +"-"+ Build.MODEL;
+        String sFecha_hora = "";
+        String sFecha = "";
+        int swDoc = conexion.consultarSwTipo(context,tipo);
+        int swDoc_lin = conexion.consultarSwTipo(context,tipo);
+        double vr_unitario = costo_kilo;
+
+        if (obj_ordenprodLn.insertarProxMes(cod,context)){
+            dFec.add(Calendar.MONTH, 1);
+
+            //Capturamos el mes en un String
+            @SuppressLint("SimpleDateFormat")
+            SimpleDateFormat dateFormatMoth = new SimpleDateFormat("MM");
+            String month = dateFormatMoth.format(dFec.getTime());
+
+            //Capturamos el año en un String
+            @SuppressLint("SimpleDateFormat")
+            SimpleDateFormat dateFormatYear = new SimpleDateFormat("yyyy");
+            String year = dateFormatYear.format(dFec.getTime());
+
+            sFecha = year + "-" + month + "-01";
+
+            //Capturamos las horas
+            @SuppressLint("SimpleDateFormat")
+            SimpleDateFormat dateFormatHour = new SimpleDateFormat("HH");
+            String hour = dateFormatHour.format(dFec.getTime());
+
+            //Capturamos los minutos
+            @SuppressLint("SimpleDateFormat")
+            SimpleDateFormat dateFormatMinute = new SimpleDateFormat("mm");
+            String minute = dateFormatMinute.format(dFec.getTime());
+
+            //Capturamos los segundos
+            @SuppressLint("SimpleDateFormat")
+            SimpleDateFormat dateFormatSeconds = new SimpleDateFormat("ss");
+            String seconds = dateFormatSeconds.format(dFec.getTime());
+
+            sFecha_hora =  year + "-" + month + "-" + "01" + " " + hour + ":" + minute + ":" + seconds + "";
+
+
+        }else{
+            Calendar calendar = Calendar.getInstance();
+            @SuppressLint("SimpleDateFormat")
+            SimpleDateFormat dateFormatsFecha_hora = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+            sFecha_hora = dateFormatsFecha_hora.format(calendar.getTime());
+
+            @SuppressLint("SimpleDateFormat")
+            SimpleDateFormat dateFormatsFecha = new SimpleDateFormat("yyyy-MM-dd");
+            sFecha = dateFormatsFecha.format(calendar.getTime());
+        }
+
+        if (swDoc == 11){
+            swDoc_lin = swDoc;
+        } else if (swDoc == 12) {
+            swDoc_lin = 3;
+        }
+        seq = 1;
+        sql = "INSERT INTO  documentos (sw,tipo,numero,nit,fecha,vencimiento,valor_total,vendedor,valor_aplicado" +
+                ",anulado,modelo,notas ,usuario,pc,fecha_hora,bodega,duracion,concepto ,centro_doc,spic) VALUES " +
+                "(" + swDoc + ",'" + tipo + "'," + num + "," + Integer.parseInt(nit) + ",'" + sFecha + "','" + sFecha + "'," +
+                "" + vrTotal + "," + vendedor + "," + 0 + ",0 ,'01','" + notas + "','" + usuario + "" +
+                "','" + pc + "','" + sFecha_hora + "'," + bodega + ",15,0,0,'S') ";
+
+        try {
+            listSql.add(sql);
+        }catch (Exception e){
+            Toast.makeText(context, e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+
+        sql = "INSERT INTO documentos_lin(sw,tipo,numero,codigo,seq,fec,nit,cantidad,porcentaje_iva," +
+                "valor_unitario,porcentaje_descuento,costo_unitario,adicional,vendedor,bodega,und," +
+                "cantidad_und,cantidad_pedida,maneja_inventario,costo_unitario_sin,cantidad_dos) " +
+                "VALUES(" + swDoc_lin + ",'" + tipo + "'," + num + ",'" + cod + "'," + seq + "," +
+                "'" + sFecha + "'," + nit + "," + cantidad + ",16," + vr_unitario + ",0," + costo_kilo + "," +
+                "'" + notas + "',0," + bodega + ",'UND',1,0,'S',0.0000000000000000,1) ";
+
+        try {
+            listSql.add(sql);
+        }catch (Exception e){
+            Toast.makeText(context, e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+
+        //'Script para ingresar a referencias_sto (STOCK)
+        listSql.add(actualizarRefSto(cantidad, costo_kilo, cod, dFec, bodega, swDoc));
+        listSql.add(sqlActUltEntradaUltSalida(swDoc, cod));
+
+        return (listSql);
+    }
+
+    public List<Object> listaTransaccionDatable_traslado_scae(Integer num, String cod, Integer bodega, Calendar dFec, String notas, String usuario, Double cantidad, String tipo, Double costo_kilo, Context context){
+        String sql;
+        int seq = 0;
+        List<Object> listSql = new ArrayList<>();;
+        String nit = "890900160";
+        double vrTotal = costo_kilo * cantidad;
+        int vendedor = 0;
+        String pc = Build.BRAND +"-"+ Build.MODEL;
+        String sFecha_hora = "";
+        String sFecha = "";
+        int swDoc = conexion.consultarSwTipo(context,tipo);
+        int swDoc_lin = conexion.consultarSwTipo(context,tipo);
+        double vr_unitario = costo_kilo;
+
+        if (obj_ordenprodLn.insertarProxMes(cod,context)){
+            dFec.add(Calendar.MONTH, 1);
+
+            //Capturamos el mes en un String
+            @SuppressLint("SimpleDateFormat")
+            SimpleDateFormat dateFormatMoth = new SimpleDateFormat("MM");
+            String month = dateFormatMoth.format(dFec.getTime());
+
+            //Capturamos el año en un String
+            @SuppressLint("SimpleDateFormat")
+            SimpleDateFormat dateFormatYear = new SimpleDateFormat("yyyy");
+            String year = dateFormatYear.format(dFec.getTime());
+
+            sFecha = year + "-" + month + "-01";
+
+            //Capturamos las horas
+            @SuppressLint("SimpleDateFormat")
+            SimpleDateFormat dateFormatHour = new SimpleDateFormat("HH");
+            String hour = dateFormatHour.format(dFec.getTime());
+
+            //Capturamos los minutos
+            @SuppressLint("SimpleDateFormat")
+            SimpleDateFormat dateFormatMinute = new SimpleDateFormat("mm");
+            String minute = dateFormatMinute.format(dFec.getTime());
+
+            //Capturamos los segundos
+            @SuppressLint("SimpleDateFormat")
+            SimpleDateFormat dateFormatSeconds = new SimpleDateFormat("ss");
+            String seconds = dateFormatSeconds.format(dFec.getTime());
+
+            sFecha_hora =  year + "-" + month + "-" + "01" + " " + hour + ":" + minute + ":" + seconds + "";
+
+
+        }else{
+            Calendar calendar = Calendar.getInstance();
+            @SuppressLint("SimpleDateFormat")
+            SimpleDateFormat dateFormatsFecha_hora = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+            sFecha_hora = dateFormatsFecha_hora.format(calendar.getTime());
+
+            @SuppressLint("SimpleDateFormat")
+            SimpleDateFormat dateFormatsFecha = new SimpleDateFormat("yyyy-MM-dd");
+            sFecha = dateFormatsFecha.format(calendar.getTime());
+        }
+
+        if (swDoc == 11){
+            swDoc_lin = swDoc;
+        } else if (swDoc == 12) {
+            swDoc_lin = 3;
+        }
+        seq = 1;
+        sql = "INSERT INTO  documentos (sw,tipo,numero,nit,fecha,vencimiento,valor_total,vendedor,valor_aplicado" +
+                ",anulado,modelo,notas ,usuario,pc,fecha_hora,bodega,duracion,concepto ,centro_doc,spic) VALUES " +
+                "(" + swDoc + ",'" + tipo + "'," + num + "," + Integer.parseInt(nit) + ",'" + sFecha + "','" + sFecha + "'," +
+                "" + vrTotal + "," + vendedor + "," + 0 + ",0 ,'01','" + notas + "','" + usuario + "" +
+                "','" + pc + "','" + sFecha_hora + "'," + bodega + ",15,0,0,'S') ";
+
+        try {
+            listSql.add(sql);
+        }catch (Exception e){
+            Toast.makeText(context, e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+
+        sql = "INSERT INTO documentos_lin(sw,tipo,numero,codigo,seq,fec,nit,cantidad,porcentaje_iva," +
+                "valor_unitario,porcentaje_descuento,costo_unitario,adicional,vendedor,bodega,und," +
+                "cantidad_und,cantidad_pedida,maneja_inventario,costo_unitario_sin,cantidad_dos) " +
+                "VALUES(" + swDoc_lin + ",'" + tipo + "'," + num + ",'" + cod + "'," + seq + "," +
+                "'" + sFecha + "'," + nit + "," + cantidad + ",16," + vr_unitario + ",0," + costo_kilo + "," +
+                "'" + notas + "',0," + bodega + ",'UND',1,0,'S',0.0000000000000000,1) ";
+
+        try {
+            listSql.add(sql);
+        }catch (Exception e){
+            Toast.makeText(context, e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+
+        //'Script para ingresar a referencias_sto (STOCK)
+        listSql.add(actualizarRefSto(cantidad, costo_kilo, cod, dFec, bodega, swDoc));
+        listSql.add(sqlActUltEntradaUltSalida(swDoc, cod));
+
+        return (listSql);
+    }
+
+    public List<Object> listaTransaccionDatable_traslado_sar(Integer num, String cod, Integer bodega, Calendar dFec, String notas, String usuario, Double cantidad, String tipo, Double costo_kilo, Context context){
+        String sql;
+        int seq = 0;
+        List<Object> listSql = new ArrayList<>();;
+        String nit = "890900160";
+        double vrTotal = costo_kilo * cantidad;
+        int vendedor = 0;
+        String pc = Build.BRAND +"-"+ Build.MODEL;
+        String sFecha_hora = "";
+        String sFecha = "";
+        int swDoc = conexion.consultarSwTipo(context,tipo);
+        int swDoc_lin = conexion.consultarSwTipo(context,tipo);
+        double vr_unitario = costo_kilo;
+
+        if (obj_ordenprodLn.insertarProxMes(cod,context)){
+            dFec.add(Calendar.MONTH, 1);
+
+            //Capturamos el mes en un String
+            @SuppressLint("SimpleDateFormat")
+            SimpleDateFormat dateFormatMoth = new SimpleDateFormat("MM");
+            String month = dateFormatMoth.format(dFec.getTime());
+
+            //Capturamos el año en un String
+            @SuppressLint("SimpleDateFormat")
+            SimpleDateFormat dateFormatYear = new SimpleDateFormat("yyyy");
+            String year = dateFormatYear.format(dFec.getTime());
+
+            sFecha = year + "-" + month + "-01";
+
+            //Capturamos las horas
+            @SuppressLint("SimpleDateFormat")
+            SimpleDateFormat dateFormatHour = new SimpleDateFormat("HH");
+            String hour = dateFormatHour.format(dFec.getTime());
+
+            //Capturamos los minutos
+            @SuppressLint("SimpleDateFormat")
+            SimpleDateFormat dateFormatMinute = new SimpleDateFormat("mm");
+            String minute = dateFormatMinute.format(dFec.getTime());
+
+            //Capturamos los segundos
+            @SuppressLint("SimpleDateFormat")
+            SimpleDateFormat dateFormatSeconds = new SimpleDateFormat("ss");
+            String seconds = dateFormatSeconds.format(dFec.getTime());
+
+            sFecha_hora =  year + "-" + month + "-" + "01" + " " + hour + ":" + minute + ":" + seconds + "";
+
+
+        }else{
+            Calendar calendar = Calendar.getInstance();
+            @SuppressLint("SimpleDateFormat")
+            SimpleDateFormat dateFormatsFecha_hora = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+            sFecha_hora = dateFormatsFecha_hora.format(calendar.getTime());
+
+            @SuppressLint("SimpleDateFormat")
+            SimpleDateFormat dateFormatsFecha = new SimpleDateFormat("yyyy-MM-dd");
+            sFecha = dateFormatsFecha.format(calendar.getTime());
+        }
+
+        if (swDoc == 11){
+            swDoc_lin = swDoc;
+        } else if (swDoc == 12) {
+            swDoc_lin = 3;
+        }
+        seq = 1;
+        sql = "INSERT INTO  documentos (sw,tipo,numero,nit,fecha,vencimiento,valor_total,vendedor,valor_aplicado" +
+                ",anulado,modelo,notas ,usuario,pc,fecha_hora,bodega,duracion,concepto ,centro_doc,spic) VALUES " +
+                "(" + swDoc + ",'" + tipo + "'," + num + "," + Integer.parseInt(nit) + ",'" + sFecha + "','" + sFecha + "'," +
+                "" + vrTotal + "," + vendedor + "," + 0 + ",0 ,'01','" + notas + "','" + usuario + "" +
+                "','" + pc + "','" + sFecha_hora + "'," + bodega + ",15,0,0,'S') ";
+
+        try {
+            listSql.add(sql);
+        }catch (Exception e){
+            Toast.makeText(context, e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+
+        sql = "INSERT INTO documentos_lin(sw,tipo,numero,codigo,seq,fec,nit,cantidad,porcentaje_iva," +
+                "valor_unitario,porcentaje_descuento,costo_unitario,adicional,vendedor,bodega,und," +
+                "cantidad_und,cantidad_pedida,maneja_inventario,costo_unitario_sin,cantidad_dos) " +
+                "VALUES(" + swDoc_lin + ",'" + tipo + "'," + num + ",'" + cod + "'," + seq + "," +
+                "'" + sFecha + "'," + nit + "," + cantidad + ",16," + vr_unitario + ",0," + costo_kilo + "," +
+                "'" + notas + "',0," + bodega + ",'UND',1,0,'S',0.0000000000000000,1) ";
+
+        try {
+            listSql.add(sql);
+        }catch (Exception e){
+            Toast.makeText(context, e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+
+        //'Script para ingresar a referencias_sto (STOCK)
+        listSql.add(actualizarRefSto(cantidad, costo_kilo, cod, dFec, bodega, swDoc));
+        listSql.add(sqlActUltEntradaUltSalida(swDoc, cod));
+
+        return (listSql);
+    }
+
+    public List<Object> listaTransaccionDatable_traslado_sav(Integer num, String cod, Integer bodega, Calendar dFec, String notas, String usuario, Double cantidad, String tipo, Double costo_kilo, Context context){
+        String sql;
+        int seq = 0;
+        List<Object> listSql = new ArrayList<>();;
+        String nit = "890900160";
+        double vrTotal = costo_kilo * cantidad;
+        int vendedor = 0;
+        String pc = Build.BRAND +"-"+ Build.MODEL;
+        String sFecha_hora = "";
+        String sFecha = "";
+        int swDoc = conexion.consultarSwTipo(context,tipo);
+        int swDoc_lin = conexion.consultarSwTipo(context,tipo);
+        double vr_unitario = costo_kilo;
+
+        if (obj_ordenprodLn.insertarProxMes(cod,context)){
+            dFec.add(Calendar.MONTH, 1);
+
+            //Capturamos el mes en un String
+            @SuppressLint("SimpleDateFormat")
+            SimpleDateFormat dateFormatMoth = new SimpleDateFormat("MM");
+            String month = dateFormatMoth.format(dFec.getTime());
+
+            //Capturamos el año en un String
+            @SuppressLint("SimpleDateFormat")
+            SimpleDateFormat dateFormatYear = new SimpleDateFormat("yyyy");
+            String year = dateFormatYear.format(dFec.getTime());
+
+            sFecha = year + "-" + month + "-01";
+
+            //Capturamos las horas
+            @SuppressLint("SimpleDateFormat")
+            SimpleDateFormat dateFormatHour = new SimpleDateFormat("HH");
+            String hour = dateFormatHour.format(dFec.getTime());
+
+            //Capturamos los minutos
+            @SuppressLint("SimpleDateFormat")
+            SimpleDateFormat dateFormatMinute = new SimpleDateFormat("mm");
+            String minute = dateFormatMinute.format(dFec.getTime());
+
+            //Capturamos los segundos
+            @SuppressLint("SimpleDateFormat")
+            SimpleDateFormat dateFormatSeconds = new SimpleDateFormat("ss");
+            String seconds = dateFormatSeconds.format(dFec.getTime());
+
+            sFecha_hora =  year + "-" + month + "-" + "01" + " " + hour + ":" + minute + ":" + seconds + "";
+
+
+        }else{
+            Calendar calendar = Calendar.getInstance();
+            @SuppressLint("SimpleDateFormat")
+            SimpleDateFormat dateFormatsFecha_hora = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+            sFecha_hora = dateFormatsFecha_hora.format(calendar.getTime());
+
+            @SuppressLint("SimpleDateFormat")
+            SimpleDateFormat dateFormatsFecha = new SimpleDateFormat("yyyy-MM-dd");
+            sFecha = dateFormatsFecha.format(calendar.getTime());
+        }
+
+        if (swDoc == 11){
+            swDoc_lin = swDoc;
+        } else if (swDoc == 12) {
+            swDoc_lin = 3;
+        }
+        seq = 1;
+        sql = "INSERT INTO  documentos (sw,tipo,numero,nit,fecha,vencimiento,valor_total,vendedor,valor_aplicado" +
+                ",anulado,modelo,notas ,usuario,pc,fecha_hora,bodega,duracion,concepto ,centro_doc,spic) VALUES " +
+                "(" + swDoc + ",'" + tipo + "'," + num + "," + Integer.parseInt(nit) + ",'" + sFecha + "','" + sFecha + "'," +
+                "" + vrTotal + "," + vendedor + "," + 0 + ",0 ,'01','" + notas + "','" + usuario + "" +
+                "','" + pc + "','" + sFecha_hora + "'," + bodega + ",15,0,0,'S') ";
+
+        try {
+            listSql.add(sql);
+        }catch (Exception e){
+            Toast.makeText(context, e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+
+        sql = "INSERT INTO documentos_lin(sw,tipo,numero,codigo,seq,fec,nit,cantidad,porcentaje_iva," +
+                "valor_unitario,porcentaje_descuento,costo_unitario,adicional,vendedor,bodega,und," +
+                "cantidad_und,cantidad_pedida,maneja_inventario,costo_unitario_sin,cantidad_dos) " +
+                "VALUES(" + swDoc_lin + ",'" + tipo + "'," + num + ",'" + cod + "'," + seq + "," +
+                "'" + sFecha + "'," + nit + "," + cantidad + ",16," + vr_unitario + ",0," + costo_kilo + "," +
+                "'" + notas + "',0," + bodega + ",'UND',1,0,'S',0.0000000000000000,1) ";
+
+        try {
+            listSql.add(sql);
+        }catch (Exception e){
+            Toast.makeText(context, e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+
+        //'Script para ingresar a referencias_sto (STOCK)
+        listSql.add(actualizarRefSto(cantidad, costo_kilo, cod, dFec, bodega, swDoc));
+        listSql.add(sqlActUltEntradaUltSalida(swDoc, cod));
+
+        return (listSql);
+    }
+
+    //Transacción Puas
+    public List<Object> listaTransaccionDatable_traslado_bodega(Integer num, String cod, Integer bod_orig, Integer bod_dest, Calendar dFec, String notas, String usuario, Double cantidad, String tipo, String modelo, Double costo_kilo, Context context){
+        String sql;
+        int seq = 0;
+        List<Object> listSql = new ArrayList<>();;
+        String nit = "890900160";
+        double vrTotal = costo_kilo * cantidad;
+        //Double costo_total = costo_kilo * cantidad;
         int vendedor = 0;
         String pc = Build.BRAND +"-"+ Build.MODEL;
         String sFecha_hora = "";
@@ -64,7 +541,7 @@ public class ObjTraslado_bodLn {
             SimpleDateFormat dateFormatYear = new SimpleDateFormat("yyyy");
             String year = dateFormatYear.format(dFec.getTime());
 
-            sFecha_hora = year + "-" + month + "-01";
+            sFecha = year + "-" + month + "-01";
 
             //Capturamos las horas
             @SuppressLint("SimpleDateFormat")
@@ -81,20 +558,13 @@ public class ObjTraslado_bodLn {
             SimpleDateFormat dateFormatSeconds = new SimpleDateFormat("ss");
             String seconds = dateFormatSeconds.format(dFec.getTime());
 
-            fecha_hora = "" + month + "-" + "01" + "-" + year + " " + hour + ":" + minute + ":" + seconds + "";
-
-            sFecha = sFecha_hora;
+            sFecha_hora = year + "-" + month + "-" + "01" + " " + hour + ":" + minute + ":" + seconds + "";
 
         }else{
             Calendar calendar = Calendar.getInstance();
             @SuppressLint("SimpleDateFormat")
             SimpleDateFormat dateFormatsFecha_hora = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
             sFecha_hora = dateFormatsFecha_hora.format(calendar.getTime());
-
-            @SuppressLint("SimpleDateFormat")
-            SimpleDateFormat dateFormatfecha_hora = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
-            fecha_hora = dateFormatfecha_hora.format(calendar.getTime());
-
 
             @SuppressLint("SimpleDateFormat")
             SimpleDateFormat dateFormatsFecha = new SimpleDateFormat("yyyy-MM-dd");
@@ -195,39 +665,36 @@ public class ObjTraslado_bodLn {
             if (obj_ordenprodLn.insertarProxMes(cod,context)){
                 pruebaFec.add(Calendar.MONTH, 1);
                 if (pruebaFec.after(dFec)){
-                    dFec.add(Calendar.MONTH, 1);
 
                     //Capturamos el mes en un String
                     @SuppressLint("SimpleDateFormat")
                     SimpleDateFormat dateFormatMoth = new SimpleDateFormat("MM");
-                    String month = dateFormatMoth.format(dFec.getTime());
+                    String month = dateFormatMoth.format(pruebaFec.getTime());
 
                     //Capturamos el año en un String
                     @SuppressLint("SimpleDateFormat")
                     SimpleDateFormat dateFormatYear = new SimpleDateFormat("yyyy");
-                    String year = dateFormatYear.format(dFec.getTime());
+                    String year = dateFormatYear.format(pruebaFec.getTime());
 
                     sFecha = year + "-" + month + "-01";
 
                     //Capturamos las horas
                     @SuppressLint("SimpleDateFormat")
                     SimpleDateFormat dateFormatHour = new SimpleDateFormat("HH");
-                    String hour = dateFormatHour.format(dFec.getTime());
+                    String hour = dateFormatHour.format(pruebaFec.getTime());
 
                     //Capturamos los minutos
                     @SuppressLint("SimpleDateFormat")
                     SimpleDateFormat dateFormatMinute = new SimpleDateFormat("mm");
-                    String minute = dateFormatMinute.format(dFec.getTime());
+                    String minute = dateFormatMinute.format(pruebaFec.getTime());
 
                     //Capturamos los segundos
                     @SuppressLint("SimpleDateFormat")
                     SimpleDateFormat dateFormatSeconds = new SimpleDateFormat("ss");
-                    String seconds = dateFormatSeconds.format(dFec.getTime());
+                    String seconds = dateFormatSeconds.format(pruebaFec.getTime());
 
-                    sFecha_hora = "" + month + "-" + "01" + "-" + year + " " + hour + ":" + minute + ":" + seconds + "";
+                    sFecha_hora = year + "-" + month + "-" + "01" + " " + hour + ":" + minute + ":" + seconds + "";
 
-                    pruebaFec.add(Calendar.MONTH, -1);
-                }else{
                     pruebaFec.add(Calendar.MONTH, -1);
                 }
             }
@@ -376,39 +843,36 @@ public class ObjTraslado_bodLn {
             if (obj_ordenprodLn.insertarProxMes(cod,context)){
                 pruebaFec.add(Calendar.MONTH, 1);
                 if (pruebaFec.after(dFec)){
-                    dFec.add(Calendar.MONTH, 1);
 
                     //Capturamos el mes en un String
                     @SuppressLint("SimpleDateFormat")
                     SimpleDateFormat dateFormatMoth = new SimpleDateFormat("MM");
-                    String month = dateFormatMoth.format(dFec.getTime());
+                    String month = dateFormatMoth.format(pruebaFec.getTime());
 
                     //Capturamos el año en un String
                     @SuppressLint("SimpleDateFormat")
                     SimpleDateFormat dateFormatYear = new SimpleDateFormat("yyyy");
-                    String year = dateFormatYear.format(dFec.getTime());
+                    String year = dateFormatYear.format(pruebaFec.getTime());
 
                     sFecha = year + "-" + month + "-01";
 
                     //Capturamos las horas
                     @SuppressLint("SimpleDateFormat")
                     SimpleDateFormat dateFormatHour = new SimpleDateFormat("HH");
-                    String hour = dateFormatHour.format(dFec.getTime());
+                    String hour = dateFormatHour.format(pruebaFec.getTime());
 
                     //Capturamos los minutos
                     @SuppressLint("SimpleDateFormat")
                     SimpleDateFormat dateFormatMinute = new SimpleDateFormat("mm");
-                    String minute = dateFormatMinute.format(dFec.getTime());
+                    String minute = dateFormatMinute.format(pruebaFec.getTime());
 
                     //Capturamos los segundos
                     @SuppressLint("SimpleDateFormat")
                     SimpleDateFormat dateFormatSeconds = new SimpleDateFormat("ss");
-                    String seconds = dateFormatSeconds.format(dFec.getTime());
+                    String seconds = dateFormatSeconds.format(pruebaFec.getTime());
 
-                    sFecha_hora = "" + month + "-" + "01" + "-" + year + " " + hour + ":" + minute + ":" + seconds + "";
+                    sFecha_hora =   year + "-" + month + "-" + "01" + " " + hour + ":" + minute + ":" + seconds + "";
 
-                    pruebaFec.add(Calendar.MONTH, -1);
-                }else{
                     pruebaFec.add(Calendar.MONTH, -1);
                 }
             }
@@ -553,43 +1017,39 @@ public class ObjTraslado_bodLn {
         for(int y=0; y<listInfRerencias.size();y++){
             String cod = listInfRerencias.get(y).getReferencia();
 
-
             if (obj_ordenprodLn.insertarProxMes(cod,context)){
                 pruebaFec.add(Calendar.MONTH, 1);
                 if (pruebaFec.after(dFec)){
-                    dFec.add(Calendar.MONTH, 1);
 
                     //Capturamos el mes en un String
                     @SuppressLint("SimpleDateFormat")
                     SimpleDateFormat dateFormatMoth = new SimpleDateFormat("MM");
-                    String month = dateFormatMoth.format(dFec.getTime());
+                    String month = dateFormatMoth.format(pruebaFec.getTime());
 
                     //Capturamos el año en un String
                     @SuppressLint("SimpleDateFormat")
                     SimpleDateFormat dateFormatYear = new SimpleDateFormat("yyyy");
-                    String year = dateFormatYear.format(dFec.getTime());
+                    String year = dateFormatYear.format(pruebaFec.getTime());
 
                     sFecha = year + "-" + month + "-01";
 
                     //Capturamos las horas
                     @SuppressLint("SimpleDateFormat")
                     SimpleDateFormat dateFormatHour = new SimpleDateFormat("HH");
-                    String hour = dateFormatHour.format(dFec.getTime());
+                    String hour = dateFormatHour.format(pruebaFec.getTime());
 
                     //Capturamos los minutos
                     @SuppressLint("SimpleDateFormat")
                     SimpleDateFormat dateFormatMinute = new SimpleDateFormat("mm");
-                    String minute = dateFormatMinute.format(dFec.getTime());
+                    String minute = dateFormatMinute.format(pruebaFec.getTime());
 
                     //Capturamos los segundos
                     @SuppressLint("SimpleDateFormat")
                     SimpleDateFormat dateFormatSeconds = new SimpleDateFormat("ss");
-                    String seconds = dateFormatSeconds.format(dFec.getTime());
+                    String seconds = dateFormatSeconds.format(pruebaFec.getTime());
 
-                    sFecha_hora = "" + month + "-" + "01" + "-" + year + " " + hour + ":" + minute + ":" + seconds + "";
+                    sFecha_hora = year + "-" + month + "-" + "01" + " " + hour + ":" + minute + ":" + seconds + "";
 
-                    pruebaFec.add(Calendar.MONTH, -1);
-                }else{
                     pruebaFec.add(Calendar.MONTH, -1);
                 }
             }
@@ -710,7 +1170,7 @@ public class ObjTraslado_bodLn {
         return (listSql);
     }
 
-    public List<Object> listaTrasladoBodegaPuas(List<PuasRecepcionadoRollosModelo> listInfRerencias, Integer num, Integer bod_orig, Integer bod_dest, Calendar dFec, String notas, String usuario, String tipo, String modelo, Context context){
+    public List<Object> listaTrasladoBodegaPuas(List<PuasRecepcionadoRollosModelo> listInfRerencias, Integer num, Integer bod_orig, Integer bod_dest, Calendar dFec, String notas, String usuario, String tipo, String modelo, Context context, List<PuaRecepcionModelo> ListaPuasTerminado){
         List<Object> listSql = new ArrayList<>();
         String sFecha_hora;
         String sFecha;
@@ -733,43 +1193,39 @@ public class ObjTraslado_bodLn {
         for(int y=0; y<listInfRerencias.size();y++){
             String cod = listInfRerencias.get(y).getReferencia();
 
-
             if (obj_ordenprodLn.insertarProxMes(cod,context)){
                 pruebaFec.add(Calendar.MONTH, 1);
                 if (pruebaFec.after(dFec)){
-                    dFec.add(Calendar.MONTH, 1);
 
                     //Capturamos el mes en un String
                     @SuppressLint("SimpleDateFormat")
                     SimpleDateFormat dateFormatMoth = new SimpleDateFormat("MM");
-                    String month = dateFormatMoth.format(dFec.getTime());
+                    String month = dateFormatMoth.format(pruebaFec.getTime());
 
                     //Capturamos el año en un String
                     @SuppressLint("SimpleDateFormat")
                     SimpleDateFormat dateFormatYear = new SimpleDateFormat("yyyy");
-                    String year = dateFormatYear.format(dFec.getTime());
+                    String year = dateFormatYear.format(pruebaFec.getTime());
 
                     sFecha = year + "-" + month + "-01";
 
                     //Capturamos las horas
                     @SuppressLint("SimpleDateFormat")
                     SimpleDateFormat dateFormatHour = new SimpleDateFormat("HH");
-                    String hour = dateFormatHour.format(dFec.getTime());
+                    String hour = dateFormatHour.format(pruebaFec.getTime());
 
                     //Capturamos los minutos
                     @SuppressLint("SimpleDateFormat")
                     SimpleDateFormat dateFormatMinute = new SimpleDateFormat("mm");
-                    String minute = dateFormatMinute.format(dFec.getTime());
+                    String minute = dateFormatMinute.format(pruebaFec.getTime());
 
                     //Capturamos los segundos
                     @SuppressLint("SimpleDateFormat")
                     SimpleDateFormat dateFormatSeconds = new SimpleDateFormat("ss");
-                    String seconds = dateFormatSeconds.format(dFec.getTime());
+                    String seconds = dateFormatSeconds.format(pruebaFec.getTime());
 
-                    sFecha_hora = "" + month + "-" + "01" + "-" + year + " " + hour + ":" + minute + ":" + seconds + "";
+                    sFecha_hora = year + "-" + month + "-" + "01" + " " + hour + ":" + minute + ":" + seconds + "";
 
-                    pruebaFec.add(Calendar.MONTH, -1);
-                }else{
                     pruebaFec.add(Calendar.MONTH, -1);
                 }
             }
@@ -827,7 +1283,7 @@ public class ObjTraslado_bodLn {
         //For para ingresar a la lista todos los detalles de cada referencia
         for(int b=0; b<listInfRerencias.size();b++){
             String cod = listInfRerencias.get(b).getReferencia().trim();
-            Double peso = listInfRerencias.get(b).getPeso();
+            Integer cantidad = ListaPuasTerminado.size();
             Double promedio =  listInfRerencias.get(b).getPromedio();
             Double costo_unitario = listInfRerencias.get(b).getCosto_unitario();
             Double costo_kilo;
@@ -849,7 +1305,7 @@ public class ObjTraslado_bodLn {
                     "valor_unitario,porcentaje_descuento,costo_unitario,adicional,vendedor,bodega,und," +
                     "cantidad_und,cantidad_pedida,maneja_inventario,costo_unitario_sin,cantidad_dos) " +
                     "VALUES(" + swDoc_lin + ",'" + tipo + "'," + num + ",'" + cod + "'," + seq + "," +
-                    "'" + sFecha + "'," + nit + "," + peso + ","+ iva +",0,0," + costo_kilo + "," +
+                    "'" + sFecha + "'," + nit + "," + cantidad + ","+ iva +"," + costo_kilo + ",0," + costo_kilo + "," +
                     "'" + notas + "',0," + bod_orig + ",'UND',1,0,'S',0.0000000000000000,1) ";
 
             try {
@@ -859,7 +1315,7 @@ public class ObjTraslado_bodLn {
             }
 
             //'Script para ingresar a referencias_sto (STOCK)
-            listSql.add(actualizarRefSto(peso, costo_kilo, cod, dFec, bod_orig, swDoc_lin));
+            listSql.add(actualizarRefStoPuas(cantidad, costo_kilo, cod, dFec, bod_orig, swDoc_lin));
             listSql.add(sqlActUltEntradaUltSalida(swDoc_lin, cod));
 
             //'******************* ----------Se adiciona la Entrada
@@ -870,7 +1326,7 @@ public class ObjTraslado_bodLn {
             swDoc_lin = 12;
             sql = "INSERT INTO documentos_lin(sw,tipo,numero,codigo,seq,fec,nit,cantidad,porcentaje_iva,valor_unitario,porcentaje_descuento ," +
                     "costo_unitario,adicional,vendedor,bodega,und,cantidad_und,cantidad_pedida,maneja_inventario,costo_unitario_sin,cantidad_dos) " +
-                    "VALUES(" + swDoc_lin + ",'" + tipo + "'," + num + ",'" + cod + "'," + seq + ",'" + sFecha + "'," + nit + "," + peso +
+                    "VALUES(" + swDoc_lin + ",'" + tipo + "'," + num + ",'" + cod + "'," + seq + ",'" + sFecha + "'," + nit + "," + cantidad +
                     ",0," + valor_unit +",0, " + costo_kilo + ",'" + notas + "',0," + bod_dest + ",'UND',1,0,'S',0.0000000000000000,1) ";
 
             try {
@@ -880,7 +1336,7 @@ public class ObjTraslado_bodLn {
             }
 
             //'Script para ingresar a referencias_sto (STOCK)
-            String actRef = actualizarRefSto(peso, costo_kilo, cod, dFec, bod_dest, swDoc_lin);
+            String actRef = actualizarRefStoPuas(cantidad, costo_kilo, cod, dFec, bod_dest, swDoc_lin);
             listSql.add(actRef);
             String actUlt = sqlActUltEntradaUltSalida(swDoc_lin, cod);
             listSql.add(actUlt);
@@ -917,39 +1373,36 @@ public class ObjTraslado_bodLn {
             if (obj_ordenprodLn.insertarProxMes(cod,context)){
                 pruebaFec.add(Calendar.MONTH, 1);
                 if (pruebaFec.after(dFec)){
-                    dFec.add(Calendar.MONTH, 1);
 
                     //Capturamos el mes en un String
                     @SuppressLint("SimpleDateFormat")
                     SimpleDateFormat dateFormatMoth = new SimpleDateFormat("MM");
-                    String month = dateFormatMoth.format(dFec.getTime());
+                    String month = dateFormatMoth.format(pruebaFec.getTime());
 
                     //Capturamos el año en un String
                     @SuppressLint("SimpleDateFormat")
                     SimpleDateFormat dateFormatYear = new SimpleDateFormat("yyyy");
-                    String year = dateFormatYear.format(dFec.getTime());
+                    String year = dateFormatYear.format(pruebaFec.getTime());
 
                     sFecha = year + "-" + month + "-01";
 
                     //Capturamos las horas
                     @SuppressLint("SimpleDateFormat")
                     SimpleDateFormat dateFormatHour = new SimpleDateFormat("HH");
-                    String hour = dateFormatHour.format(dFec.getTime());
+                    String hour = dateFormatHour.format(pruebaFec.getTime());
 
                     //Capturamos los minutos
                     @SuppressLint("SimpleDateFormat")
                     SimpleDateFormat dateFormatMinute = new SimpleDateFormat("mm");
-                    String minute = dateFormatMinute.format(dFec.getTime());
+                    String minute = dateFormatMinute.format(pruebaFec.getTime());
 
                     //Capturamos los segundos
                     @SuppressLint("SimpleDateFormat")
                     SimpleDateFormat dateFormatSeconds = new SimpleDateFormat("ss");
-                    String seconds = dateFormatSeconds.format(dFec.getTime());
+                    String seconds = dateFormatSeconds.format(pruebaFec.getTime());
 
-                    sFecha_hora = "" + month + "-" + "01" + "-" + year + " " + hour + ":" + minute + ":" + seconds + "";
+                    sFecha_hora = year + "-" + month + "-" + "01" + " " + hour + ":" + minute + ":" + seconds + "";
 
-                    pruebaFec.add(Calendar.MONTH, -1);
-                }else{
                     pruebaFec.add(Calendar.MONTH, -1);
                 }
             }
@@ -1103,6 +1556,40 @@ public class ObjTraslado_bodLn {
         return sql;
     }
 
+    private String actualizarRefStoPuas(Integer cantidad , Double costUnit, String codigo, Calendar dFec, Integer bodega, Integer swTipo){
+        String sql = "";
+        //DecimalFormat df = new DecimalFormat("#0.0");
+
+        //Capturamos el mes en un String
+        @SuppressLint("SimpleDateFormat")
+        SimpleDateFormat dateFormatMoth = new SimpleDateFormat("MM");
+        String month = dateFormatMoth.format(dFec.getTime());
+
+
+        //Capturamos el año en un String
+        @SuppressLint("SimpleDateFormat")
+        SimpleDateFormat dateFormatYear = new SimpleDateFormat("yyyy");
+        String year = dateFormatYear.format(dFec.getTime());
+
+        //'sw 11 resta(salida) , sw 12 suma(entrada)
+        if (swTipo == 11 || swTipo == 16){
+            sql = "UPDATE referencias_sto SET can_sal += " + cantidad + " , cos_sal +=" + (costUnit * cantidad) + " " +
+                    ", cos_otr_sal +=" + (costUnit * cantidad) + " , can_otr_sal += " + cantidad + " , nro_com = " +
+                    "(CASE WHEN nro_com is null  THEN 1 ELSE nro_com + 1 END ) WHERE bodega = " + bodega + " " +
+                    "AND codigo ='" + codigo + "' AND mes = " + month + " and ano = " + year + " ";
+        }else if (swTipo == 12 || swTipo == 3){
+            sql = "UPDATE referencias_sto SET can_ent = (CASE WHEN can_ent is null  THEN " + cantidad + " " +
+                    "ELSE can_ent +" + cantidad + " END ), cos_ent = (CASE WHEN cos_ent is null  " +
+                    "THEN " + (costUnit * cantidad) + " ELSE cos_ent +" + (costUnit * cantidad) + " END ), " +
+                    "can_com = (CASE WHEN can_com is null  THEN " + cantidad + " ELSE can_com +" + cantidad + " " +
+                    "END ), cos_com = (CASE WHEN cos_com is null  THEN " + (costUnit * cantidad) + " " +
+                    "ELSE cos_com +" + (costUnit * cantidad) + " END ), nro_com = (CASE WHEN nro_com is null  " +
+                    "THEN 1 ELSE nro_com + 1 END )  WHERE bodega = " + bodega + " AND codigo ='" + codigo + "' " +
+                    "AND mes = " + month + " and ano = " + year + " ";
+        }
+        return sql;
+    }
+
     private Boolean existe_referencias_sto(String codigo, Integer bodega, Calendar fec, Context context){
         boolean resp = false;
 
@@ -1158,9 +1645,6 @@ public class ObjTraslado_bodLn {
         double vrTotal = calcular_costo_total_importacion(dt_codigos_valores);
         int vendedor = 0;
         String pc = Build.MODEL;
-        @SuppressLint("SimpleDateFormat")
-        SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy");
-        String fecha_hora = dateFormat.format(dFec.getTime());
         String sFecha_hora = "";
         String sFecha = "";
         int swDoc = consultarSwTipo(tipo,context);
@@ -1198,7 +1682,7 @@ public class ObjTraslado_bodLn {
             SimpleDateFormat dateFormatYear = new SimpleDateFormat("yyyy");
             String year = dateFormatYear.format(dFec.getTime());
 
-            sFecha_hora = year + "-" + month + "-01";
+            sFecha = year + "-" + month + "-01";
 
             //Capturamos las horas
             @SuppressLint("SimpleDateFormat")
@@ -1215,20 +1699,14 @@ public class ObjTraslado_bodLn {
             SimpleDateFormat dateFormatSeconds = new SimpleDateFormat("ss");
             String seconds = dateFormatSeconds.format(dFec.getTime());
 
-            fecha_hora = "" + month + "-" + "01" + "-" + year + " " + hour + ":" + minute + ":" + seconds + "";
+            sFecha_hora = year + "-" + month + "-" + "01" + " " + hour + ":" + minute + ":" + seconds + "";
 
-            sFecha = sFecha_hora;
 
         }else{
             Calendar calendar = Calendar.getInstance();
             @SuppressLint("SimpleDateFormat")
             SimpleDateFormat dateFormatsFecha_hora = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
             sFecha_hora = dateFormatsFecha_hora.format(calendar.getTime());
-
-            @SuppressLint("SimpleDateFormat")
-            SimpleDateFormat dateFormatfecha_hora = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
-            fecha_hora = dateFormatfecha_hora.format(calendar.getTime());
-
 
             @SuppressLint("SimpleDateFormat")
             SimpleDateFormat dateFormatsFecha = new SimpleDateFormat("yyyy-MM-dd");
@@ -1239,7 +1717,7 @@ public class ObjTraslado_bodLn {
                 "(sw, tipo, numero, nit, fecha, vencimiento, valor_total, vendedor, valor_aplicado, " +
                 "anulado, modelo, notas, usuario, pc, fecha_hora, bodega, duracion, concepto, centro_doc, spic, iva, valor_mercancia) " +
                 "VALUES (" + swDoc + ",'" + tipo + "'," + numero + "," + nit + ",'" + sFecha + "','" + sFecha + "'," + vrTotal + "," + vendedor + "," + 0 + ",0 " +
-                ",'" + modelo + "','" + notas + "','" + usuario + "','" + pc + "','" + sFecha + "'," + bodega + ",15,0,0,'S'," + vr_iva + "," + vr_tot_mercancia + ")";
+                ",'" + modelo + "','" + notas + "','" + usuario + "','" + pc + "','" + sFecha_hora + "'," + bodega + ",15,0,0,'S'," + vr_iva + "," + vr_tot_mercancia + ")";
         try {
             listSql.add(sql);
         }catch (Exception e){

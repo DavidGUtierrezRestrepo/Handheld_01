@@ -111,6 +111,7 @@ public class RecepcionTerminadoPuasOperarios extends AppCompatActivity implement
         //Enviamos al siguiente Activity los datos del Listview Seleccionado
         intent.putExtra("nit", ListaOperariosPuasRecepcion.get(position).getNit());
         intent.putExtra("nombre", ListaOperariosPuasRecepcion.get(position).getNombre());
+        intent.putExtra("codigo", ListaOperariosPuasRecepcion.get(position).getCodigo());
         startActivity(intent);
     }
 }

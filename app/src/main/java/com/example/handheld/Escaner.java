@@ -278,8 +278,8 @@ public class Escaner extends AppCompatActivity implements AdapterView.OnItemClic
             }
         });
         btnCancelar.setOnClickListener(v -> {
-            Intent i = new Intent(Escaner.this,MainActivity.class);
-            startActivity(i);
+            alertDialog.dismiss();
+            finish();
         });
         alertDialog.setCancelable(false);
         alertDialog.show();

@@ -361,8 +361,6 @@ public class lector_cod_alambron_cargue extends AppCompatActivity implements Ada
         }
     }
 
-
-
     //Se crea el metodo para validar que el codigo de barras ingresado existe
     private boolean validarCodigoBarras(String consecutivo){
         boolean resp = false;
@@ -548,14 +546,13 @@ public class lector_cod_alambron_cargue extends AppCompatActivity implements Ada
                                             throw new RuntimeException(e);
                                         }
                                     } else {
-                                        toastError("Primero La cantidad de rollos leídos no coincide con la ingresada en la planilla: "+eCantRollos+ "En la lista hay: "+ mAdapterCodAlambron.getCount());
-
+                                        toastError("Primero La cantidad de rollos leídos no coincide con la ingresada en la planilla: "+ eCantRollos+ "En la lista hay: "+ mAdapterCodAlambron.getCount());
                                     }
                                 } catch (SQLException e) {
                                     throw new RuntimeException(e);
                                 }
                             } else {
-                                toastError( "Segundo La cantidad de rollos registrados no coincide con la planilla"+eCantRollos + "En la lista hay "+ mAdapterCodAlambron.getCount());
+                                toastError( "Segundo La cantidad de rollos registrados no coincide con la planilla"+ eCantRollos + "En la lista hay "+ mAdapterCodAlambron.getCount());
                             }
                         }
                     })
@@ -585,11 +582,11 @@ public class lector_cod_alambron_cargue extends AppCompatActivity implements Ada
         });
         double prov_ant = 0;
         double nit_proveedor = 0;
-        double num_importacion = 0;
+        String num_importacion = "0";
         for (int i = 0; i < ListaCodAlambron.size(); i++) {
             nit_proveedor = Double.parseDouble(ListaCodAlambron.get(i).getNit_proveedor());
             if (nit_proveedor != 999999999) {
-                num_importacion = Double.parseDouble(ListaCodAlambron.get(i).getNum_imp());
+                num_importacion = ListaCodAlambron.get(i).getNum_imp();
                 if (prov_ant != nit_proveedor) {
                     prov_ant = nit_proveedor;
                     tl_codigos_valores.removeAllViews();
@@ -725,7 +722,7 @@ public class lector_cod_alambron_cargue extends AppCompatActivity implements Ada
 
 
     //Metodo que realiza la transacción
-    public boolean realizar_transaccion(TableLayout dtValores, double nitProveedor, double numImportacion) throws SQLException {
+    public boolean realizar_transaccion(TableLayout dtValores, double nitProveedor, String numImportacion) throws SQLException {
         boolean resp = true;
         String tipo = "";
         String modelo = "";
@@ -798,15 +795,15 @@ public class lector_cod_alambron_cargue extends AppCompatActivity implements Ada
 
 
     //Metodo para registrar la transacción en DMS
-    public List<Object> ingProdDms(TableLayout tl, String tipo, double nit_proveedor, String modelo, double num_imp) throws SQLException {
+    public List<Object> ingProdDms(TableLayout tl, String tipo, double nit_proveedor, String modelo, String num_imp) throws SQLException {
         String bodega = "1";
         Calendar calendar = Calendar.getInstance();
         @SuppressLint("SimpleDateFormat")
-        SimpleDateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy");
+        SimpleDateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss a");
         String Fec = dateFormat.format(calendar.getTime());
         Date dFec = new Date();
         String usuario = nit_usuario;
-        String notas = "MV No." + num_imp + ". " + Fec + " usr:" + usuario;
+        String notas = "MOVIL No." + num_imp + " fecha: " + Fec + " usuario: " + usuario;
         //String notas = "SP No." + num_imp + ". " + dFec.getYear() + "-" + dFec.getMonth() + "-" + dFec.getDay() + " usr:" + usuario;
         numero_transacc = Obj_ordenprodLn.mover_consecutivo(tipo, lector_cod_alambron_cargue.this);
         //toastAcierto("Pasamos el metodo mover consecutivo y entramos al metodo listaTransaccionTableLayout_importaciones"+ numero_transacc);

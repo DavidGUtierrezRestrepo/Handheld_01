@@ -91,7 +91,7 @@ public class Pedido extends AppCompatActivity implements AdapterView.OnItemClick
     //METODO PARA CERRAR LA APLICACION
     @SuppressLint("")
     public void salir(View view){
-        finishAffinity();
+        finish();
     }
 
     //Metodo "Al presionar algun elemento del listview"
