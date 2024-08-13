@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/text"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#FFFFFF"
+    tools:context=".Inventario_resumen_alambre">
+
+    <Button
+        android:id="@+id/btnSalida"
+        android:layout_width="130dp"
+        android:layout_height="46dp"
+        android:layout_marginStart="155dp"
+        android:layout_marginEnd="127dp"
+        android:layout_marginBottom="5dp"
+        android:layout_weight="1"
+        android:backgroundTint="#979797"
+        android:drawableEnd="@drawable/salida1"
+        android:onClick="salir"
+        android:text="@string/btnSalir"
+        android:textSize="12sp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/buttonAgregar"
+        tools:ignore="UsingOnClickInXml" />
+
+    <TextView
+        android:id="@+id/textViewTitulo"
+        android:layout_width="439dp"
+        android:layout_height="46dp"
+        android:layout_marginStart="4dp"
+        android:layout_marginTop="5dp"
+        android:layout_marginEnd="5dp"
+        android:layout_marginBottom="15dp"
+        android:background="#5B81F3"
+        android:text="RESUMEN"
+        android:textAlignment="center"
+        android:textColor="@color/white"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        app:layout_constraintBottom_toTopOf="@+id/Resumen"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.486"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <ListView
+        android:id="@+id/Resumen"
+        android:layout_width="305dp"
+        android:layout_height="372dp"
+        android:layout_marginStart="42dp"
+        android:layout_marginTop="15dp"
+        android:layout_marginEnd="32dp"
+        app:layout_constraintBottom_toTopOf="@+id/buttonAgregar"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/textViewTitulo" />
+
+    <Button
+        android:id="@+id/buttonAgregar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="20dp"
+        android:layout_marginTop="30dp"
+        android:layout_marginEnd="29dp"
+        android:backgroundTint="#25984A"
+        android:drawableEnd="@drawable/cheque"
+        android:text="Agregar"
+        app:layout_constraintBottom_toTopOf="@+id/btnSalida"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@+id/buttonRetroceder"
+        app:layout_constraintTop_toBottomOf="@+id/Resumen"
+        tools:ignore="MissingConstraints" />
+
+    <Button
+        android:id="@+id/buttonRetroceder"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="29dp"
+        android:layout_marginTop="51dp"
+        android:layout_marginEnd="20dp"
+        android:backgroundTint="@color/redGalva"
+        android:drawableEnd="@drawable/salida"
+        android:text="Retroceder"
+        android:textColor="@color/white"
+        app:layout_constraintBottom_toTopOf="@+id/btnSalida"
+        app:layout_constraintEnd_toStartOf="@+id/buttonAgregar"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/Resumen"
+        app:layout_constraintVertical_bias="1.0"
+        tools:ignore="MissingConstraints" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>
+

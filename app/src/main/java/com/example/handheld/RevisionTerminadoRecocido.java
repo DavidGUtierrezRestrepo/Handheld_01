@@ -2,9 +2,6 @@ package com.example.handheld;
 
 import static com.example.handheld.R.id.txtCedulaLogistica;
 
-import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.app.AppCompatActivity;
-
 import android.annotation.SuppressLint;
 import android.app.ProgressDialog;
 import android.content.Context;
@@ -32,6 +29,9 @@ import android.widget.ProgressBar;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.handheld.ClasesOperativas.Gestion_alambronLn;
 import com.example.handheld.ClasesOperativas.Ing_prod_ad;

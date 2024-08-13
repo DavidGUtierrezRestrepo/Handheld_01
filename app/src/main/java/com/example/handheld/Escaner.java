@@ -2,7 +2,6 @@ package com.example.handheld;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
-import android.content.Intent;
 import android.media.AudioManager;
 import android.media.SoundPool;
 import android.os.Bundle;
@@ -32,7 +31,6 @@ import com.example.handheld.ClasesOperativas.Gestion_alambronLn;
 import com.example.handheld.ClasesOperativas.Ing_prod_ad;
 import com.example.handheld.ClasesOperativas.ObjTraslado_bodLn;
 import com.example.handheld.ClasesOperativas.Obj_ordenprodLn;
-import com.example.handheld.ClasesOperativas.objOperacionesDb;
 import com.example.handheld.atv.holder.adapters.listescanerAdapter;
 import com.example.handheld.conexionDB.Conexion;
 import com.example.handheld.conexionDB.ConfiguracionBD;
@@ -70,7 +68,6 @@ public class Escaner extends AppCompatActivity implements AdapterView.OnItemClic
     ArrayList<String> listaTp;
     ArrayList<TipotransModelo> tiposLista = new ArrayList<>();
     List<Object> listTransaccion_corsan;
-    List<Object> listTransaccion_prod;
 
     //Se inicializa un objeto conexion
     Conexion conexion;
@@ -78,12 +75,11 @@ public class Escaner extends AppCompatActivity implements AdapterView.OnItemClic
     //Se declaran los objetos de otras clases necesarias
     Gestion_alambronLn obj_gestion_alambronLn = new Gestion_alambronLn();
     ObjTraslado_bodLn objTraslado_bodLn = new ObjTraslado_bodLn();
-    com.example.handheld.ClasesOperativas.objOperacionesDb objOperacionesDb = new objOperacionesDb();
     Ing_prod_ad ing_prod_ad = new Ing_prod_ad();
 
     //se declaran las variables donde estaran los datos que vienen de la anterior clase
-    Integer pNumero, pIdDetalle, bod_origen, bod_destino, repeticiones;
-    String pfecha, pcodigo, pPendiente, pDescripcion, nit_usuario, modelo;
+    Integer pNumero, pIdDetalle, bod_origen, bod_destino;
+    String pfecha, pcodigo, pPendiente, pDescripcion, nit_usuario, modelo,db_produccion;
 
     //Se inicializa variables necesarias en la clase
     boolean yaentre = false;
@@ -143,6 +139,9 @@ public class Escaner extends AppCompatActivity implements AdapterView.OnItemClic
         //Se definen las herramientas para el listView
         listviewEscaner = findViewById(R.id.listviewEscaner);
         listviewEscaner.setOnItemClickListener(this);
+
+        //Le asignamos el nombre de la base de datos que estemos utilizando (La real o la de prueba)
+        db_produccion = ConfiguracionBD.obtenerNombreBD(2) + ".dbo.";
 
         //Recibimos los datos del pedido desde el anterior Activity
         pNumero = getIntent().getIntExtra("numero", 0);
@@ -242,6 +241,7 @@ public class Escaner extends AppCompatActivity implements AdapterView.OnItemClic
         ingresarCedulas();
     }
 
+    //funcion donde se verifican las cedulas de la persona que entrega y recibe
     private void ingresarCedulas() {
         AlertDialog.Builder builder = new AlertDialog.Builder(Escaner.this);
         View mView = getLayoutInflater().inflate(R.layout.alertdialog_cedulastranslado,null);
@@ -454,15 +454,6 @@ public class Escaner extends AppCompatActivity implements AdapterView.OnItemClic
         }catch (Exception e){
             Toast.makeText(Escaner.this,e.getMessage(),Toast.LENGTH_SHORT).show();
         }
-
-        //Trabajo para el translator de bodega 2 a 1
-        /*if (bod_origen.equals("2") && bod_destino.equals("1")){
-            if (resp == true){
-                resp == false;
-            }else{
-                resp == true;
-            }
-        }*/
         return respuesta;
     }
 
@@ -518,94 +509,58 @@ public class Escaner extends AppCompatActivity implements AdapterView.OnItemClic
         Double gPeso = Double.parseDouble(txtKilosRollo.getText().toString());
         String gCodigo = lblCodigo.getText().toString().trim();
         String gBodega = objTraslado_bodLn.obtenerBodegaXcodigo(gCodigo);
-        String gStock = conexion.consultarStock(Escaner.this,gCodigo,gBodega);
+        double gStock = Double.parseDouble(conexion.consultarStock(Escaner.this,gCodigo,gBodega));
         Double gNit_prov = Double.parseDouble(obj_gestion_alambronLn.extraerDatoCodigoBarras("proveedor", consecutivo));
-        Double gNum_importa = Double.parseDouble(obj_gestion_alambronLn.extraerDatoCodigoBarras("num_importacion", consecutivo));
+        double gNum_importa = Double.parseDouble(obj_gestion_alambronLn.extraerDatoCodigoBarras("num_importacion", consecutivo));
         Double gDeta = Double.parseDouble(obj_gestion_alambronLn.extraerDatoCodigoBarras("detalle", consecutivo));
         Double gNum_rollo = Double.parseDouble(obj_gestion_alambronLn.extraerDatoCodigoBarras("num_rollo", consecutivo));
         String sql_costo_unit = "SELECT d.costo_kilo FROM J_alambron_solicitud_det d WHERE d.num_importacion =" + gNum_importa + " AND d.nit_proveedor =" + gNit_prov + "  AND d.id_det =" + gDeta;
         Double gCosto_unit = Double.parseDouble(conexion.obtenerCostoUnit(Escaner.this,sql_costo_unit));
 
-        try {
-            realizar_transaccion(gCodigo, gPeso, gNit_prov, gNum_importa, gTipo, gDeta, gNum_rollo, gCosto_unit);
-            etCodigo.requestFocus();
-        }catch (Exception e){
-            leer_nuevo();
-            toastError(e.getMessage());
-        }
-    }
+        if (gPeso <= gStock){
+            listTransaccion_corsan = traslado_bodega(gCodigo, gPeso, gTipo, gCosto_unit);
 
-    //Metodo donde se agregan las consultas sql a una lista y se envian a otro metodo para ejecutarlas
-    @SuppressLint("SetTextI18n")
-    public Boolean realizar_transaccion(String gCodigo, Double gPeso, Double gNit_prov, Double gNum_importa, String gTipo, Double gDeta, Double gNum_rollo, Double gCosto_unit) throws SQLException {
-        cargando.setVisibility(View.VISIBLE);
-        boolean resp = true;
-        listTransaccion_prod = new ArrayList<>();
-        String sql_rollo;
-        String consecutivo = etCodigo.getText().toString();
-        String sql_solicitud;
-        String sql_detalle_salida;
-        String sql_devuelto;
-        listTransaccion_corsan = traslado_bodega(gCodigo, gPeso, gTipo, gCosto_unit);
-        sql_solicitud = "INSERT INTO J_salida_alambron_transaccion (numero,id_detalle,tipo,num_transaccion) " +
-                "VALUES (" + pNumero + "," + pIdDetalle + ",'" + gTipo + "'," + numero_transaccion + ") ";
+            // Obtén la fecha y hora actual
+            Date fechaActual = new Date();
+            // Define el formato de la fecha y hora que deseas obtener
+            @SuppressLint("SimpleDateFormat")
+            SimpleDateFormat formatoFecha = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+            // Convierte la fecha actual en un String con el formato definido
+            String fechaActualString = formatoFecha.format(fechaActual);
 
+            String sql_detalle_salida = "INSERT INTO " + db_produccion + "jd_detalle_salida_alambron (nit_entrega,nit_recibe,fecha_transaccion,trb1) " +
+                    "VALUES (" + personaEntrega.getNit() + "," + personaRecibe.getNit() + ",'" + fechaActualString + "'," + numero_transaccion + ") ";
 
-        // Obtén la fecha y hora actual
-        Date fechaActual = new Date();
-        // Define el formato de la fecha y hora que deseas obtener
-        @SuppressLint("SimpleDateFormat")
-        SimpleDateFormat formatoFecha = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        // Convierte la fecha actual en un String con el formato definido
-        String fechaActualString = formatoFecha.format(fechaActual);
+            try {
+                //Se añade el sql a la lista
+                listTransaccion_corsan.add(sql_detalle_salida);
+            }catch (Exception e){
+                Toast.makeText(Escaner.this, e.getMessage(), Toast.LENGTH_SHORT).show();
+            }
 
-        sql_detalle_salida = "INSERT INTO jd_detalle_salida_alambron (nit_entrega,nit_recibe,fecha_transaccion,trb1) " +
-                "VALUES (" + personaEntrega.getNit() + "," + personaRecibe.getNit() + ",'" + fechaActualString + "'," + numero_transaccion + ") ";
-
-        try {
-            //Se añade el sql a la lista
-            listTransaccion_prod.add(sql_solicitud);
-        }catch (Exception e){
-            Toast.makeText(Escaner.this, e.getMessage(), Toast.LENGTH_SHORT).show();
-        }
-
-        try {
-            //Se añade el sql a la lista
-            listTransaccion_prod.add(sql_detalle_salida);
-        }catch (Exception e){
-            Toast.makeText(Escaner.this, e.getMessage(), Toast.LENGTH_SHORT).show();
-        }
-
-        if (bod_origen.equals(1)  && bod_destino.equals(2)){
-            sql_rollo = "UPDATE J_alambron_importacion_det_rollos SET " +
+            String sql_rollo = "UPDATE " + db_produccion + "J_alambron_importacion_det_rollos SET " +
                     "num_transaccion_salida =" + numero_transaccion + " ,tipo_salida = '" + gTipo + "' " +
                     "WHERE num_importacion=" + num_importacion + " AND  id_solicitud_det =" + gDeta + " " +
                     "AND numero_rollo =" + gNum_rollo + " AND nit_proveedor =" + gNit_prov;
-        }else{
-            sql_rollo = "UPDATE J_alambron_importacion_det_rollos  SET num_transaccion_salida = NULL " +
-                    ",tipo_salida = NULL WHERE num_importacion=" + num_importacion + " " +
-                    "AND  id_solicitud_det =" + gDeta + " AND numero_rollo =" + gNum_rollo + " " +
-                    "AND nit_proveedor =" + gNit_prov;
 
-            sql_devuelto = "UPDATE J_alambron_importacion_det_rollos " +
-                    "SET num_transaccion_dev =" + numero_transaccion + "" +
-                    "WHERE num_importacion=" + num_importacion + " AND  id_solicitud_det =" + gDeta + " " +
-                    "AND numero_rollo =" + gNum_rollo + " AND nit_proveedor =" + gNit_prov;
+            try {
+                //Se añade el sql a la lista
+                listTransaccion_corsan.add(sql_rollo);
+            }catch (Exception e){
+                Toast.makeText(Escaner.this, e.getMessage(), Toast.LENGTH_SHORT).show();
+            }
 
-            objOperacionesDb.ejecutarUpdateProduccion(sql_devuelto,Escaner.this);
-        }
+            String sql_solicitud = "INSERT INTO " + db_produccion + "J_salida_alambron_transaccion (numero,id_detalle,tipo,num_transaccion) " +
+                    "VALUES (" + pNumero + "," + pIdDetalle + ",'" + gTipo + "'," + numero_transaccion + ") ";
 
-        try {
-            //Se añade el sql a la lista
-            listTransaccion_prod.add(sql_rollo);
-        }catch (Exception e){
-            Toast.makeText(Escaner.this, e.getMessage(), Toast.LENGTH_SHORT).show();
-        }
-        repeticiones = 0;
-        error = transaccion();
-        if (error.equals("")){
-            repeticiones = 0;
-            error = tabla_produccion();
+            try {
+                //Se añade el sql a la lista
+                listTransaccion_corsan.add(sql_solicitud);
+            }catch (Exception e){
+                Toast.makeText(Escaner.this, e.getMessage(), Toast.LENGTH_SHORT).show();
+            }
+
+            error = ing_prod_ad.ExecuteSqlTransaction(listTransaccion_corsan, ConfiguracionBD.obtenerNombreBD(1), Escaner.this);
             if (error.equals("")){
                 addRollo(num_importacion, consecutivo, gPeso, gNum_rollo, gDeta, gNit_prov, gTipo);
                 etCodigo.setEnabled(true);
@@ -628,68 +583,11 @@ public class Escaner extends AppCompatActivity implements AdapterView.OnItemClic
                 alertDialog.show();
                 etCodigo.setEnabled(true);
                 leer_nuevo();
-                resp = false;
             }
-
         }else{
+            toastError("El pedido es más grande que el stock!");
             AudioError();
-            AlertDialog.Builder builder = new AlertDialog.Builder(Escaner.this);
-            View mView = getLayoutInflater().inflate(R.layout.alertdialog_aceptar,null);
-            TextView alertMensaje = mView.findViewById(R.id.alertMensaje);
-            alertMensaje.setText(error);
-            Button btnAceptar = mView.findViewById(R.id.btnAceptar);
-            btnAceptar.setText("Aceptar");
-            builder.setView(mView);
-            AlertDialog alertDialog = builder.create();
-            btnAceptar.setOnClickListener(v -> alertDialog.dismiss());
-            alertDialog.setCancelable(false);
-            alertDialog.show();
-            etCodigo.setEnabled(true);
-            leer_nuevo();
-            resp = false;
         }
-        return  resp;
-    }
-
-    private String transaccion() {
-        repeticiones = repeticiones + 1;
-        if(repeticiones<=5){
-            cargando.setVisibility(View.VISIBLE);
-            // quitar mensaje guardado ya que esto no funciono muy bien en el programa
-            mensajeCargando.setText("Intento transacción " + repeticiones + "/5");
-            error = ing_prod_ad.ExecuteSqlTransaction(listTransaccion_corsan, ConfiguracionBD.obtenerNombreBD(1), Escaner.this);
-            if(error.equals("")){
-                mensajeCargando.setText("");
-                return error;
-            }else{
-                transaccion();
-            }
-        }else{
-            cargando.setVisibility(View.INVISIBLE);
-            return error;
-        }
-        return error;
-    }
-
-    private String tabla_produccion() {
-        cargando.setVisibility(View.VISIBLE);
-        repeticiones = repeticiones + 1;
-        if(repeticiones<=5){
-            //Quitar este mensaje ya que no funciono muy bien en el programa
-            mensajeCargando.setText("Intento producción " + repeticiones + "/5");
-            error = ing_prod_ad.ExecuteSqlTransaction(listTransaccion_prod, ConfiguracionBD.obtenerNombreBD(2), Escaner.this);
-            if(error.equals("")){
-                mensajeCargando.setText("");
-                return error;
-            }else{
-                transaccion();
-            }
-        }else{
-            cargando.setVisibility(View.INVISIBLE);
-            mensajeCargando.setText("");
-            return error;
-        }
-        return error;
     }
 
     //Solo para 'TRB1' modelo 08 traslado de la 1 a la 2

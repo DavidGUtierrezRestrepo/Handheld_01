@@ -560,7 +560,7 @@ public class EscanerTrasladoMateriaPrimaPuntilleria extends AppCompatActivity im
                 if (validacion.getDestino().equals("A")){
                     toastError("El rollo ya pertenece a PUAS");
                 }else{
-                    toastError("El rollo ya pertenece a PUNTILLERIA");
+                    toastError("El rollo ya pertenece a GIANTKILLER");
                 }
             }else{
                 toastError("El rollo ya fue trasladado");

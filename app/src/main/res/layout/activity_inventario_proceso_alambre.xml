@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".Inventario_proceso_alambre">
+
+    <Spinner
+        android:id="@+id/spinnerProceso"
+        android:layout_width="278dp"
+        android:layout_height="33dp"
+        app:layout_constraintBottom_toTopOf="@+id/spinnerBodega"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintStart_toEndOf="@+id/textView_proceso"
+        app:layout_constraintTop_toBottomOf="@+id/textView_inventario"
+        tools:ignore="MissingConstraints" />
+
+    <TextView
+        android:id="@+id/textView_inventario"
+        android:layout_width="419dp"
+        android:layout_height="35dp"
+        android:layout_marginBottom="64dp"
+        android:background="#5B81F3"
+        android:backgroundTint="#5B81F3"
+        android:text="INVENTARIO"
+        android:textAlignment="center"
+        android:textColor="@color/white"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        app:layout_constraintBottom_toTopOf="@+id/spinnerProceso"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:ignore="MissingConstraints" />
+
+    <TextView
+        android:id="@+id/textBodega"
+        android:layout_width="86dp"
+        android:layout_height="54dp"
+        android:layout_marginStart="24dp"
+        android:layout_marginTop="88dp"
+        android:layout_marginBottom="163dp"
+        android:text="Bodega:"
+        android:textColor="@color/black"
+        android:textSize="20sp"
+        app:layout_constraintBottom_toTopOf="@+id/buttonAceptar"
+        app:layout_constraintEnd_toStartOf="@+id/spinnerBodega"
+        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/textView_proceso" />
+
+    <Button
+        android:id="@+id/buttonAceptar"
+        android:layout_width="273dp"
+        android:layout_height="61dp"
+        android:layout_marginStart="87dp"
+        android:layout_marginEnd="87dp"
+        android:layout_marginBottom="145dp"
+        android:backgroundTint="#25984A"
+        android:drawableEnd="@drawable/adelante"
+        android:onClick="buttonPress"
+        android:text="Comenzar Inventario"
+        android:textColor="@color/white"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/textBodega" />
+
+    <Spinner
+        android:id="@+id/spinnerBodega"
+        android:layout_width="278dp"
+        android:layout_height="33dp"
+        android:layout_marginTop="102dp"
+        android:layout_marginBottom="185dp"
+        app:layout_constraintBottom_toTopOf="@+id/buttonAceptar"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.323"
+        app:layout_constraintStart_toEndOf="@+id/textView_proceso"
+        app:layout_constraintTop_toBottomOf="@+id/spinnerProceso"
+        tools:ignore="MissingConstraints" />
+
+    <TextView
+        android:id="@+id/textView_proceso"
+        android:layout_width="75dp"
+        android:layout_height="47dp"
+        android:layout_marginStart="24dp"
+        android:layout_marginTop="65dp"
+        android:text="Area:"
+        android:textColor="@color/black"
+        android:textSize="20sp"
+        app:layout_constraintBottom_toTopOf="@+id/textBodega"
+        app:layout_constraintEnd_toStartOf="@+id/spinnerProceso"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/textView_inventario"
+        tools:ignore="MissingConstraints" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

@@ -29,6 +29,23 @@ public class Obj_ordenprodLn {
         return Integer.toString(numero);
     }
 
+    public static String mover_consecutivoTref(String tipo, Context context) {
+        String numeroString;
+        int numero = 0;
+        try {
+            String sqlMaxNumero = "SELECT CASE WHEN (MAX (siguiente)) is null THEN 0 ELSE MAX (siguiente) END as numero  FROM consecutivos WHERE  tipo = '" + tipo + "'";
+            numeroString = conexion.obtenerConsecutivo(context, sqlMaxNumero);
+            numero = Integer.parseInt(numeroString);
+            numero += 1;
+            String sql = "UPDATE consecutivos SET siguiente = " + numero + " WHERE tipo = '" + tipo + "'";
+            objOperacionesDb.ejecutarUpdate(sql, context);
+
+        } catch (Exception e) {
+            Toast.makeText(context, "a", Toast.LENGTH_SHORT).show();
+        }
+        return Integer.toString(numero);
+    }
+
     public static Integer realizarUpdateProduccion(String sql, Context context) {
         int numero = 0;
         try {

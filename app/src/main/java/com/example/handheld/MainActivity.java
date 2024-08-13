@@ -129,7 +129,6 @@ public class MainActivity extends AppCompatActivity {
                 TextView txtCedula = mView.findViewById(R.id.textView6);
                 Button btnAceptar = mView.findViewById(R.id.btnAceptar);
                 Button btnCancelar = mView.findViewById(R.id.btnCancelar);
-                ProgressBar Barraprogreso = mView.findViewById(R.id.progress_bar);
                 //Enviamos valores a los elementos del alert
                 txtMrollos.setText("¡Se cambiaran las bases de datos!");
                 txtCedula.setText("Ingrese cedula autorizada");
@@ -137,8 +136,11 @@ public class MainActivity extends AppCompatActivity {
                 builder.setView(mView);
                 AlertDialog alertDialog = builder.create();
                 btnAceptar.setOnClickListener(v12 -> {
+                    //Verificamos que haya internet
                     if (isNetworkAvailable()) {
+                        //Obtenemos la cedula del EditText
                         String CedulaAutorizada = CedulaIngresada.getText().toString().trim();
+                        //Verificamos que el campo de cedula no este vacio
                         if (CedulaAutorizada.equals("")){
                             AudioError();
                             toastError("Ingresar cedula autorizada");
@@ -235,6 +237,7 @@ public class MainActivity extends AppCompatActivity {
         toast.show();
     }
 
+    //Este codigo es del arbol
     public void agregarTreeview(){
         //Root
         TreeNode root = TreeNode.root();
@@ -316,8 +319,6 @@ public class MainActivity extends AppCompatActivity {
         //parent.addChildren(child1);
         root.addChild(child1);
 
-        ////////////////////////////////////////////////////////////////////////////////////////////
-
         //Grupo"Gestion de Gestion Galvanizado"
         MyHolder.IconTreeItem childItem2 = new MyHolder.IconTreeItem(R.drawable.ic_folder, "Gestion Galvanizado");
         TreeNode child2 = new TreeNode(childItem2).setViewHolder(new MyHolder(getApplicationContext(), false, R.layout.child, 25));
@@ -327,20 +328,52 @@ public class MainActivity extends AppCompatActivity {
         MyHolder.IconTreeItem subChildItem2_1 = new MyHolder.IconTreeItem(R.drawable.ic_folder, "Traslado de Bodega (2-11)");
         TreeNode subChild2_1 = new TreeNode(subChildItem2_1).setViewHolder(new MyHolder(getApplicationContext(), false, R.layout.child, 100));
 
+        //Al darle clic a este elemento en el treeview se abrira una nueva pantalla y se enviaran unos datos
+        subChild2_1.setClickListener((node, value) -> {
+            if (isNetworkAvailable()) {
+                Intent i = new Intent(MainActivity.this, Pedido_MP_Galvanizado.class);
+                i.putExtra("nit_usuario", cd);
+                i.putExtra("bod_origen", 2);
+                i.putExtra("bod_destino", 11);
+                i.putExtra("modelo", "21");
+
+                startActivity(i);
+            } else {
+                toastError("Problemas de conexión a Internet");
+            }
+        });
+
+
+
         //SubGrupo2"Gestion Galvanizado"
         //Enviamos el icono y el texto para el SubGrupo
         MyHolder.IconTreeItem subChildItem2_2 = new MyHolder.IconTreeItem(R.drawable.ic_folder, "Traslado de Bodega (11-2)");
         TreeNode subChild2_2 = new TreeNode(subChildItem2_2).setViewHolder(new MyHolder(getApplicationContext(), false, R.layout.child, 100));
 
+        //Al darle clic a este elemento en el treeview se abrira una nueva pantalla y se enviaran unos datos
+        subChild2_2.setClickListener((node, value) -> {
+            if (isNetworkAvailable()) {
+                Intent i = new Intent(MainActivity.this, Pedido_MP_Galvanizado.class);
+                i.putExtra("nit_usuario", cd);
+                i.putExtra("bod_origen", 11);
+                i.putExtra("bod_destino", 2);
+                i.putExtra("modelo", "24");
+
+                startActivity(i);
+            } else {
+                toastError("Problemas de conexión a Internet");
+            }
+        });
+
         //Agregamos subgrupo1"Gestion Galvanizado".
-        //child2.addChild(subChild2_1);
+        child2.addChild(subChild2_1);
 
         //Agregamos subgrupo2"Gestion Galvanizado".
-        //child2.addChild(subChild2_2);
+        child2.addChild(subChild2_2);
 
         //Agregamos Grupo"Gestion Galvanizado".
         //parent.addChildren(child1);
-        //root.addChild(child2);
+        root.addChild(child2);
 
         ////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -775,6 +808,22 @@ public class MainActivity extends AppCompatActivity {
             intent.putExtra("nit_usuario", cd);
             startActivity(intent);
         });
+
+        //SubGrupo5" Inventario "
+        //Enviamos el icono y el texto para el SubGrupo
+        MyHolder.IconTreeItem subChildItemInventario = new MyHolder.IconTreeItem(R.drawable.ic_folder, "Inventario");
+        TreeNode subChildInventario = new TreeNode(subChildItemInventario).setViewHolder(new MyHolder(getApplicationContext(), false, R.layout.child, 100));
+
+        //Al darle clic a este elemento en el treeview se abrira una nueva pantalla y se enviaran unos datos
+        subChildInventario.setClickListener((node, value) -> {
+            Intent intent = new Intent(MainActivity.this,  Inventario_proceso_alambre.class);
+            intent.putExtra("nit_usuario", cd);
+            startActivity(intent);
+        });
+
+
+        //Agregamos subgrupo4"Otros".
+        child7.addChild(subChildInventario);
 
 
         //Agregamos subgrupo1"Otros".

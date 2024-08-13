@@ -52,7 +52,7 @@ public class listpedidoAdapter extends ArrayAdapter<PedidoModelo> {
         TextView textopendiente = view.findViewById(R.id.txtNumimp);
         textopendiente.setText(modelo.getPendiente());
 
-        TextView textodescripcion = view.findViewById(R.id.txtdescripcion);
+        TextView textodescripcion = view.findViewById(R.id.textViewdescripcion);
         textodescripcion.setText(modelo.getDescripcion());
 
         return view;

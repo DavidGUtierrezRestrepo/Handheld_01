@@ -68,7 +68,8 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal">
+        android:orientation="horizontal"
+        android:padding="10dp">
 
         <EditText
             android:id="@+id/txtCedulaLogistica"
@@ -76,9 +77,12 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:ems="10"
-            android:hint="Cedula Logistica"
+            android:hint="Cédula Logística"
             android:inputType="number"
-            android:textAlignment="center" />
+            android:textAlignment="center"
+            android:minHeight="48dp"
+            android:padding="16dp"
+            android:autofillHints="" />
     </LinearLayout>
 
     <LinearLayout

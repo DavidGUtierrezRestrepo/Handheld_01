@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".Inventario_transaccion_alambre">
+
+    <TextView
+        android:id="@+id/textView9"
+        android:layout_width="422dp"
+        android:layout_height="37dp"
+        android:layout_marginTop="10dp"
+        android:layout_marginBottom="7dp"
+        android:background="#5B81F3"
+        android:text="ESCANER"
+        android:textAlignment="center"
+        android:textColor="@color/white"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        app:layout_constraintBottom_toTopOf="@+id/txtLector"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.545"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <TextView
+        android:id="@+id/txtLector"
+        android:layout_width="0dp"
+        android:layout_height="32dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="7dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="9dp"
+        android:background="@color/redGalva"
+        android:backgroundTint="@color/redGalva"
+        android:text="LECTOR HANDHELD"
+        android:textAlignment="center"
+        android:textColor="#800000"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        app:layout_constraintBottom_toTopOf="@+id/codigoCajaRecep"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/textView9" />
+
+    <EditText
+        android:id="@+id/codigoCajaRecep"
+        android:layout_width="0dp"
+        android:layout_height="45dp"
+        android:layout_marginStart="24dp"
+        android:layout_marginEnd="24dp"
+        android:layout_marginBottom="9dp"
+        android:ems="10"
+        android:inputType="text"
+        app:layout_constraintBottom_toTopOf="@+id/listviewInventario"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="1.0"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/txtLector" />
+
+    <ListView
+        android:id="@+id/listviewInventario"
+        android:layout_width="288dp"
+        android:layout_height="301dp"
+        android:layout_marginStart="24dp"
+        android:layout_marginEnd="24dp"
+        app:layout_constraintBottom_toTopOf="@+id/txtTotalRollos"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.49"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/codigoCajaRecep" />
+
+    <Button
+        android:id="@+id/buttonSalir"
+        android:layout_width="0dp"
+        android:layout_height="52dp"
+        android:layout_marginStart="24dp"
+        android:layout_marginEnd="8dp"
+        android:backgroundTint="#FF2414"
+        android:drawableEnd="@drawable/cancelar"
+        android:text="Eliminar"
+        android:textColor="@color/white"
+        app:layout_constraintBottom_toTopOf="@+id/buttonAtras"
+        app:layout_constraintEnd_toStartOf="@+id/buttonListo"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/txtTotalRollos" />
+
+    <Button
+        android:id="@+id/buttonListo"
+        android:layout_width="0dp"
+        android:layout_height="52dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginEnd="24dp"
+        android:backgroundTint="#25984A"
+        android:drawableEnd="@drawable/cheque"
+        android:text="Enviar"
+        android:textColor="@color/white"
+        app:layout_constraintBottom_toTopOf="@+id/buttonAtras"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@+id/buttonSalir"
+        app:layout_constraintTop_toBottomOf="@+id/textView16" />
+
+    <Button
+        android:id="@+id/buttonAtras"
+        android:layout_width="wrap_content"
+        android:layout_height="52dp"
+        android:layout_marginStart="139dp"
+        android:layout_marginEnd="140dp"
+        android:layout_marginBottom="5dp"
+        android:backgroundTint="#979797"
+        android:drawableEnd="@drawable/salida1"
+        android:text="Salir"
+        android:textColor="@color/white"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/buttonSalir" />
+
+    <TextView
+        android:id="@+id/textView16"
+        android:layout_width="31dp"
+        android:layout_height="23dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginEnd="158dp"
+        android:layout_marginBottom="5dp"
+        android:text="0"
+        android:textColor="@color/black"
+        app:layout_constraintBottom_toTopOf="@+id/buttonListo"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@+id/txtTotalRollos"
+        app:layout_constraintTop_toBottomOf="@+id/listviewInventario" />
+
+    <TextView
+        android:id="@+id/txtTotalRollos"
+        android:layout_width="80dp"
+        android:layout_height="19dp"
+        android:layout_marginStart="134dp"
+        android:layout_marginBottom="15dp"
+        android:text="Total leidos: "
+        android:textColor="@color/black"
+        app:layout_constraintBottom_toTopOf="@+id/buttonSalir"
+        app:layout_constraintEnd_toStartOf="@+id/textView16"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/listviewInventario" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

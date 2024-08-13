@@ -3,6 +3,7 @@ package com.example.handheld.conexionDB;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.os.StrictMode;
+import android.util.Log;
 import android.widget.Toast;
 
 import com.example.handheld.modelos.BodegasModelo;
@@ -11,6 +12,7 @@ import com.example.handheld.modelos.CajasRefeModelo;
 import com.example.handheld.modelos.CentrosModelo;
 import com.example.handheld.modelos.CodigoGalvModelo;
 import com.example.handheld.modelos.CorreoModelo;
+import com.example.handheld.modelos.CorreoResumenModelo;
 import com.example.handheld.modelos.CuentasModelo;
 import com.example.handheld.modelos.DatosRecepcionLogistica;
 import com.example.handheld.modelos.DatosRevisionCalidad;
@@ -31,6 +33,7 @@ import com.example.handheld.modelos.RecoRecepcionModelo;
 import com.example.handheld.modelos.RecoRecepcionadoRollosModelo;
 import com.example.handheld.modelos.ReferenciasPuasRecepcionModelo;
 import com.example.handheld.modelos.RolloGalvInfor;
+import com.example.handheld.modelos.RolloGalvInventario;
 import com.example.handheld.modelos.RolloGalvTransa;
 import com.example.handheld.modelos.RolloGalvaRevisionModelo;
 import com.example.handheld.modelos.RolloRecoInfor;
@@ -39,6 +42,12 @@ import com.example.handheld.modelos.RolloRecoTransa;
 import com.example.handheld.modelos.RolloTrefiInfor;
 import com.example.handheld.modelos.RolloTrefiRevisionModelo;
 import com.example.handheld.modelos.RolloTrefiTransa;
+import com.example.handheld.modelos.RollosAlambronInven;
+import com.example.handheld.modelos.RollosMPGalvInven;
+import com.example.handheld.modelos.RollosMPPuntInven;
+import com.example.handheld.modelos.RollosRecocidoInven;
+import com.example.handheld.modelos.RollosTrefiInven;
+import com.example.handheld.modelos.RollosTrefiInvenNo_conforme;
 import com.example.handheld.modelos.RolloterminadoModelo;
 import com.example.handheld.modelos.TipotransModelo;
 import com.example.handheld.modelos.TrefiRecepcionModelo;
@@ -561,6 +570,22 @@ public class Conexion {
         return modelo;
     }
 
+    public String obtenerConsecutivoTref(Context context, String sql){
+        String numero = "";
+
+        try {
+            Statement st = conexionBD(ConfiguracionBD.obtenerNombreBD(1), context).createStatement();
+            ResultSet rs = st.executeQuery(sql);
+            if (rs.next()){
+                numero = rs.getString("");
+            }
+        }catch (Exception e){
+            Toast.makeText(context, e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+        return numero;
+    }
+
+
     public ValidarTrasladoModelo validarTraslado(Context context, String consecutivo_materia_prima, String id_detalle, String id_rollo){
         ValidarTrasladoModelo modelo;
         modelo = new ValidarTrasladoModelo("","","");
@@ -689,6 +714,22 @@ public class Conexion {
             ResultSet rs = st.executeQuery(sql);
             if (rs.next()){
                 codigo = rs.getString("codigo");
+            }
+        }catch (Exception e){
+            Toast.makeText(context, e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+        return codigo;
+    }
+
+    //Obtiene un dato
+    public String obtenerCodigoMostrar(Context context, String sql){
+        String codigo = null;
+
+        try {
+            Statement st = conexionBD(ConfiguracionBD.obtenerNombreBD(2), context).createStatement();
+            ResultSet rs = st.executeQuery(sql);
+            if (rs.next()){
+                codigo = rs.getString("prod_final");
             }
         }catch (Exception e){
             Toast.makeText(context, e.getMessage(), Toast.LENGTH_SHORT).show();
@@ -2784,6 +2825,879 @@ public class Conexion {
             Toast.makeText(context, e.getMessage(), Toast.LENGTH_SHORT).show();
         }
         return id;
+    }
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    ///Enviar correo
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    public CorreoResumenModelo correoResumen(Context context,String nit){
+        CorreoResumenModelo mail = null;
+
+        try {
+            Statement st = conexionBD(ConfiguracionBD.obtenerNombreBD(2), context).createStatement();
+            ResultSet rs = st.executeQuery("SELECT Correo FROM dg_Inventario_Empleados WHERE Nit = '" + nit + "'");
+            if (rs.next()){
+                mail = new CorreoResumenModelo(rs.getString("Correo"));
+
+            }else{
+                mail = new CorreoResumenModelo("");
+            }
+        }catch (Exception e){
+            Toast.makeText(context, e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+        return mail;
+    }
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    ///Informacion de inventario
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+
+    public RollosTrefiInven ObtenerRollosTrefiInve(Context context, String cod_orden, String id_detalle, String id_rollo) {
+        RollosTrefiInven modelo = new RollosTrefiInven();
+
+        try {
+            Connection connection = conexionBD(ConfiguracionBD.obtenerNombreBD(2), context);
+            if (connection != null) {
+                String consultaSQL = "SELECT T.prod_final as codigo,\n" +
+                        "C.descripcion AS nombre,\n" +
+                        "r.consecutivo,\n" +
+                        "R.id_rollo,\n" +
+                        "R.id_detalle,\n" +
+                        "T.nit AS operario,\n" +
+                        "T.diametro,\n" +
+                        "T.materia_prima,\n" +
+                        "R.colada,\n" +
+                        "R.traccion,\n" +
+                        "R.peso,\n" +
+                        "R.cod_orden,\n" +
+                        "R.fecha_hora,\n" +
+                        "T.tipoCliente AS cliente,\n" +
+                        "R.manuales as manual,\n" +
+                        "R.anulado,\n" +
+                        "R.destino\n" +
+                        "FROM \n" +
+                        "J_rollos_tref R \n" +
+                        "INNER JOIN\n" +
+                        "J_orden_prod_tef T ON T.consecutivo = R.cod_orden\n" +
+                        "INNER JOIN\n" +
+                        "CORSAN.dbo.referencias C ON C.codigo = T.prod_final\n" +
+                        "WHERE T.prod_final like '22%' \n" +
+                        "and R.cod_orden='" + cod_orden + "' and R.id_detalle='" + id_detalle + "' and R.id_rollo='" + id_rollo + "'";
+                Statement st = conexionBD(ConfiguracionBD.obtenerNombreBD(2), context).createStatement();
+                ResultSet rs = st.executeQuery(consultaSQL);
+
+                while (rs.next()) {
+                    modelo.setCodigo(rs.getString("codigo"));
+                    modelo.setNombre(rs.getString("nombre"));
+                    modelo.setConsecutivo(rs.getString("consecutivo"));
+                    modelo.setId_rollo(rs.getString("id_rollo"));
+                    modelo.setId_detalle(rs.getString("id_detalle"));
+                    modelo.setOperario(rs.getString("operario"));
+                    modelo.setDiametro(rs.getString("diametro"));
+                    modelo.setMateria_prima(rs.getString("materia_prima"));
+                    modelo.setColada(rs.getString("colada"));
+                    modelo.setTraccion(rs.getString("traccion"));
+                    modelo.setCod_orden(rs.getString("cod_orden"));
+                    modelo.setPeso(rs.getString("peso"));
+                    modelo.setFecha_hora(rs.getString("fecha_hora"));
+                    modelo.setCliente(rs.getString("cliente"));
+                    modelo.setManual(rs.getString("manual"));
+                    modelo.setAnulado(rs.getString("anulado"));
+                    modelo.setDestino(rs.getString("destino"));
+                }
+            } else {
+                Log.e("ObtenerRollosTrefiInv", "Error: Conexión a la base de datos no establecida");
+            }
+        } catch (Exception e) {
+            Log.e("ObtenerRollosTrefiInv", "Error al obtener los rollos de la base de datos", e);
+        }
+        return modelo;
+    }
+
+    public RollosTrefiInvenNo_conforme ObtenerRollosTrefiInvNo_Conforme(Context context, String cod_orden, String id_detalle, String id_rollo) {
+        RollosTrefiInvenNo_conforme modelo = new RollosTrefiInvenNo_conforme();
+
+        try {
+            Connection connection = conexionBD(ConfiguracionBD.obtenerNombreBD(2), context);
+            if (connection != null) {
+                String consultaSQL = "SELECT T.prod_final as codigo,\n" +
+                        "C.descripcion AS nombre,\n" +
+                        "r.consecutivo,\n" +
+                        "R.id_rollo,\n" +
+                        "R.id_detalle,\n" +
+                        "T.nit AS operario,\n" +
+                        "T.diametro,\n" +
+                        "T.materia_prima,\n" +
+                        "R.colada,\n" +
+                        "R.traccion,\n" +
+                        "R.peso,\n" +
+                        "R.cod_orden,\n" +
+                        "R.fecha_hora,\n" +
+                        "T.tipoCliente AS cliente,\n" +
+                        "R.manuales as manual,\n" +
+                        "R.anulado,\n" +
+                        "R.destino\n" +
+                        "FROM \n" +
+                        "J_rollos_tref R \n" +
+                        "INNER JOIN\n" +
+                        "J_orden_prod_tef T ON T.consecutivo = R.cod_orden\n" +
+                        "INNER JOIN\n" +
+                        "CORSAN.dbo.referencias C ON C.codigo = T.prod_final\n" +
+                        "INNER JOIN\n" +
+                        "CORSAN.dbo.J_transacciones_kilos K  ON  K.codigo = T.prod_final\n" +
+                        "WHERE T.prod_final like '22%' AND (K.tipo='TRB1' AND K.modelo='20')\n" +
+                        "and R.cod_orden='" + cod_orden + "' and R.id_detalle='" + id_detalle + "' and R.id_rollo='" + id_rollo + "'";
+                Statement st = conexionBD(ConfiguracionBD.obtenerNombreBD(2), context).createStatement();
+                ResultSet rs = st.executeQuery(consultaSQL);
+
+                while (rs.next()) {
+                    modelo.setCodigo(rs.getString("codigo"));
+                    modelo.setNombre(rs.getString("nombre"));
+                    modelo.setConsecutivo(rs.getString("consecutivo"));
+                    modelo.setId_rollo(rs.getString("id_rollo"));
+                    modelo.setId_detalle(rs.getString("id_detalle"));
+                    modelo.setOperario(rs.getString("operario"));
+                    modelo.setDiametro(rs.getString("diametro"));
+                    modelo.setMateria_prima(rs.getString("materia_prima"));
+                    modelo.setColada(rs.getString("colada"));
+                    modelo.setTraccion(rs.getString("traccion"));
+                    modelo.setCod_orden(rs.getString("cod_orden"));
+                    modelo.setPeso(rs.getString("peso"));
+                    modelo.setFecha_hora(rs.getString("fecha_hora"));
+                    modelo.setCliente(rs.getString("cliente"));
+                    modelo.setManual(rs.getString("manual"));
+                    modelo.setAnulado(rs.getString("anulado"));
+                    modelo.setDestino(rs.getString("destino"));
+
+                }
+            } else {
+                Log.e("ObtenerRollosTrefiInv", "Error: Conexión a la base de datos no establecida");
+            }
+        } catch (Exception e) {
+            Log.e("ObtenerRollosTrefiInv", "Error al obtener los rollos de la base de datos", e);
+        }
+        return modelo;
+    }
+
+    public RollosMPPuntInven ObtenerRollosPunt(Context context, String cod_orden, String id_detalle, String id_rollo) {
+        RollosMPPuntInven modelo = new RollosMPPuntInven();
+
+        try {
+            Connection connection = conexionBD(ConfiguracionBD.obtenerNombreBD(2), context);
+            if (connection != null) {
+                String consultaSQL = "SELECT R.cod_orden,\n" +
+                        "R.id_detalle,\n" +
+                        "R.id_rollo,\n" +
+                        "R.peso,\n" +
+                        "T.prod_final as codigo,\n" +
+                        "C.descripcion AS nombre,\n" +
+                        "R.fecha_hora,\n" +
+                        "R.destino,\n" +
+                        "R.traslado,\n" +
+                        "R.anulado,\n" +
+                        "R.manuales,\n" +
+                        "R.scla\n" +
+                        "FROM \n" +
+                        "J_rollos_tref R \n" +
+                        "INNER JOIN\n" +
+                        "J_orden_prod_tef T ON T.consecutivo = R.cod_orden\n" +
+                        "INNER JOIN\n" +
+                        "CORSAN.dbo.referencias C ON C.codigo = T.prod_final\n" +
+                        "WHERE R.traslado IS NOT NULL AND R.no_conforme IS NULL\n" +
+                        "AND R.scla IS NULL\n"+
+                        "AND R.destino = 'P'\n" +
+                        "and R.cod_orden='" + cod_orden + "' and R.id_detalle='" + id_detalle + "' and R.id_rollo='" + id_rollo + "'";
+                Statement st = conexionBD(ConfiguracionBD.obtenerNombreBD(2), context).createStatement();
+                ResultSet rs = st.executeQuery(consultaSQL);
+
+                while (rs.next()) {
+                    modelo.setCodigo(rs.getString("codigo"));
+                    modelo.setNombre(rs.getString("nombre"));
+                    modelo.setId_rollo(rs.getString("id_rollo"));
+                    modelo.setId_detalle(rs.getString("id_detalle"));
+                    modelo.setTraslado(rs.getString("traslado"));
+                    modelo.setCod_orden(rs.getString("cod_orden"));
+                    modelo.setPeso(rs.getString("peso"));
+                    modelo.setFecha_hora(rs.getString("fecha_hora"));
+                    modelo.setManuales(rs.getString("manuales"));
+                    modelo.setScla(rs.getString("scla"));
+                    modelo.setAnulado(rs.getString("anulado"));
+                    modelo.setDestino(rs.getString("destino"));
+
+                }
+            } else {
+                Log.e("ObtenerRollosPunt", "Error: Conexión a la base de datos no establecida");
+            }
+        } catch (Exception e) {
+            Log.e("ObtenerRollosPunt", "Error al obtener los rollos de la base de datos", e);
+        }
+        return modelo;
+
+    }
+
+    public RollosMPGalvInven ObtenerRollosGalvanizado(Context context, String cod_orden, String id_detalle, String id_rollo) {
+        RollosMPGalvInven modelo = new RollosMPGalvInven();
+
+        try {
+            Connection connection = conexionBD(ConfiguracionBD.obtenerNombreBD(2), context);
+            if (connection != null) {
+                String consultaSQL = "SELECT T.prod_final as codigo,\n" +
+                        "C.descripcion AS nombre,\n" +
+                        "r.consecutivo,\n" +
+                        "R.id_rollo,\n" +
+                        "R.id_detalle,\n" +
+                        "R.traslado,\n" +
+                        "T.nit AS operario,\n" +
+                        "T.diametro,\n" +
+                        "T.materia_prima,\n" +
+                        "R.colada,\n" +
+                        "R.traccion,\n" +
+                        "R.peso,\n" +
+                        "R.cod_orden,\n" +
+                        "R.fecha_hora,\n" +
+                        "T.tipoCliente AS cliente,\n" +
+                        "R.manuales as manual,\n" +
+                        "R.anulado,\n" +
+                        "R.destino\n" +
+                        "FROM \n" +
+                        "J_rollos_tref R \n" +
+                        "INNER JOIN\n" +
+                        "J_orden_prod_tef T ON T.consecutivo = R.cod_orden\n" +
+                        "INNER JOIN\n" +
+                        "CORSAN.dbo.referencias C ON C.codigo = T.prod_final\n" +
+                        "WHERE T.prod_final LIKE '22%'\n" +
+                        "and R.destino= 'G'\n" +
+                        "and R.cod_orden='" + cod_orden + "' and R.id_detalle='" + id_detalle + "' and R.id_rollo='" + id_rollo + "'";
+                Statement st = conexionBD(ConfiguracionBD.obtenerNombreBD(2), context).createStatement();
+                ResultSet rs = st.executeQuery(consultaSQL);
+
+                while (rs.next()) {
+                    modelo.setCodigo(rs.getString("codigo"));
+                    modelo.setNombre(rs.getString("nombre"));
+                    modelo.setId_rollo(rs.getString("id_rollo"));
+                    modelo.setId_detalle(rs.getString("id_detalle"));
+                    modelo.setTraslado(rs.getString("traslado"));
+                    modelo.setCod_orden(rs.getString("cod_orden"));
+                    modelo.setPeso(rs.getString("peso"));
+                    modelo.setFecha_hora(rs.getString("fecha_hora"));
+                    modelo.setManuales(rs.getString("manuales"));
+                    modelo.setAnulado(rs.getString("anulado"));
+                    modelo.setDestino(rs.getString("destino"));
+                    modelo.setSaga(rs.getString("saga"));
+
+                }
+            } else {
+                Log.e("ObtenerRollosGalva", "Error: Conexión a la base de datos no establecida");
+            }
+        } catch (Exception e) {
+            Log.e("ObtenerRollosGalva", "Error al obtener los rollos de la base de datos", e);
+        }
+        return modelo;
+
+    }
+
+    public RolloGalvInventario ObtenerRollosGalva(Context context, String nro_orden, String nro_rollo) {
+        RolloGalvInventario modelo = new RolloGalvInventario();
+
+        try {
+            Connection connection = conexionBD(ConfiguracionBD.obtenerNombreBD(2), context);
+            if (connection != null) {
+                String consultaSQL = "SELECT final_galv as codigo,ref.descripcion as nombre,R.nro_orden,R.consecutivo_rollo as nro_rollo,r.destino,r.tipo_trans,R.trans_galv as traslado,R.peso,FORMAT(R.fecha_hora, 'dd-MMMM-yyyy', 'es-ES') AS fecha\n" +
+                        "FROM D_rollo_galvanizado_f R, D_orden_pro_galv_enc S,CORSAN.dbo.referencias ref,CORSAN.dbo.Jjv_emplea_CORcontrol_Act_ret ter \n" +
+                        "where R.nro_orden = S.consecutivo_orden_G And ref.codigo = S.final_galv and ter.nit=R.nit_operario AND R.no_conforme is null and R.anular is null and R.recepcionado is null and R.trb1 is null and S.final_galv LIKE '22%' and R.tipo_transacion is  null  AND R.no_conforme IS NULL \n" +
+                        "and R.nro_orden='" + nro_orden + "' and R.consecutivo_rollo='" + nro_rollo + "'\n" +
+                        "order by ref.descripcion";
+                Statement st = conexionBD(ConfiguracionBD.obtenerNombreBD(2), context).createStatement();
+                ResultSet rs = st.executeQuery(consultaSQL);
+
+                while (rs.next()) {
+                    modelo.setCodigo(rs.getString("codigo"));
+                    modelo.setNombre(rs.getString("nombre"));
+                    modelo.setNro_orden(rs.getString("nro_orden"));
+                    modelo.setNro_rollo(rs.getString("nro_rollo"));
+                    modelo.setTipo_trans(rs.getString("tipo_trans"));
+                    modelo.setTraslado(rs.getString("traslado"));
+                    modelo.setPeso(rs.getString("peso"));
+                    modelo.setFecha_hora(rs.getString("fecha"));
+                    modelo.setDestino(rs.getString("destino"));
+
+
+
+                }
+            } else {
+                Log.e("ObtenerRollosGalva", "Error: Conexión a la base de datos no establecida");
+            }
+        } catch (Exception e) {
+            Log.e("ObtenerRollosGalva", "Error al obtener los rollos de la base de datos", e);
+        }
+        return modelo;
+
+    }
+
+    public RolloGalvInventario ObtenerRollosGalva12(Context context, String nro_orden, String nro_rollo) {
+        RolloGalvInventario modelo = new RolloGalvInventario();
+
+        try {
+            Connection connection = conexionBD(ConfiguracionBD.obtenerNombreBD(2), context);
+            if (connection != null) {
+                String consultaSQL = "SELECT final_galv as codigo,ref.descripcion as nombre,R.nro_orden,R.consecutivo_rollo as nro_rollo,r.destino,r.tipo_trans,R.trans_galv as traslado,R.peso,FORMAT(R.fecha_hora, 'dd-MMMM-yyyy', 'es-ES') AS fecha\n" +
+                        "FROM D_rollo_galvanizado_f R, D_orden_pro_galv_enc S,CORSAN.dbo.referencias ref,CORSAN.dbo.Jjv_emplea_CORcontrol_Act_ret ter \n" +
+                        "where R.nro_orden = S.consecutivo_orden_G And ref.codigo = S.final_galv and ter.nit=R.nit_operario AND R.no_conforme is null and R.anular is null and R.recepcionado is null and R.trb1 is null and S.final_galv LIKE '22%' and R.tipo_transacion is  null  AND R.no_conforme IS NULL  \n" +
+                        "and R.nro_orden='" + nro_orden + "' and R.consecutivo_rollo='" + nro_rollo + "'\n" +
+                        "order by ref.descripcion";
+                Statement st = conexionBD(ConfiguracionBD.obtenerNombreBD(2), context).createStatement();
+                ResultSet rs = st.executeQuery(consultaSQL);
+
+                while (rs.next()) {
+                    modelo.setCodigo(rs.getString("codigo"));
+                    modelo.setNombre(rs.getString("nombre"));
+                    modelo.setNro_orden(rs.getString("nro_orden"));
+                    modelo.setNro_rollo(rs.getString("nro_rollo"));
+                    modelo.setTipo_trans(rs.getString("tipo_trans"));
+                    modelo.setTraslado(rs.getString("traslado"));
+                    modelo.setPeso(rs.getString("peso"));
+                    modelo.setFecha_hora(rs.getString("fecha"));
+                    modelo.setDestino(rs.getString("destino"));
+
+
+                }
+            } else {
+                Log.e("ObtenerRollosGalva", "Error: Conexión a la base de datos no establecida");
+            }
+        } catch (Exception e) {
+            Log.e("ObtenerRollosGalva", "Error al obtener los rollos de la base de datos", e);
+        }
+        return modelo;
+
+    }
+    public RollosRecocidoInven ObtenerRollosRecocidoCodigo2(Context context, String cod_orden_rec, String id_detalle_rec, String id_rollo_rec) {
+        RollosRecocidoInven modelo = new RollosRecocidoInven();
+
+        try {
+            Connection connection = conexionBD(ConfiguracionBD.obtenerNombreBD(2), context);
+            if (connection != null) {
+                String consultaSQL = "SELECT O.prod_final as codigo,\n" +
+                        "Ref.descripcion as nombre,\n" +
+                        "R.cod_orden_rec as cod_orden,\n" +
+                        "R.id_detalle_rec as id_detalle,\n" +
+                        "R.id_rollo_rec as id_rollo,\n" +
+                        "R.peso\n" +
+                        "FROM JB_rollos_rec R inner join JB_orden_prod_rec_refs O on R.cod_orden_rec =O.cod_orden\n" +
+                        "inner join CORSAN.dbo.referencias Ref ON O.prod_final=Ref.codigo\n" +
+                        "where O.prod_final like '22%' and R.id_prof_final = O.num   \n"+
+                        "and R.cod_orden_rec='" + cod_orden_rec + "' and R.id_detalle_rec='" + id_detalle_rec + "' and R.id_rollo_rec='" + id_rollo_rec + "'";
+                Statement st = conexionBD(ConfiguracionBD.obtenerNombreBD(2), context).createStatement();
+                ResultSet rs = st.executeQuery(consultaSQL);
+
+                while (rs.next()) {
+                    modelo.setCodigo(rs.getString("codigo"));
+                    modelo.setNombre(rs.getString("nombre"));
+                    modelo.setCod_orden_rec(rs.getString("cod_orden"));
+                    modelo.setId_detalle_rec(rs.getString("id_detalle"));
+                    modelo.setId_rollo_rec(rs.getString("id_rollo"));
+                    modelo.setPeso(rs.getString("peso"));
+
+                }
+            } else {
+                Log.e("ObtenerRollosRecocidos", "Error: Conexión a la base de datos no establecida");
+            }
+        } catch (Exception e) {
+            Log.e("ObtenerRollosRecocidos", "Error al obtener los rollos de la base de datos", e);
+        }
+        return modelo;
+
+    }
+    public RollosRecocidoInven ObtenerRollosRecocidoNoConformeCodigo2(Context context, String cod_orden_rec, String id_detalle_rec, String id_rollo_rec) {
+        RollosRecocidoInven modelo = new RollosRecocidoInven();
+
+        try {
+            Connection connection = conexionBD(ConfiguracionBD.obtenerNombreBD(2), context);
+            if (connection != null) {
+                String consultaSQL = "SELECT O.prod_final as codigo,\n" +
+                        "Ref.descripcion as nombre,\n" +
+                        "R.cod_orden_rec as cod_orden,\n" +
+                        "R.id_detalle_rec as id_detalle,\n" +
+                        "R.id_rollo_rec as id_rollo,\n" +
+                        "R.peso\n" +
+                        "FROM JB_rollos_rec R inner join JB_orden_prod_rec_refs O on R.cod_orden_rec =O.cod_orden\n" +
+                        "inner join CORSAN.dbo.referencias Ref ON O.prod_final=Ref.codigo\n" +
+                        "INNER JOIN\n" +
+                        "CORSAN.dbo.J_transacciones_kilos K  ON  K.codigo = O.prod_final\n" +
+                        "where O.prod_final like '22%' and R.id_prof_final = O.num AND (K.tipo='TRB1' AND K.modelo='20')\n"+
+                        "and R.cod_orden_rec='" + cod_orden_rec + "' and R.id_detalle_rec='" + id_detalle_rec + "' and R.id_rollo_rec='" + id_rollo_rec + "'";
+                Statement st = conexionBD(ConfiguracionBD.obtenerNombreBD(2), context).createStatement();
+                ResultSet rs = st.executeQuery(consultaSQL);
+
+                while (rs.next()) {
+                    modelo.setCodigo(rs.getString("codigo"));
+                    modelo.setNombre(rs.getString("nombre"));
+                    modelo.setCod_orden_rec(rs.getString("cod_orden"));
+                    modelo.setId_detalle_rec(rs.getString("id_detalle"));
+                    modelo.setId_rollo_rec(rs.getString("id_rollo"));
+                    modelo.setPeso(rs.getString("peso"));
+
+                }
+            } else {
+                Log.e("ObtenerRollosRecocidos", "Error: Conexión a la base de datos no establecida");
+            }
+        } catch (Exception e) {
+            Log.e("ObtenerRollosRecocidos", "Error al obtener los rollos de la base de datos", e);
+        }
+        return modelo;
+
+    }
+
+    public RollosRecocidoInven ObtenerRollosRecocidoCodigo3(Context context, String cod_orden, String id_detalle, String id_rollo) {
+        RollosRecocidoInven modelo = new RollosRecocidoInven();
+
+        try {
+            Connection connection = conexionBD(ConfiguracionBD.obtenerNombreBD(2), context);
+            if (connection != null) {
+                String consultaSQL = "SELECT O.prod_final as codigo,\n" +
+                        "Ref.descripcion as nombre,\n" +
+                        "R.cod_orden_rec as cod_orden,\n" +
+                        "R.id_detalle_rec as id_detalle,\n" +
+                        "R.id_rollo_rec as id_rollo,\n" +
+                        "R.peso\n" +
+                        "FROM JB_rollos_rec R inner join JB_orden_prod_rec_refs O on R.cod_orden_rec =O.cod_orden\n" +
+                        "inner join CORSAN.dbo.referencias Ref ON O.prod_final=Ref.codigo\n" +
+                        "where O.prod_final like '33%' and R.id_prof_final = O.num   \n" +
+                        "and R.cod_orden_rec='" + cod_orden + "' and R.id_detalle_rec='" + id_detalle + "' and R.id_rollo_rec='" + id_rollo + "'";
+                Statement st = conexionBD(ConfiguracionBD.obtenerNombreBD(2), context).createStatement();
+                ResultSet rs = st.executeQuery(consultaSQL);
+
+                while (rs.next()) {
+                    modelo.setCodigo(rs.getString("codigo"));
+                    modelo.setNombre(rs.getString("nombre"));
+                    modelo.setCod_orden_rec(rs.getString("cod_orden"));
+                    modelo.setId_detalle_rec(rs.getString("id_detalle"));
+                    modelo.setId_rollo_rec(rs.getString("id_rollo"));
+                    modelo.setPeso(rs.getString("peso"));
+
+                }
+            } else {
+                Log.e("ObtenerRollosAlambron", "Error: Conexión a la base de datos no establecida");
+            }
+        } catch (Exception e) {
+            Log.e("ObtenerRollosAlambron", "Error al obtener los rollos de la base de datos", e);
+        }
+        return modelo;
+
+    }
+    public RollosRecocidoInven ObtenerRollosRecocidoNoConformeCodigo3(Context context, String cod_orden, String id_detalle, String id_rollo) {
+        RollosRecocidoInven modelo = new RollosRecocidoInven();
+
+        try {
+            Connection connection = conexionBD(ConfiguracionBD.obtenerNombreBD(2), context);
+            if (connection != null) {
+                String consultaSQL = "SELECT O.prod_final as codigo,\n" +
+                        "Ref.descripcion as nombre,\n" +
+                        "R.cod_orden_rec as cod_orden,\n" +
+                        "R.id_detalle_rec as id_detalle,\n" +
+                        "R.id_rollo_rec as id_rollo,\n" +
+                        "R.peso\n" +
+                        "FROM JB_rollos_rec R inner join JB_orden_prod_rec_refs O on R.cod_orden_rec =O.cod_orden\n" +
+                        "inner join CORSAN.dbo.referencias Ref ON O.prod_final=Ref.codigo\n" +
+                        "INNER JOIN\n" +
+                        "CORSAN.dbo.J_transacciones_kilos K  ON  K.codigo = O.prod_final\n" +
+                        "where O.prod_final like '33%' and R.id_prof_final = O.num AND (K.tipo='TRB1' AND K.modelo='20')   \n" +
+                        "and R.cod_orden_rec='" + cod_orden + "' and R.id_detalle_rec='" + id_detalle + "' and R.id_rollo_rec='" + id_rollo + "'";
+                Statement st = conexionBD(ConfiguracionBD.obtenerNombreBD(2), context).createStatement();
+                ResultSet rs = st.executeQuery(consultaSQL);
+
+                while (rs.next()) {
+                    modelo.setCodigo(rs.getString("codigo"));
+                    modelo.setNombre(rs.getString("nombre"));
+                    modelo.setCod_orden_rec(rs.getString("cod_orden"));
+                    modelo.setId_detalle_rec(rs.getString("id_detalle"));
+                    modelo.setId_rollo_rec(rs.getString("id_rollo"));
+                    modelo.setPeso(rs.getString("peso"));
+
+                }
+            } else {
+                Log.e("ObtenerRollosAlambron", "Error: Conexión a la base de datos no establecida");
+            }
+        } catch (Exception e) {
+            Log.e("ObtenerRollosAlambron", "Error al obtener los rollos de la base de datos", e);
+        }
+        return modelo;
+
+    }
+    public RollosAlambronInven ObtenerRollosAlambronCodigo1(Context context, String nit_proveedor, String num_importacion, String id_detalle, String numero_rollo) {
+        RollosAlambronInven modelo = new RollosAlambronInven();
+
+        try {
+            Connection connection = conexionBD(ConfiguracionBD.obtenerNombreBD(2), context);
+            if (connection != null) {
+                String consultaSQL = "SELECT T.nit_proveedor,T.num_importacion,T.id_solicitud_det,T.numero_rollo,T.peso,D.codigo,D.costo_kilo\n" +
+                        "FROM J_alambron_importacion_det_rollos T, J_alambron_solicitud_det D\n" +
+                        "WHERE (D.nit_proveedor = T.nit_proveedor AND D.num_importacion = T.num_importacion AND D.id_det=T.id_solicitud_det) AND T.peso IS NOT NULL AND T.num_transaccion IS NOT NULL AND t.num_transaccion_salida IS NULL   \n"+
+                        "and T.nit_proveedor='" + nit_proveedor + "' and T.num_importacion='" + num_importacion + "' and T.id_solicitud_det='" + id_detalle  + "' and T.numero_rollo='" + numero_rollo + "'" ;
+                Statement st = conexionBD(ConfiguracionBD.obtenerNombreBD(2), context).createStatement();
+                ResultSet rs = st.executeQuery(consultaSQL);
+
+                while (rs.next()) {
+                    modelo.setNit_proveedor(rs.getString("nit_proveedor"));
+                    modelo.setNum_importacion(rs.getString("num_importacion"));
+                    modelo.setId_solicitud_det(rs.getString("id_solicitud_det"));
+                    modelo.setNumero_rollo(rs.getString("numero_rollo"));
+                    modelo.setPeso(rs.getString("peso"));
+                    modelo.setCodigo(rs.getString("codigo"));
+                    modelo.setCosto_kilo(rs.getString("costo_kilo"));
+
+
+                }
+            } else {
+                Log.e("ObtenerRollosAlambron", "Error: Conexión a la base de datos no establecida");
+            }
+        } catch (Exception e) {
+            Log.e("ObtenerRollosAlambron", "Error al obtener los rollos de la base de datos", e);
+        }
+        return modelo;
+
+    }
+    public RollosAlambronInven ObtenerRollosAlambronCodigo2(Context context, String nit_proveedor, String num_importacion, String id_detalle, String numero_rollo) {
+        RollosAlambronInven modelo = new RollosAlambronInven();
+
+        try {
+            Connection connection = conexionBD(ConfiguracionBD.obtenerNombreBD(2), context);
+            if (connection != null) {
+                String consultaSQL = "SELECT T.nit_proveedor,T.num_importacion,T.id_solicitud_det,T.numero_rollo,T.peso,D.codigo,D.costo_kilo,T.nro_consumos\n" +
+                        "FROM J_alambron_importacion_det_rollos T, J_alambron_solicitud_det D\n" +
+                        "WHERE (D.nit_proveedor = T.nit_proveedor AND D.num_importacion = T.num_importacion AND D.id_det=T.id_solicitud_det) AND T.peso IS NOT NULL AND T.num_transaccion IS NOT NULL AND num_transaccion_salida IS NOT NULL AND tipo_salida IS NOT NULL   \n"+
+                        "and T.nit_proveedor='" + nit_proveedor + "' and T.num_importacion='" + num_importacion + "' and T.id_solicitud_det='" + id_detalle  + "' and T.numero_rollo='" + numero_rollo + "'";
+                Statement st = conexionBD(ConfiguracionBD.obtenerNombreBD(2), context).createStatement();
+                ResultSet rs = st.executeQuery(consultaSQL);
+
+                while (rs.next()) {
+                    modelo.setNit_proveedor(rs.getString("nit_proveedor"));
+                    modelo.setTipo_salida(rs.getString("nro_consumos"));
+                    modelo.setNum_importacion(rs.getString("num_importacion"));
+                    modelo.setId_solicitud_det(rs.getString("id_solicitud_det"));
+                    modelo.setNumero_rollo(rs.getString("numero_rollo"));
+                    modelo.setPeso(rs.getString("peso"));
+                    modelo.setCodigo(rs.getString("codigo"));
+                    modelo.setCosto_kilo(rs.getString("costo_kilo"));
+
+
+                }
+            } else {
+                Log.e("ObtenerRollosAlambron", "Error: Conexión a la base de datos no establecida");
+            }
+        } catch (Exception e) {
+            Log.e("ObtenerRollosAlambron", "Error al obtener los rollos de la base de datos", e);
+        }
+        return modelo;
+
+    }
+    public RollosTrefiInvenNo_conforme ObtenerRollosTrefi3InvNo_Conforme(Context context, String cod_orden, String id_detalle, String id_rollo) {
+        RollosTrefiInvenNo_conforme modelo = new RollosTrefiInvenNo_conforme();
+
+        try {
+            Connection connection = conexionBD(ConfiguracionBD.obtenerNombreBD(2), context);
+            if (connection != null) {
+                String consultaSQL = "SELECT T.prod_final as codigo,\n" +
+                        "C.descripcion AS nombre,\n" +
+                        "r.consecutivo,\n" +
+                        "R.id_rollo,\n" +
+                        "R.id_detalle,\n" +
+                        "T.nit AS operario,\n" +
+                        "T.diametro,\n" +
+                        "T.materia_prima,\n" +
+                        "R.colada,\n" +
+                        "R.traccion,\n" +
+                        "R.peso,\n" +
+                        "R.cod_orden,\n" +
+                        "R.fecha_hora,\n" +
+                        "T.tipoCliente AS cliente,\n" +
+                        "R.manuales as manual,\n" +
+                        "R.anulado,\n" +
+                        "R.destino\n" +
+                        "FROM \n" +
+                        "J_rollos_tref R \n" +
+                        "INNER JOIN\n" +
+                        "J_orden_prod_tef T ON T.consecutivo = R.cod_orden\n" +
+                        "INNER JOIN\n" +
+                        "CORSAN.dbo.referencias C ON C.codigo = T.prod_final\n" +
+                        "INNER JOIN\n" +
+                        "CORSAN.dbo.J_transacciones_kilos K  ON  K.codigo = T.prod_final\n" +
+                        "WHERE T.prod_final like '33%' AND (K.tipo='TRB1' AND K.modelo='20') \n" +
+                        "and R.cod_orden='" + cod_orden + "' and R.id_detalle='" + id_detalle + "' and R.id_rollo='" + id_rollo + "'";
+                Statement st = conexionBD(ConfiguracionBD.obtenerNombreBD(2), context).createStatement();
+                ResultSet rs = st.executeQuery(consultaSQL);
+
+                while (rs.next()) {
+                    modelo.setCodigo(rs.getString("codigo"));
+                    modelo.setNombre(rs.getString("nombre"));
+                    modelo.setConsecutivo(rs.getString("consecutivo"));
+                    modelo.setId_rollo(rs.getString("id_rollo"));
+                    modelo.setId_detalle(rs.getString("id_detalle"));
+                    modelo.setOperario(rs.getString("operario"));
+                    modelo.setDiametro(rs.getString("diametro"));
+                    modelo.setMateria_prima(rs.getString("materia_prima"));
+                    modelo.setColada(rs.getString("colada"));
+                    modelo.setTraccion(rs.getString("traccion"));
+                    modelo.setCod_orden(rs.getString("cod_orden"));
+                    modelo.setPeso(rs.getString("peso"));
+                    modelo.setFecha_hora(rs.getString("fecha_hora"));
+                    modelo.setCliente(rs.getString("cliente"));
+                    modelo.setManual(rs.getString("manual"));
+                    modelo.setAnulado(rs.getString("anulado"));
+                    modelo.setDestino(rs.getString("destino"));
+
+                }
+            } else {
+                Log.e("ObtenerRollosTrefiInv", "Error: Conexión a la base de datos no establecida");
+            }
+        } catch (Exception e) {
+            Log.e("ObtenerRollosTrefiInv", "Error al obtener los rollos de la base de datos", e);
+        }
+        return modelo;
+    }
+    public RollosTrefiInven ObtenerRollosTrefiInvCodigo(Context context, String cod_orden, String id_detalle, String id_rollo) {
+        RollosTrefiInven modelo = new RollosTrefiInven();
+
+        try {
+            Connection connection = conexionBD(ConfiguracionBD.obtenerNombreBD(2), context);
+            if (connection != null) {
+                String consultaSQL = "SELECT T.prod_final as codigo,\n" +
+                        "C.descripcion AS nombre,\n" +
+                        "r.consecutivo,\n" +
+                        "R.id_rollo,\n" +
+                        "R.id_detalle,\n" +
+                        "T.nit AS operario,\n" +
+                        "T.diametro,\n" +
+                        "T.materia_prima,\n" +
+                        "R.colada,\n" +
+                        "R.traccion,\n" +
+                        "R.peso,\n" +
+                        "R.cod_orden,\n" +
+                        "R.fecha_hora,\n" +
+                        "T.tipoCliente AS cliente,\n" +
+                        "R.manuales as manual,\n" +
+                        "R.anulado,\n" +
+                        "R.destino" +
+                        "FROM \n" +
+                        "J_rollos_tref R \n" +
+                        "INNER JOIN\n" +
+                        "J_orden_prod_tef T ON T.consecutivo = R.cod_orden\n" +
+                        "INNER JOIN\n" +
+                        "CORSAN.dbo.referencias C ON C.codigo = T.prod_final\n" +
+                        "WHERE T.prod_final LIKE '33%' \n" +
+                        "and R.cod_orden='" + cod_orden + "' and R.id_detalle='" + id_detalle + "' and R.id_rollo='" + id_rollo + "'";
+                Statement st = conexionBD(ConfiguracionBD.obtenerNombreBD(2), context).createStatement();
+                ResultSet rs = st.executeQuery(consultaSQL);
+
+                while (rs.next()) {
+                    modelo.setCodigo(rs.getString("codigo"));
+                    modelo.setNombre(rs.getString("nombre"));
+                    modelo.setConsecutivo(rs.getString("consecutivo"));
+                    modelo.setId_rollo(rs.getString("id_rollo"));
+                    modelo.setId_detalle(rs.getString("id_detalle"));
+                    modelo.setOperario(rs.getString("operario"));
+                    modelo.setDiametro(rs.getString("diametro"));
+                    modelo.setMateria_prima(rs.getString("materia_prima"));
+                    modelo.setColada(rs.getString("colada"));
+                    modelo.setTraccion(rs.getString("traccion"));
+                    modelo.setCod_orden(rs.getString("cod_orden"));
+                    modelo.setPeso(rs.getString("peso"));
+                    modelo.setFecha_hora(rs.getString("fecha_hora"));
+                    modelo.setCliente(rs.getString("cliente"));
+                    modelo.setManual(rs.getString("manual"));
+                    modelo.setAnulado(rs.getString("anulado"));
+                    modelo.setDestino(rs.getString("destino"));
+                }
+            } else {
+                Log.e("ObtenerRollosTrefiInv", "Error: Conexión a la base de datos no establecida");
+            }
+        } catch (Exception e) {
+            Log.e("ObtenerRollosTrefiInv", "Error al obtener los rollos de la base de datos", e);
+        }
+        return modelo;
+
+    }
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    ///Tomar informacion de gestion de galvanizado
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+
+    public String obtenerPendienteTrefImport(Context context, String sql){
+        String pendiente = "";
+
+        try {
+            Statement st = conexionBD(ConfiguracionBD.obtenerNombreBD(2), context).createStatement();
+            ResultSet rs = st.executeQuery(sql);
+            if (rs.next()){
+                pendiente = rs.getString("pendiente");
+            }
+        }catch (Exception e){
+            Toast.makeText(context, e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+        return pendiente;
+    }
+
+    public String obtenerPesoTrefImport(Context context, String sql){
+        String peso = "";
+
+        try {
+            Statement st = conexionBD(ConfiguracionBD.obtenerNombreBD(2), context).createStatement();
+            ResultSet rs = st.executeQuery(sql);
+            if (rs.next()){
+                peso = rs.getString("peso");
+            }
+        }catch (Exception e){
+            Toast.makeText(context, e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+        return peso;
+    }
+
+
+    public String obtenerCodigoTrefImport(Context context, String sql){
+        String prod_final = null;
+
+        try {
+            Statement st = conexionBD(ConfiguracionBD.obtenerNombreBD(2), context).createStatement();
+            ResultSet rs = st.executeQuery(sql);
+            if (rs.next()){
+                prod_final = rs.getString("prod_final");
+            }
+        }catch (Exception e){
+            Toast.makeText(context, e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+        return prod_final;
+    }
+
+    public String obtenerConsecutivoTrefImport(Context context, String sql){
+        String id = "";
+        try {
+            Statement st = conexionBD(ConfiguracionBD.obtenerNombreBD(2), context).createStatement();
+            ResultSet rs = st.executeQuery(sql);
+            if (rs.next()){
+                id = rs.getString("consecutivo");
+            }
+        }catch (Exception e){
+            Toast.makeText(context, e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+        return id;
+    }
+
+
+
+    public String obtenerNumTranTrefImport(Context context, String sql){
+        String numImport = "";
+
+        try {
+            Statement st = conexionBD(ConfiguracionBD.obtenerNombreBD(2), context).createStatement();
+            ResultSet rs = st.executeQuery(sql);
+            if (rs.next()){
+                numImport = rs.getString("traslado");
+            }
+        }catch (Exception e){
+            Toast.makeText(context, e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+        return numImport;
+    }
+    public String obtenerCostoUnitTref(Context context, String sql){
+        String costo_unitario = null;
+
+        try {
+            Statement st = conexionBD(ConfiguracionBD.obtenerNombreBD(1), context).createStatement();
+            ResultSet rs = st.executeQuery(sql);
+            if (rs.next()){
+                costo_unitario = rs.getString("costo_unitario");
+            }
+        }catch (Exception e){
+            Toast.makeText(context, e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+        return costo_unitario;
+    }
+
+
+    public String obtenerDestino(Context context, String sql){
+        String id = "";
+        try {
+            Statement st = conexionBD(ConfiguracionBD.obtenerNombreBD(2), context).createStatement();
+            ResultSet rs = st.executeQuery(sql);
+            if (rs.next()){
+                id = rs.getString("destino");
+            }
+        }catch (Exception e){
+            Toast.makeText(context, e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+        return id;
+    }
+
+
+    public List<PedidoModelo> obtenerPedidosGalvanizadoDevolucion(Context context){
+        List<PedidoModelo> pedidos = new ArrayList<>();
+        PedidoModelo modelo;
+
+        Date fechaActual = new Date();
+
+        // Define el formato de la fecha y hora que deseas obtener
+        @SuppressLint("SimpleDateFormat")
+        SimpleDateFormat formatoAno = new SimpleDateFormat("yyyy");
+
+        // Convierte la fecha actual en un String con el formato definido
+        String anoActual = formatoAno.format(fechaActual);
+
+
+
+        try {
+            Statement st = conexionBD(ConfiguracionBD.obtenerNombreBD(2), context).createStatement();
+            ResultSet rs = st.executeQuery("SELECT E.numero,D.id_detalle,E.fecha,D.codigo,(SELECT CASE WHEN (SELECT sum(peso) FROM J_salida_materia_prima_G_transaccion  WHERE numero = D.numero AND id_detalle = D.id_detalle ) is null THEN D.cantidad  ELSE (D.cantidad -(SELECT sum(peso) FROM J_salida_materia_prima_G_transaccion  WHERE numero = D.numero AND id_detalle = D.id_detalle )) END )As pendiente  ,R.descripcion FROM J_salida_materia_prima_G_enc E ,J_salida_materia_prima_G_det D, CORSAN.dbo.referencias R \n" +
+                    "WHERE year(E.fecha)= "  + anoActual + " AND E.anulado is null  AND  R.codigo = D.codigo AND D.numero = E.numero  AND e.devolver = 'S'\n" +
+                    "AND (D.cantidad - (SELECT CASE WHEN ((SELECT sum(peso) FROM J_salida_materia_prima_G_transaccion  WHERE numero = D.numero AND id_detalle = D.id_detalle )) is null THEN 0 ELSE ((SELECT sum(peso) FROM J_salida_materia_prima_G_transaccion  WHERE numero = D.numero AND id_detalle = D.id_detalle ))END) > 0 ) ORDER BY E.fecha");
+            while (rs.next()){
+                modelo = new PedidoModelo();
+                modelo.setNumero(Integer.valueOf(rs.getString("numero")));
+                modelo.setIdDetalle(Integer.valueOf(rs.getString("id_detalle")));
+                modelo.setFecha(rs.getString("fecha"));
+                modelo.setCodigo(rs.getString("codigo"));
+                modelo.setPendiente(rs.getString("pendiente"));
+                modelo.setDescripcion(rs.getString("descripcion"));
+                pedidos.add(modelo);
+            }
+        }catch (Exception e){
+            Toast.makeText(context, e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+        return pedidos;
+    }
+
+    public List<PedidoModelo> obtenerPedidosGalvanizado(Context context){
+        List<PedidoModelo> pedidos = new ArrayList<>();
+        PedidoModelo modelo;
+
+        Date fechaActual = new Date();
+
+        // Define el formato de la fecha y hora que deseas obtener
+        @SuppressLint("SimpleDateFormat")
+        SimpleDateFormat formatoAno = new SimpleDateFormat("yyyy");
+
+        // Convierte la fecha actual en un String con el formato definido
+        String anoActual = formatoAno.format(fechaActual);
+
+
+
+        try {
+            Statement st = conexionBD(ConfiguracionBD.obtenerNombreBD(2), context).createStatement();
+            ResultSet rs = st.executeQuery("SELECT E.numero,D.id_detalle,E.fecha,D.codigo,(SELECT CASE WHEN (SELECT sum(peso) FROM J_salida_materia_prima_G_transaccion  WHERE numero = D.numero AND id_detalle = D.id_detalle ) is null THEN D.cantidad  ELSE (D.cantidad -(SELECT sum(peso) FROM J_salida_materia_prima_G_transaccion  WHERE numero = D.numero AND id_detalle = D.id_detalle )) END )As pendiente  ,R.descripcion FROM J_salida_materia_prima_G_enc E ,J_salida_materia_prima_G_det D, CORSAN.dbo.referencias R \n" +
+                    "WHERE year(E.fecha)= "  + anoActual + " AND E.anulado is null  AND  R.codigo = D.codigo AND D.numero = E.numero  AND (e.devolver = 'N' OR e.devolver IS NULL )\n" +
+                    "AND (D.cantidad - (SELECT CASE WHEN ((SELECT sum(peso) FROM J_salida_materia_prima_G_transaccion  WHERE numero = D.numero AND id_detalle = D.id_detalle )) is null THEN 0 ELSE ((SELECT sum(peso) FROM J_salida_materia_prima_G_transaccion  WHERE numero = D.numero AND id_detalle = D.id_detalle ))END) > 0 ) ORDER BY E.fecha");
+            while (rs.next()){
+                modelo = new PedidoModelo();
+                modelo.setNumero(Integer.valueOf(rs.getString("numero")));
+                modelo.setIdDetalle(Integer.valueOf(rs.getString("id_detalle")));
+                modelo.setFecha(rs.getString("fecha"));
+                modelo.setCodigo(rs.getString("codigo"));
+                modelo.setPendiente(rs.getString("pendiente"));
+                modelo.setDescripcion(rs.getString("descripcion"));
+                pedidos.add(modelo);
+            }
+        }catch (Exception e){
+            Toast.makeText(context, e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+        return pedidos;
     }
 
 
