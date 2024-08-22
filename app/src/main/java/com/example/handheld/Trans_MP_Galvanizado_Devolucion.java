@@ -337,7 +337,7 @@ public class Trans_MP_Galvanizado_Devolucion extends AppCompatActivity implement
         // consecutivo = "444444218-4-3-168";
         if (validarCodigoBarras(consecutivo)) {
             cod_orden = obj_gestion_alambronLn.extraerDatoCodigoBarrasTrefilacion("cod_orden", consecutivo);
-            detalle = obj_gestion_alambronLn.extraerDatoCodigoBarrasTrefilacion("detalle", consecutivo);
+            detalle = obj_gestion_alambronLn.extraerDatoCodigoBarrasTrefilacion("id_detalle", consecutivo);
             id_rollo = obj_gestion_alambronLn.extraerDatoCodigoBarrasTrefilacion("id_rollo", consecutivo);
 
             if (validarRolloRegistrado(cod_orden, detalle, id_rollo)) {
@@ -389,7 +389,7 @@ public class Trans_MP_Galvanizado_Devolucion extends AppCompatActivity implement
         boolean resp = false;
 
         String num_consecutivo = obj_gestion_alambronLn.extraerDatoCodigoBarrasTrefilacion("cod_orden", consecutivo);
-        String detalle = obj_gestion_alambronLn.extraerDatoCodigoBarrasTrefilacion("detalle", consecutivo);
+        String detalle = obj_gestion_alambronLn.extraerDatoCodigoBarrasTrefilacion("id_detalle", consecutivo);
         String id_rollo = obj_gestion_alambronLn.extraerDatoCodigoBarrasTrefilacion("id_rollo", consecutivo);
 
         if (!num_consecutivo.isEmpty() && !detalle.isEmpty() && !id_rollo.isEmpty()) {
@@ -408,10 +408,10 @@ public class Trans_MP_Galvanizado_Devolucion extends AppCompatActivity implement
     }
 
 
-    private boolean validarRolloRegistrado(String cod_orden, String detalle, String id_rollo){
+    private boolean validarRolloRegistrado(String cod_orden, String id_detalle, String id_rollo){
         boolean resp = false;
         String sql = "SELECT (SELECT CASE WHEN (SELECT sum(peso) FROM J_salida_materia_prima_G_transaccion  WHERE numero = D.numero AND id_detalle = D.id_detalle ) is null THEN D.cantidad  ELSE (D.cantidad -(SELECT sum(peso) FROM J_salida_materia_prima_G_transaccion  WHERE numero = D.numero AND id_detalle = D.id_detalle )) END )As pendiente FROM J_salida_materia_prima_G_enc E ,J_salida_materia_prima_G_det D, CORSAN.dbo.referencias R where E.numero=" + pNumero + " AND E.anulado is null AND  R.codigo = D.codigo AND (e.devolver = 'S' OR e.devolver IS NULL ) AND E.numero = D.numero AND id_detalle = D.id_detalle";
-        String peso = conexion.obtenerPesoTrefImport(getApplicationContext(), sql);
+        String peso = conexion.obtenerPendienteTrefImport(getApplicationContext(), sql);
         if (!peso.isEmpty()){
             resp = true;
         }

@@ -353,7 +353,7 @@ public class MainActivity extends AppCompatActivity {
         //Al darle clic a este elemento en el treeview se abrira una nueva pantalla y se enviaran unos datos
         subChild2_2.setClickListener((node, value) -> {
             if (isNetworkAvailable()) {
-                Intent i = new Intent(MainActivity.this, Pedido_MP_Galvanizado.class);
+                Intent i = new Intent(MainActivity.this, Pedido_MP_Galvanizado_Devolucion.class);
                 i.putExtra("nit_usuario", cd);
                 i.putExtra("bod_origen", 11);
                 i.putExtra("bod_destino", 2);
@@ -457,7 +457,7 @@ public class MainActivity extends AppCompatActivity {
         });
 
         //Agregamos subgrupo1"Gestion Puntilleria".
-        //child4.addChild(subChild4_1);
+        child4.addChild(subChild4_1);
 
         //Agregamos subgrupo2"Gestion Puntilleria".
         child4.addChild(subChild4_2);
@@ -566,7 +566,7 @@ public class MainActivity extends AppCompatActivity {
         });
 
         //Agregamos subgrupo1"Revisión - Calidad: Galvanizado".
-        //child5.addChild(subChild5_1);
+        child5.addChild(subChild5_1);
 
         //Agregamos subgrupo2"Revisión - Calidad: Trefilación".
         child5.addChild(subChild5_2);
@@ -718,7 +718,7 @@ public class MainActivity extends AppCompatActivity {
         child6.addChild(subChild6_5);
 
         //Agregamos subgrupo4"Logistica - Recepción: Puntilleria".
-        //child6.addChild(subChild6_6);
+        child6.addChild(subChild6_6);
 
         //Agregamos subgrupo4"Logistica - Recepción: Auditoria Logistica".
         child6.addChild(subChild6_7);

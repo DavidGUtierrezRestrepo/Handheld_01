@@ -98,7 +98,7 @@ public class Pedido_MP_Galvanizado_Devolucion extends AppCompatActivity implemen
         int intPendiente = Integer.parseInt(ListaPedidos.get(position).getPendiente());
 
         if (intPendiente > 0){
-            Intent intent = new Intent(this,Pedido_MP_Galvanizado_Devolucion.class);
+            Intent intent = new Intent(this,Trans_MP_Galvanizado_Devolucion.class);
             //Enviamos al siguiente Activity los datos del Listview Seleccionado
             intent.putExtra("numero", ListaPedidos.get(position).getNumero());
             intent.putExtra("idDetalle", ListaPedidos.get(position).getIdDetalle());

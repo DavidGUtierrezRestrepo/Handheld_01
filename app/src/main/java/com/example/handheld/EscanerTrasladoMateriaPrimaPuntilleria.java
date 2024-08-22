@@ -583,7 +583,7 @@ public class EscanerTrasladoMateriaPrimaPuntilleria extends AppCompatActivity im
         Boolean resp = false;
         String nro_orden = obj_gestion_alambronLn.extraerDatoCodigoBarrasGalvanizado("nro_orden", consecutivo);
         String id_rollo = obj_gestion_alambronLn.extraerDatoCodigoBarrasGalvanizado("nro_rollo", consecutivo);
-        if (!nro_orden.equals("") && !numero_rollo.equals("")){
+        if (!nro_orden.equals("") && !id_rollo.equals("")){
             String sql = "select nro_orden from D_rollo_galvanizado_f WHERE nro_orden =" + nro_orden + " AND consecutivo_rollo = " + id_rollo;
             String id = conexion.valorTodo(EscanerTrasladoMateriaPrimaPuntilleria.this,sql);
             if (!id.equals("")){

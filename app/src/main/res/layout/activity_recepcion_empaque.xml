@@ -6,8 +6,8 @@
     tools:context=".RecepcionEmpaque">
 
     <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_width="416dp"
+        android:layout_height="655dp"
         android:orientation="vertical">
 
         <LinearLayout

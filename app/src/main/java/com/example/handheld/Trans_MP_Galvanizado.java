@@ -505,7 +505,7 @@ public class Trans_MP_Galvanizado extends AppCompatActivity implements AdapterVi
         Double costo_unit = Double.parseDouble(conexion.obtenerCostoUnitTref(Trans_MP_Galvanizado.this,sql_costo_unit));
 
         try {
-            realizar_transaccion(codigo, peso,consecutivo_materia_prima, id_detalle, id_rollo, tipo, costo_unit);
+            realizar_transaccion(codigo, peso,consecutivo_materia_prima, id_detalle, id_rollo, tipo, costo_unit,stock);
             etCodigo.requestFocus();
         }catch (Exception e){
             leer_nuevo();
@@ -514,7 +514,7 @@ public class Trans_MP_Galvanizado extends AppCompatActivity implements AdapterVi
     }
 
     @SuppressLint("SetTextI18n")
-    public Boolean realizar_transaccion(String codigo, Double peso, String consecutivo_materia_prima, String id_detalle, String id_rollo,String tipo,Double costo_unit ) throws SQLException {
+    public Boolean realizar_transaccion(String codigo, Double peso, String consecutivo_materia_prima, String id_detalle, String id_rollo,String tipo,Double costo_unit,String Stock ) throws SQLException {
         cargando.setVisibility(View.VISIBLE);
         boolean resp = true;
         listTransaccion_prodGalv = new ArrayList<>();
@@ -547,12 +547,6 @@ public class Trans_MP_Galvanizado extends AppCompatActivity implements AdapterVi
             Toast.makeText(Trans_MP_Galvanizado.this, e.getMessage(), Toast.LENGTH_SHORT).show();
         }
 
-        try {
-            //Se añade el sql a la lista
-            listTransaccion_prodGalv.add(sql_detalle_salida);
-        }catch (Exception e){
-            Toast.makeText(Trans_MP_Galvanizado.this, e.getMessage(), Toast.LENGTH_SHORT).show();
-        }
 
         repeticiones = 0;
         error = transaccion();

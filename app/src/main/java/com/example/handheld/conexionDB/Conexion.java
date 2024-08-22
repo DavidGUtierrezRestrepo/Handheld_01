@@ -739,18 +739,18 @@ public class Conexion {
 
     //Obtiene un dato
     public String consultarStock(Context context,String codigo, String bodega){
-        String Stock = null;
+        String stock = null;
 
         try {
             Statement st = conexionBD(ConfiguracionBD.obtenerNombreBD(1), context).createStatement();
             ResultSet rs = st.executeQuery("SELECT stock,bodega FROM v_referencias_sto_hoy WHERE codigo = '" + codigo + "' and bodega = " + bodega + " ");
             if (rs.next()){
-                Stock = rs.getString("stock");
+                stock = rs.getString("stock");
             }
         }catch (Exception e){
             Toast.makeText(context, e.getMessage(), Toast.LENGTH_SHORT).show();
         }
-        return Stock;
+        return stock;
     }
 
     public Integer consultarSwTipo(Context context,String tipo){
@@ -3550,6 +3550,8 @@ public class Conexion {
         }
         return peso;
     }
+
+
 
 
     public String obtenerCodigoTrefImport(Context context, String sql){
