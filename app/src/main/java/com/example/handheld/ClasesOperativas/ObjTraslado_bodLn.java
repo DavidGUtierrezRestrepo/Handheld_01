@@ -1524,10 +1524,10 @@ public class ObjTraslado_bodLn {
 
 
     private String actualizarRefSto(Double kilos , Double costUnit, String codigo, Calendar dFec, Integer bodega, Integer swTipo){
-        String sql = "";
-        //DecimalFormat df = new DecimalFormat("#0.0");
+            String sql = "";
+            //DecimalFormat df = new DecimalFormat("#0.0");
 
-        //Capturamos el mes en un String
+            //Capturamos el mes en un String
         @SuppressLint("SimpleDateFormat")
         SimpleDateFormat dateFormatMoth = new SimpleDateFormat("MM");
         String month = dateFormatMoth.format(dFec.getTime());

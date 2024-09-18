@@ -308,13 +308,13 @@
     <LinearLayout
         android:id="@+id/ll_listview"
         android:layout_width="match_parent"
-        android:layout_height="215dp"
+        android:layout_height="156dp"
         android:orientation="horizontal">
 
         <ListView
             android:id="@+id/listviewEscaner"
             android:layout_width="match_parent"
-            android:layout_height="213dp" />
+            android:layout_height="156dp" />
     </LinearLayout>
 
     <LinearLayout

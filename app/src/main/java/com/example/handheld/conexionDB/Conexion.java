@@ -1253,9 +1253,38 @@ public class Conexion {
 
         try {
             Statement st = conexionBD(ConfiguracionBD.obtenerNombreBD(2), context).createStatement();
-            ResultSet rs = st.executeQuery("SELECT E.numero,D.id_detalle,E.fecha,D.codigo,(SELECT CASE WHEN (SELECT sum(peso) FROM J_salida_materia_prima_P_transaccion  WHERE numero = D.numero AND id_detalle = D.id_detalle ) is null THEN D.cantidad  ELSE (D.cantidad -(SELECT sum(peso) FROM J_salida_materia_prima_P_transaccion  WHERE numero = D.numero AND id_detalle = D.id_detalle )) END )As pendiente  ,R.descripcion FROM J_salida_materia_prima_P_enc E ,J_salida_materia_prima_P_det D, CORSAN.dbo.referencias R \n" +
-                    "         WHERE year(E.fecha)=" + ano + " AND E.anulado is null  AND  R.codigo = D.codigo AND D.numero = E.numero AND (e.devolver = 'N' OR e.devolver IS NULL ) \n" +
-                    "        AND (D.cantidad - (SELECT CASE WHEN ((SELECT sum(peso) FROM J_salida_materia_prima_P_transaccion  WHERE numero = D.numero AND id_detalle = D.id_detalle )) is null THEN 0 ELSE ((SELECT sum(peso) FROM J_salida_materia_prima_P_transaccion  WHERE numero = D.numero AND id_detalle = D.id_detalle ))END) > 0 ) ORDER BY E.fecha");
+            ResultSet rs = st.executeQuery("SELECT \n" +
+                    "    E.numero,\n" +
+                    "    D.id_detalle,\n" +
+                    "    E.fecha,\n" +
+                    "    D.codigo,\n" +
+                    "    (SELECT \n" +
+                    "        CASE \n" +
+                    "            WHEN (SELECT SUM(peso) FROM J_salida_materia_prima_P_transaccion WHERE numero = D.numero AND id_detalle = D.id_detalle) IS NULL \n" +
+                    "            THEN D.cantidad  \n" +
+                    "            ELSE (D.cantidad - (SELECT SUM(peso) FROM J_salida_materia_prima_P_transaccion WHERE numero = D.numero AND id_detalle = D.id_detalle))\n" +
+                    "        END \n" +
+                    "    ) AS pendiente,\n" +
+                    "    R.descripcion \n" +
+                    "FROM \n" +
+                    "    J_salida_materia_prima_P_enc E, \n" +
+                    "    J_salida_materia_prima_P_det D, \n" +
+                    "    CORSAN.dbo.referencias R \n" +
+                    "WHERE \n" +
+                    "    YEAR(E.fecha) ="+ ano +" \n" +
+                    "    AND E.anulado IS NULL  \n" +
+                    "    AND R.codigo = D.codigo \n" +
+                    "    AND D.numero = E.numero \n" +
+                    "    AND (E.devolver = 'N' OR E.devolver IS NULL) \n" +
+                    "    AND (D.cantidad - (SELECT \n" +
+                    "                        CASE \n" +
+                    "                            WHEN (SELECT SUM(peso) FROM J_salida_materia_prima_P_transaccion WHERE numero = D.numero AND id_detalle = D.id_detalle) IS NULL \n" +
+                    "                            THEN 0 \n" +
+                    "                            ELSE (SELECT SUM(peso) FROM J_salida_materia_prima_P_transaccion WHERE numero = D.numero AND id_detalle = D.id_detalle)\n" +
+                    "                        END\n" +
+                    "                    ) > 0) \n" +
+                    "ORDER BY \n" +
+                    "    pendiente DESC;");
             while (rs.next()){
                 modelo = new PedidoModelo();
                 modelo.setNumero(Integer.valueOf(rs.getString("numero")));
@@ -1340,9 +1369,50 @@ public class Conexion {
 
         try {
             Statement st = conexionBD(ConfiguracionBD.obtenerNombreBD(2), context).createStatement();
-            ResultSet rs = st.executeQuery("SELECT E.numero,D.id_detalle,E.fecha,D.codigo,(SELECT CASE WHEN (SELECT sum(peso) FROM J_salida_materia_prima_Tscal_transaccion  WHERE numero = D.numero AND id_detalle = D.id_detalle ) is null THEN D.cantidad  ELSE (D.cantidad -(SELECT sum(peso) FROM J_salida_materia_prima_Tscal_transaccion  WHERE numero = D.numero AND id_detalle = D.id_detalle )) END )As pendiente  ,R.descripcion FROM J_salida_materia_prima_Tscal_enc E ,J_salida_materia_prima_Tscal_det D, CORSAN.dbo.referencias R \n" +
-                    "WHERE year(E.fecha)=" + ano + " AND E.anulado is null  AND  R.codigo = D.codigo AND D.numero = E.numero AND (e.devolver = 'N' OR e.devolver IS NULL )\n" +
-                    "AND (D.cantidad - (SELECT CASE WHEN ((SELECT sum(peso) FROM J_salida_materia_prima_Tscal_transaccion  WHERE numero = D.numero AND id_detalle = D.id_detalle )) is null THEN 0 ELSE ((SELECT sum(peso) FROM J_salida_materia_prima_Tscal_transaccion  WHERE numero = D.numero AND id_detalle = D.id_detalle ))END) > 0 ) ORDER BY E.fecha");
+            ResultSet rs = st.executeQuery("SELECT \n" +
+                    "    E.numero,\n" +
+                    "    D.id_detalle,\n" +
+                    "    E.fecha,\n" +
+                    "    D.codigo,\n" +
+                    "    (SELECT \n" +
+                    "        CASE \n" +
+                    "            WHEN (SELECT sum(peso) \n" +
+                    "                  FROM J_salida_materia_prima_Tscal_transaccion  \n" +
+                    "                  WHERE numero = D.numero \n" +
+                    "                  AND id_detalle = D.id_detalle) IS NULL \n" +
+                    "            THEN D.cantidad  \n" +
+                    "            ELSE (D.cantidad - (SELECT sum(peso) \n" +
+                    "                                FROM J_salida_materia_prima_Tscal_transaccion  \n" +
+                    "                                WHERE numero = D.numero \n" +
+                    "                                AND id_detalle = D.id_detalle)) \n" +
+                    "        END \n" +
+                    "    ) AS pendiente,\n" +
+                    "    R.descripcion \n" +
+                    "FROM \n" +
+                    "    J_salida_materia_prima_Tscal_enc E,\n" +
+                    "    J_salida_materia_prima_Tscal_det D,\n" +
+                    "    CORSAN.dbo.referencias R \n" +
+                    "WHERE \n" +
+                    "    YEAR(E.fecha) = " + ano + " \n" +
+                    "    AND E.anulado IS NULL  \n" +
+                    "    AND R.codigo = D.codigo \n" +
+                    "    AND D.numero = E.numero \n" +
+                    "    AND (E.devolver = 'N' OR E.devolver IS NULL)\n" +
+                    "    AND (D.cantidad - (SELECT \n" +
+                    "                        CASE \n" +
+                    "                            WHEN (SELECT sum(peso) \n" +
+                    "                                  FROM J_salida_materia_prima_Tscal_transaccion  \n" +
+                    "                                  WHERE numero = D.numero \n" +
+                    "                                  AND id_detalle = D.id_detalle) IS NULL \n" +
+                    "                            THEN 0 \n" +
+                    "                            ELSE (SELECT sum(peso) \n" +
+                    "                                  FROM J_salida_materia_prima_Tscal_transaccion  \n" +
+                    "                                  WHERE numero = D.numero \n" +
+                    "                                  AND id_detalle = D.id_detalle) \n" +
+                    "                        END) > 0 ) \n" +
+                    "ORDER BY \n" +
+                    "    pendiente DESC, \n" +
+                    "    E.numero DESC;");
             while (rs.next()){
                 modelo = new PedidoModelo();
                 modelo.setNumero(Integer.valueOf(rs.getString("numero")));
@@ -1369,9 +1439,50 @@ public class Conexion {
 
         try {
             Statement st = conexionBD(ConfiguracionBD.obtenerNombreBD(2), context).createStatement();
-            ResultSet rs = st.executeQuery("SELECT E.numero,D.id_detalle,E.fecha,D.codigo,(SELECT CASE WHEN (SELECT sum(peso) FROM J_salida_materia_prima_Tscae_transaccion  WHERE numero = D.numero AND id_detalle = D.id_detalle ) is null THEN D.cantidad  ELSE (D.cantidad -(SELECT sum(peso) FROM J_salida_materia_prima_Tscae_transaccion  WHERE numero = D.numero AND id_detalle = D.id_detalle )) END )As pendiente  ,R.descripcion FROM J_salida_materia_prima_Tscae_enc E ,J_salida_materia_prima_Tscae_det D, CORSAN.dbo.referencias R \n" +
-                    "WHERE year(E.fecha)=" + ano + " AND E.anulado is null  AND  R.codigo = D.codigo AND D.numero = E.numero AND (e.devolver = 'N' OR e.devolver IS NULL )\n" +
-                    "AND (D.cantidad - (SELECT CASE WHEN ((SELECT sum(peso) FROM J_salida_materia_prima_Tscae_transaccion  WHERE numero = D.numero AND id_detalle = D.id_detalle )) is null THEN 0 ELSE ((SELECT sum(peso) FROM J_salida_materia_prima_Tscae_transaccion  WHERE numero = D.numero AND id_detalle = D.id_detalle ))END) > 0 ) ORDER BY E.fecha");
+            ResultSet rs = st.executeQuery("SELECT \n" +
+                    "    E.numero,\n" +
+                    "    D.id_detalle,\n" +
+                    "    E.fecha,\n" +
+                    "    D.codigo,\n" +
+                    "    (SELECT \n" +
+                    "        CASE \n" +
+                    "            WHEN (SELECT sum(peso) \n" +
+                    "                  FROM J_salida_materia_prima_Tscae_transaccion  \n" +
+                    "                  WHERE numero = D.numero \n" +
+                    "                  AND id_detalle = D.id_detalle) IS NULL \n" +
+                    "            THEN D.cantidad  \n" +
+                    "            ELSE (D.cantidad - (SELECT sum(peso) \n" +
+                    "                                FROM J_salida_materia_prima_Tscae_transaccion  \n" +
+                    "                                WHERE numero = D.numero \n" +
+                    "                                AND id_detalle = D.id_detalle)) \n" +
+                    "        END \n" +
+                    "    ) AS pendiente,\n" +
+                    "    R.descripcion \n" +
+                    "FROM \n" +
+                    "    J_salida_materia_prima_Tscae_enc E,\n" +
+                    "    J_salida_materia_prima_Tscae_det D,\n" +
+                    "    CORSAN.dbo.referencias R \n" +
+                    "WHERE \n" +
+                    "    YEAR(E.fecha) = " + ano + " \n" +
+                    "    AND E.anulado IS NULL  \n" +
+                    "    AND R.codigo = D.codigo \n" +
+                    "    AND D.numero = E.numero \n" +
+                    "    AND (E.devolver = 'N' OR E.devolver IS NULL)\n" +
+                    "    AND (D.cantidad - (SELECT \n" +
+                    "                        CASE \n" +
+                    "                            WHEN (SELECT sum(peso) \n" +
+                    "                                  FROM J_salida_materia_prima_Tscae_transaccion  \n" +
+                    "                                  WHERE numero = D.numero \n" +
+                    "                                  AND id_detalle = D.id_detalle) IS NULL \n" +
+                    "                            THEN 0 \n" +
+                    "                            ELSE (SELECT sum(peso) \n" +
+                    "                                  FROM J_salida_materia_prima_Tscae_transaccion  \n" +
+                    "                                  WHERE numero = D.numero \n" +
+                    "                                  AND id_detalle = D.id_detalle) \n" +
+                    "                        END) > 0 ) \n" +
+                    "ORDER BY \n" +
+                    "    pendiente DESC, \n" +
+                    "    E.numero DESC;\n");
             while (rs.next()){
                 modelo = new PedidoModelo();
                 modelo.setNumero(Integer.valueOf(rs.getString("numero")));
@@ -1398,9 +1509,50 @@ public class Conexion {
 
         try {
             Statement st = conexionBD(ConfiguracionBD.obtenerNombreBD(2), context).createStatement();
-            ResultSet rs = st.executeQuery("SELECT E.numero,D.id_detalle,E.fecha,D.codigo,(SELECT CASE WHEN (SELECT sum(peso) FROM J_salida_materia_prima_Tsar_transaccion  WHERE numero = D.numero AND id_detalle = D.id_detalle ) is null THEN D.cantidad  ELSE (D.cantidad -(SELECT sum(peso) FROM J_salida_materia_prima_Tsar_transaccion  WHERE numero = D.numero AND id_detalle = D.id_detalle )) END )As pendiente  ,R.descripcion FROM J_salida_materia_prima_Tsar_enc E ,J_salida_materia_prima_Tsar_det D, CORSAN.dbo.referencias R \n" +
-                    "WHERE year(E.fecha)=" + ano + " AND E.anulado is null  AND  R.codigo = D.codigo AND D.numero = E.numero AND (e.devolver = 'N' OR e.devolver IS NULL )\n" +
-                    "AND (D.cantidad - (SELECT CASE WHEN ((SELECT sum(peso) FROM J_salida_materia_prima_Tsar_transaccion  WHERE numero = D.numero AND id_detalle = D.id_detalle )) is null THEN 0 ELSE ((SELECT sum(peso) FROM J_salida_materia_prima_Tsar_transaccion  WHERE numero = D.numero AND id_detalle = D.id_detalle ))END) > 0 ) ORDER BY E.fecha");
+            ResultSet rs = st.executeQuery("SELECT \n" +
+                    "    E.numero,\n" +
+                    "    D.id_detalle,\n" +
+                    "    E.fecha,\n" +
+                    "    D.codigo,\n" +
+                    "    (SELECT \n" +
+                    "        CASE \n" +
+                    "            WHEN (SELECT sum(peso) \n" +
+                    "                  FROM J_salida_materia_prima_Tsar_transaccion  \n" +
+                    "                  WHERE numero = D.numero \n" +
+                    "                  AND id_detalle = D.id_detalle) IS NULL \n" +
+                    "            THEN D.cantidad  \n" +
+                    "            ELSE (D.cantidad - (SELECT sum(peso) \n" +
+                    "                                FROM J_salida_materia_prima_Tsar_transaccion  \n" +
+                    "                                WHERE numero = D.numero \n" +
+                    "                                AND id_detalle = D.id_detalle)) \n" +
+                    "        END \n" +
+                    "    ) AS pendiente,\n" +
+                    "    R.descripcion \n" +
+                    "FROM \n" +
+                    "    J_salida_materia_prima_Tsar_enc E,\n" +
+                    "    J_salida_materia_prima_Tsar_det D,\n" +
+                    "    CORSAN.dbo.referencias R \n" +
+                    "WHERE \n" +
+                    "    YEAR(E.fecha) = " + ano + " \n" +
+                    "    AND E.anulado IS NULL  \n" +
+                    "    AND R.codigo = D.codigo \n" +
+                    "    AND D.numero = E.numero \n" +
+                    "    AND (E.devolver = 'N' OR E.devolver IS NULL)\n" +
+                    "    AND (D.cantidad - (SELECT \n" +
+                    "                        CASE \n" +
+                    "                            WHEN (SELECT sum(peso) \n" +
+                    "                                  FROM J_salida_materia_prima_Tsar_transaccion  \n" +
+                    "                                  WHERE numero = D.numero \n" +
+                    "                                  AND id_detalle = D.id_detalle) IS NULL \n" +
+                    "                            THEN 0 \n" +
+                    "                            ELSE (SELECT sum(peso) \n" +
+                    "                                  FROM J_salida_materia_prima_Tsar_transaccion  \n" +
+                    "                                  WHERE numero = D.numero \n" +
+                    "                                  AND id_detalle = D.id_detalle) \n" +
+                    "                        END) > 0 ) \n" +
+                    "ORDER BY \n" +
+                    "    pendiente DESC, \n" +
+                    "    E.numero DESC;\n");
             while (rs.next()){
                 modelo = new PedidoModelo();
                 modelo.setNumero(Integer.valueOf(rs.getString("numero")));
@@ -1427,9 +1579,50 @@ public class Conexion {
 
         try {
             Statement st = conexionBD(ConfiguracionBD.obtenerNombreBD(2), context).createStatement();
-            ResultSet rs = st.executeQuery("SELECT E.numero,D.id_detalle,E.fecha,D.codigo,(SELECT CASE WHEN (SELECT sum(peso) FROM J_salida_materia_prima_Tsav_transaccion  WHERE numero = D.numero AND id_detalle = D.id_detalle ) is null THEN D.cantidad  ELSE (D.cantidad -(SELECT sum(peso) FROM J_salida_materia_prima_Tsav_transaccion  WHERE numero = D.numero AND id_detalle = D.id_detalle )) END )As pendiente  ,R.descripcion FROM J_salida_materia_prima_Tsav_enc E ,J_salida_materia_prima_Tsav_det D, CORSAN.dbo.referencias R \n" +
-                    "WHERE year(E.fecha)=" + ano + " AND E.anulado is null  AND  R.codigo = D.codigo AND D.numero = E.numero AND (e.devolver = 'N' OR e.devolver IS NULL )\n" +
-                    "AND (D.cantidad - (SELECT CASE WHEN ((SELECT sum(peso) FROM J_salida_materia_prima_Tsav_transaccion  WHERE numero = D.numero AND id_detalle = D.id_detalle )) is null THEN 0 ELSE ((SELECT sum(peso) FROM J_salida_materia_prima_Tsav_transaccion  WHERE numero = D.numero AND id_detalle = D.id_detalle ))END) > 0 ) ORDER BY E.fecha");
+            ResultSet rs = st.executeQuery("SELECT \n" +
+                    "    E.numero,\n" +
+                    "    D.id_detalle,\n" +
+                    "    E.fecha,\n" +
+                    "    D.codigo,\n" +
+                    "    (SELECT \n" +
+                    "        CASE \n" +
+                    "            WHEN (SELECT sum(peso) \n" +
+                    "                  FROM J_salida_materia_prima_Tsav_transaccion  \n" +
+                    "                  WHERE numero = D.numero \n" +
+                    "                  AND id_detalle = D.id_detalle) IS NULL \n" +
+                    "            THEN D.cantidad  \n" +
+                    "            ELSE (D.cantidad - (SELECT sum(peso) \n" +
+                    "                                FROM J_salida_materia_prima_Tsav_transaccion  \n" +
+                    "                                WHERE numero = D.numero \n" +
+                    "                                AND id_detalle = D.id_detalle)) \n" +
+                    "        END \n" +
+                    "    ) AS pendiente,\n" +
+                    "    R.descripcion \n" +
+                    "FROM \n" +
+                    "    J_salida_materia_prima_Tsav_enc E,\n" +
+                    "    J_salida_materia_prima_Tsav_det D,\n" +
+                    "    CORSAN.dbo.referencias R \n" +
+                    "WHERE \n" +
+                    "    YEAR(E.fecha) = " + ano + " \n" +
+                    "    AND E.anulado IS NULL  \n" +
+                    "    AND R.codigo = D.codigo \n" +
+                    "    AND D.numero = E.numero \n" +
+                    "    AND (E.devolver = 'N' OR E.devolver IS NULL)\n" +
+                    "    AND (D.cantidad - (SELECT \n" +
+                    "                        CASE \n" +
+                    "                            WHEN (SELECT sum(peso) \n" +
+                    "                                  FROM J_salida_materia_prima_Tsav_transaccion  \n" +
+                    "                                  WHERE numero = D.numero \n" +
+                    "                                  AND id_detalle = D.id_detalle) IS NULL \n" +
+                    "                            THEN 0 \n" +
+                    "                            ELSE (SELECT sum(peso) \n" +
+                    "                                  FROM J_salida_materia_prima_Tsav_transaccion  \n" +
+                    "                                  WHERE numero = D.numero \n" +
+                    "                                  AND id_detalle = D.id_detalle) \n" +
+                    "                        END) > 0 ) \n" +
+                    "ORDER BY \n" +
+                    "    pendiente DESC, \n" +
+                    "    E.numero DESC;\n");
             while (rs.next()){
                 modelo = new PedidoModelo();
                 modelo.setNumero(Integer.valueOf(rs.getString("numero")));
@@ -1603,10 +1796,7 @@ public class Conexion {
 
         try {
             Statement st = conexionBD(ConfiguracionBD.obtenerNombreBD(2), context).createStatement();
-            ResultSet rs = st.executeQuery("SELECT R.nro_orden,R.consecutivo_rollo as nro_rollo,S.final_galv,ref.descripcion,R.peso \n" +
-                    "FROM D_rollo_galvanizado_f R, D_orden_pro_galv_enc S,CORSAN.dbo.referencias ref,CORSAN.dbo.V_nom_personal_Activo_con_maquila ter \n" +
-                    "where R.nro_orden = S.consecutivo_orden_G And ref.codigo = S.final_galv and ter.nit=R.nit_operario AND R.no_conforme is null and R.anular is null and R.recepcionado is not null and trb1 is null and R.tipo_transacion is null and S.final_galv LIKE '33G%' \n" +
-                    "order by ref.descripcion");
+            ResultSet rs = st.executeQuery("3R");
             while (rs.next()){
                 modelo = new GalvRecepcionModelo();
                 modelo.setNro_orden(rs.getString("nro_orden"));
@@ -3476,7 +3666,7 @@ public class Conexion {
                         "T.tipoCliente AS cliente,\n" +
                         "R.manuales as manual,\n" +
                         "R.anulado,\n" +
-                        "R.destino" +
+                        "R.destino \n" +
                         "FROM \n" +
                         "J_rollos_tref R \n" +
                         "INNER JOIN\n" +
@@ -3683,9 +3873,39 @@ public class Conexion {
 
         try {
             Statement st = conexionBD(ConfiguracionBD.obtenerNombreBD(2), context).createStatement();
-            ResultSet rs = st.executeQuery("SELECT E.numero,D.id_detalle,E.fecha,D.codigo,(SELECT CASE WHEN (SELECT sum(peso) FROM J_salida_materia_prima_G_transaccion  WHERE numero = D.numero AND id_detalle = D.id_detalle ) is null THEN D.cantidad  ELSE (D.cantidad -(SELECT sum(peso) FROM J_salida_materia_prima_G_transaccion  WHERE numero = D.numero AND id_detalle = D.id_detalle )) END )As pendiente  ,R.descripcion FROM J_salida_materia_prima_G_enc E ,J_salida_materia_prima_G_det D, CORSAN.dbo.referencias R \n" +
-                    "WHERE year(E.fecha)= "  + anoActual + " AND E.anulado is null  AND  R.codigo = D.codigo AND D.numero = E.numero  AND (e.devolver = 'N' OR e.devolver IS NULL )\n" +
-                    "AND (D.cantidad - (SELECT CASE WHEN ((SELECT sum(peso) FROM J_salida_materia_prima_G_transaccion  WHERE numero = D.numero AND id_detalle = D.id_detalle )) is null THEN 0 ELSE ((SELECT sum(peso) FROM J_salida_materia_prima_G_transaccion  WHERE numero = D.numero AND id_detalle = D.id_detalle ))END) > 0 ) ORDER BY E.fecha");
+            ResultSet rs = st.executeQuery("SELECT \n" +
+                    "    E.numero,\n" +
+                    "    D.id_detalle,\n" +
+                    "    E.fecha,\n" +
+                    "    D.codigo,\n" +
+                    "    (SELECT \n" +
+                    "        CASE \n" +
+                    "            WHEN (SELECT SUM(peso) FROM J_salida_materia_prima_G_transaccion WHERE numero = D.numero AND id_detalle = D.id_detalle) IS NULL \n" +
+                    "            THEN D.cantidad  \n" +
+                    "            ELSE (D.cantidad - (SELECT SUM(peso) FROM J_salida_materia_prima_G_transaccion WHERE numero = D.numero AND id_detalle = D.id_detalle))\n" +
+                    "        END \n" +
+                    "    ) AS pendiente,\n" +
+                    "    R.descripcion \n" +
+                    "FROM \n" +
+                    "    J_salida_materia_prima_G_enc E, \n" +
+                    "    J_salida_materia_prima_G_det D, \n" +
+                    "    CORSAN.dbo.referencias R \n" +
+                    "WHERE \n" +
+                    "    YEAR(E.fecha) = " + anoActual + " \n" +
+                    "    AND E.anulado IS NULL  \n" +
+                    "    AND R.codigo = D.codigo \n" +
+                    "    AND D.numero = E.numero  \n" +
+                    "    AND (E.devolver = 'N' OR E.devolver IS NULL) \n" +
+                    "    AND (D.cantidad - (SELECT \n" +
+                    "                        CASE \n" +
+                    "                            WHEN (SELECT SUM(peso) FROM J_salida_materia_prima_G_transaccion WHERE numero = D.numero AND id_detalle = D.id_detalle) IS NULL \n" +
+                    "                            THEN 0 \n" +
+                    "                            ELSE (SELECT SUM(peso) FROM J_salida_materia_prima_G_transaccion WHERE numero = D.numero AND id_detalle = D.id_detalle)\n" +
+                    "                        END\n" +
+                    "                    ) > 0) \n" +
+                    "ORDER BY \n" +
+                    "    pendiente DESC,\n" +
+                    "    E.fecha;\n");
             while (rs.next()){
                 modelo = new PedidoModelo();
                 modelo.setNumero(Integer.valueOf(rs.getString("numero")));

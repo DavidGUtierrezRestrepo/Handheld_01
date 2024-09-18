@@ -678,16 +678,16 @@ public class MainActivity extends AppCompatActivity {
 
         //SubGrupo4"Logistica - Recepción "
         //Enviamos el icono y el texto para el SubGrupo
-        MyHolder.IconTreeItem subChildItem6_6 = new MyHolder.IconTreeItem(R.drawable.ic_folder, "Puntilleria");
-        TreeNode subChild6_6 = new TreeNode(subChildItem6_6).setViewHolder(new MyHolder(getApplicationContext(), false, R.layout.child, 100));
+        //MyHolder.IconTreeItem subChildItem6_6 = new MyHolder.IconTreeItem(R.drawable.ic_folder, "Puntilleria");
+        //TreeNode subChild6_6 = new TreeNode(subChildItem6_6).setViewHolder(new MyHolder(getApplicationContext(), false, R.layout.child, 100));
 
         //Al darle clic a este elemento en el treeview se abrira una nueva pantalla y se enviaran unos datos
-        subChild6_6.setClickListener((node, value) -> {
-            Intent intent = new Intent(MainActivity.this, ResumenPunti.class);
-            intent.putExtra("nit_usuario", cd);
-            intent.putExtra("nombre_usuario", nombre_usuario);
-            startActivity(intent);
-        });
+        //subChild6_6.setClickListener((node, value) -> {
+        //   Intent intent = new Intent(MainActivity.this, ResumenPunti.class);
+        //    intent.putExtra("nit_usuario", cd);
+        //    intent.putExtra("nombre_usuario", nombre_usuario);
+        //   startActivity(intent);
+        // });
 
         //SubGrupo6"Logistica - Recepción"
         //Enviamos el icono y el texto para el SubGrupo
@@ -718,7 +718,7 @@ public class MainActivity extends AppCompatActivity {
         child6.addChild(subChild6_5);
 
         //Agregamos subgrupo4"Logistica - Recepción: Puntilleria".
-        child6.addChild(subChild6_6);
+        // child6.addChild(subChild6_6);
 
         //Agregamos subgrupo4"Logistica - Recepción: Auditoria Logistica".
         child6.addChild(subChild6_7);

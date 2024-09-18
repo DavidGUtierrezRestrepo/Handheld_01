@@ -150,9 +150,7 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
         context = this;
 
         rec = new String[] {
-                "auxiliar3.TI@corsan.com.co",
-                "isabel.gomez@corsan.com.co",
-                "auditoria@corsan.com.co"
+                "auxiliar3.TI@corsan.com.co"
         };
 
         /////////////////////////////////////////////////////////////////////////////////////////////
@@ -601,7 +599,7 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
                 incompleta = false;
                 ///////////////////////////////////////////////////////////
                 //Correo electronico funciono la transacción
-                /*correo = conexion.obtenerCorreo(EscanerInventario.this);
+                correo = conexion.obtenerCorreo(EscanerInventario.this);
                 String email = correo.getCorreo();
                 String pass = correo.getContrasena();
                 subject = "Transacción Exitosa Control en Piso Galvanizado";
@@ -634,7 +632,7 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
                     task.execute();
                 } else {
                     toastError("Problemas de conexión a Internet");
-                }*/
+                }
                 //////////////////////////////////////////////////////////////////////////////////
                 toastAcierto("Transaccion Realizada con Exito! -- " + numero_transaccion);
             }else{

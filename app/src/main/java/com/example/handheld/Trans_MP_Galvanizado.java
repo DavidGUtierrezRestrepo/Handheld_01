@@ -7,6 +7,7 @@ import android.media.AudioManager;
 import android.media.SoundPool;
 import android.os.Bundle;
 import android.os.Vibrator;
+import android.util.Log;
 import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
@@ -358,26 +359,24 @@ public class Trans_MP_Galvanizado extends AppCompatActivity implements AdapterVi
                 String sql_peso = "SELECT R.peso FROM J_orden_prod_tef O,J_rollos_tref R WHERE peso IS NOT NULL AND O.consecutivo =" + cod_orden + " AND R.id_detalle = " + detalle + " AND R.id_rollo=" + id_rollo + " and R.cod_orden=O.consecutivo";
                 String peso = conexion.obtenerPesoTrefImport(getApplicationContext(), sql_peso);
                 String codigo = conexion.obtenerCodigoTrefImport(getApplicationContext(), sql_codigo);
-                if(codigo.equals(pcodigo)){
-                    Boolean valid;
-                    valid = validarRolloConTransaccion(cod_orden,detalle,id_rollo);
-                    if(valid.equals(false)){
+                if (codigo.equals(pcodigo)) {
+                    boolean valid = validarRolloConTransaccion(cod_orden, detalle, id_rollo);  // Si no hay traslado, `valid` será `false`
+
+                    if (valid) {  // Continuar si `valid` es `false`
                         lblCodigo.setText(codigo);
-                        String sql_descripcion = "SELECT descripcion FROM referencias WHERE  codigo = '" + codigo + "'";
-                        lblDescripcion.setText(conexion.obtenerDescripcionCodigo(Trans_MP_Galvanizado.this,sql_descripcion));
+                        String sql_descripcion = "SELECT descripcion FROM referencias WHERE codigo = '" + codigo + "'";
+                        lblDescripcion.setText(conexion.obtenerDescripcionCodigo(Trans_MP_Galvanizado.this, sql_descripcion));
                         txtKilosRollo.setText(peso);
-                        yaentre=true;
-                        //Se bloquea el EditText ya que el tiquete fue leido correctamente
+                        yaentre = true;
+                        // Bloquear el EditText ya que el tiquete fue leído correctamente
                         etCodigo.setEnabled(false);
                         toastAcierto("Rollo validado");
-                    }else{
-                        {
-                            toastError("Ya se le hizo una salida al rollo");
-                            AudioError();
-                            leer_nuevo();
-                        }
+                    } else {
+                        toastError("Ya se le hizo una salida al rollo");
+                        AudioError();
+                        leer_nuevo();
                     }
-
+                }
                 }else{
                     toastError("El código de alambrón no pertenece al pedido");
                     AudioError();
@@ -389,7 +388,7 @@ public class Trans_MP_Galvanizado extends AppCompatActivity implements AdapterVi
                 leer_nuevo();
             }
         }
-    }
+
 
 
     //Metodo que valida que el codigo de barras exista y este bien
@@ -428,30 +427,34 @@ public class Trans_MP_Galvanizado extends AppCompatActivity implements AdapterVi
     }
 
     //Metodo que valida que el rollo no tenga ya una salida
-    private boolean validarRolloConTransaccion(String cod_orden, String detalle, String id_rollo){
-        boolean respuesta = true;
+    private boolean validarRolloConTransaccion(String cod_orden, String detalle, String id_rollo) {
+        boolean respuesta = false;  // Inicialmente asumimos que no hay traslado
+
         try {
-            String sql = "SELECT traslado FROM J_rollos_tref WHERE cod_orden =" + cod_orden + " AND id_detalle = " + detalle + " AND id_rollo = " + id_rollo;
-            String id = conexion.obtenerNumTranTrefImport(getApplicationContext(), sql);
-            if (id.isEmpty()){
+            // Consulta SQL ajustada con comillas simples para valores de tipo String
+            String sql = "SELECT traslado FROM J_rollos_tref WHERE cod_orden = '" + cod_orden + "' AND id_detalle = '" + detalle + "' AND id_rollo = '" + id_rollo + "'";
+            String traslado = conexion.obtenerNumTranTrefImport(getApplicationContext(), sql);
+
+            // Si se encuentra un traslado, la respuesta será 'true'
+            if (!traslado.isEmpty()) {
                 respuesta = true;
             }
-        }catch (Exception e){
-            Toast.makeText(Trans_MP_Galvanizado.this,e.getMessage(),Toast.LENGTH_SHORT).show();
+        } catch (Exception e) {
+            Log.e("Trans_MP_Galvanizado", "Error al validar rollo con transacción", e);
+            Toast.makeText(Trans_MP_Galvanizado.this, "Error al validar rollo: " + e.getMessage(), Toast.LENGTH_SHORT).show();
         }
 
-        //Trabajo para el translator de bodega 11 a 2
-        if (bod_origen.equals(2) && bod_destino.equals(11)){
-            if (respuesta){
-                respuesta = false;
-            }else{
-                respuesta = true;
-            }
+        // Condición especial para el traductor de bodega de 11 a 2
+        if (bod_origen == 2 && bod_destino == 11) {
+            respuesta = !respuesta;  // Invertimos la lógica si hay traslado
         }
-        return respuesta;
+
+        return respuesta;  // Retornamos 'true' si se encontró traslado, 'false
+
     }
 
-    private boolean validarFrm(){
+
+        private boolean validarFrm(){
         if (!lblCodigo.getText().toString().isEmpty() && !lblCodigo.getText().toString().equals("LEA CODIGO")){
             if (!txtKilosRollo.getText().toString().isEmpty()){
                 if (!spinner.getSelectedItem().equals("Seleccione")){
@@ -493,7 +496,7 @@ public class Trans_MP_Galvanizado extends AppCompatActivity implements AdapterVi
     private void guardar() throws SQLException {
         cargando.setVisibility(View.VISIBLE);
         String tipo = spinner.getSelectedItem().toString();
-        Double peso = Double.parseDouble(txtKilosRollo.getText().toString());
+        String peso = txtKilosRollo.getText().toString().trim();
         String codigo = lblCodigo.getText().toString().trim();
         String bodega = objTraslado_bodLn.obtenerBodegaXcodigo(codigo);
         String stock = conexion.consultarStock(Trans_MP_Galvanizado.this,codigo,bodega);
@@ -514,7 +517,7 @@ public class Trans_MP_Galvanizado extends AppCompatActivity implements AdapterVi
     }
 
     @SuppressLint("SetTextI18n")
-    public Boolean realizar_transaccion(String codigo, Double peso, String consecutivo_materia_prima, String id_detalle, String id_rollo,String tipo,Double costo_unit,String Stock ) throws SQLException {
+    public Boolean realizar_transaccion(String codigo, String peso, String consecutivo_materia_prima, String id_detalle, String id_rollo,String tipo,Double costo_unit,String Stock ) throws SQLException {
         cargando.setVisibility(View.VISIBLE);
         boolean resp = true;
         listTransaccion_prodGalv = new ArrayList<>();
@@ -639,7 +642,7 @@ public class Trans_MP_Galvanizado extends AppCompatActivity implements AdapterVi
         return error;
     }
 
-    private List<Object> traslado_bodega(String codigo, Double cantidad, String tipo, Double costo_unit){
+    private List<Object> traslado_bodega(String codigo, String cantidad, String tipo, Double costo_unit){
         List<Object> listSql;
 
         Calendar calendar = Calendar.getInstance();
@@ -650,11 +653,11 @@ public class Trans_MP_Galvanizado extends AppCompatActivity implements AdapterVi
         String usuario = personaEntrega.getNit();
         String notas = "MOVIL fecha:" + fecha + " usuario:" + usuario;
         numero_transaccion = Integer.valueOf(Obj_ordenprodLn.mover_consecutivoTref(tipo, Trans_MP_Galvanizado.this));
-        listSql = objTraslado_bodLn.listaTransaccionDatable_traslado_bodega(numero_transaccion, codigo, bod_origen, bod_destino, calendar, notas, usuario, cantidad, tipo, modelo, costo_unit,Trans_MP_Galvanizado.this);
+        listSql = objTraslado_bodLn.listaTransaccionDatable_traslado_bodega(numero_transaccion, codigo, bod_origen, bod_destino, calendar, notas, usuario, Double.valueOf(cantidad), tipo, modelo, costo_unit,Trans_MP_Galvanizado.this);
         return listSql;
     }
 
-    public void addRollo(String consecutivo_materia_prima, String id_detalle, String id_rollo, String tipo, Double peso, Double costo_unit){
+    public void addRollo(String consecutivo_materia_prima, String id_detalle, String id_rollo, String tipo, String peso, Double costo_unit){
         DetalleTranModelo escanerModelo;
 
         String sql_codigo = "select O.prod_final FROM  J_orden_prod_tef O, J_rollos_tref R WHERE O.consecutivo = " + consecutivo_materia_prima + " AND R.id_detalle  =" + id_detalle + " AND R.id_rollo =" + id_rollo + "AND R.cod_orden=O.consecutivo";
@@ -668,7 +671,7 @@ public class Trans_MP_Galvanizado extends AppCompatActivity implements AdapterVi
         escanerModelo.setTipo(tipo);
         escanerModelo.setNum_trans(numero_transaccion.toString());
         escanerModelo.setCodigo(codigo);
-        escanerModelo.setPeso(peso.toString());
+        escanerModelo.setPeso(peso);
         escanerModelo.setDetalle(id_detalle.toString());
         escanerModelo.setNum_rollo(id_rollo.toString());
         escanerModelo.setEstado_muestra("0");
