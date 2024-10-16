@@ -42,11 +42,14 @@ import com.example.handheld.modelos.GalvRecepcionadoRollosModelo;
 import com.example.handheld.modelos.PermisoPersonaModelo;
 import com.example.handheld.modelos.PersonaModelo;
 import com.example.handheld.modelos.RolloGalvTransa;
+import com.example.handheld.modelos.TrefiRecepcionadoRollosModelo;
 
 import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 
@@ -82,7 +85,7 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
 
     //Se inicializa variables necesarias en la clase
     int yaentre = 0, leidos;
-    String consecutivo, error, fechaTransaccion, nro_orden,nro_rollo;
+    String consecutivo, error, fechaTransaccion, nro_orden,nro_rollo,db_produccion;
     Integer numero_transaccion, repeticiones;
 
     String permiso = "";
@@ -99,7 +102,7 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
 
     //Lista para relacionar rollos con la transacción.
     List<Object> listTransactionTrb1 = new ArrayList<>(); //Lista donde agregamos las consultas que agrearan el campo trb1
-    List<Object> listTransactionGal;
+    List<GalvRecepcionadoRollosModelo> listTransactionGal=new ArrayList<>();
     List<Object> listReanudarTransa;
 
     //Se inicializa los varibles para el sonido de error
@@ -145,6 +148,9 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
         sonido_de_Reproduccion = sp.load(this, R.raw.sonido_error_2,1);
 
         vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+
+        //Definimos en una variable la base de datos que estamos utilizando en prgproduccion
+        db_produccion = ConfiguracionBD.obtenerNombreBD(2) + ".dbo.";
 
         //Se definen elementos para enviar correos
         context = this;
@@ -372,13 +378,18 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
     //Una TRB1 en el sistema de bodega 2 a bodega 3 con los rollos leidos
     @SuppressLint("SetTextI18n")
     private void realizarTransaccion() {
+        StringBuilder stringConstructor = new StringBuilder();
+        stringConstructor.append("AND ((R.nro_orden=" +   listTransactionGal.get(0).getNro_orden() + " and R.nro_rollo=" +   listTransactionGal.get(0).getNro_rollo() + ")");
+        if (  listTransactionGal.size() > 1) {
+            for (int j = 1; j <   listTransactionGal.size(); j++) {
+                stringConstructor.append(" OR (R.nro_orden=" +   listTransactionGal.get(j).getNro_orden() + " and R.nro_rollo=" +   listTransactionGal.get(j).getNro_rollo() + ")");
+            }
+        }
+        stringConstructor.append(")");
+        String complementoSql = stringConstructor.toString();
+
         //Creamos una lista para almacenar todas las consultas que se realizaran en la base de datos
         listTransactionGal = new ArrayList<>();
-        //Creamos una lista para almacenar todas las consultas que se realizaran en la base de datos
-        List<Object> listTransaccionBodega;
-        //Lista donde revertimos la primer consulta si el segundo proceso no se realiza bien
-        //List<Object> listTransactionError = new ArrayList<>(); se comenta porque se decide no revertir la primera consulta sino terminar las incompletas
-
 
         // Obtén la fecha y hora actual
         Date fechaActual = new Date();
@@ -396,165 +407,75 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
         String monthActualString = formatoMonth.format(fechaActual);
         String yearActualString = formatoYear.format(fechaActual);
 
+        ListarefeRecepcionados = conexion.galvRefeRecepcionados(EscanerInventario.this, monthActualString, yearActualString, complementoSql);
+
         //se adicionan los campos recepcionado, nit_recepcionado y fecha_recepcionado a la tabla
-        for(int i=0;i<ListaGalvRollosRecep.size();i++){
+        for (int i = 0; i < ListaGalvRollosRecep.size(); i++) {
             String nro_orden = ListaGalvRollosRecep.get(i).getNro_orden();
             String nro_rollo = ListaGalvRollosRecep.get(i).getNro_rollo();
 
-            String sql_rollo= "UPDATE D_rollo_galvanizado_f SET recepcionado='SI', nit_recepcionado='"+ nit_usuario +"', fecha_recepcion='"+ fechaActualString +"', nit_entrega='"+ personaLogistica.getNit() +"' WHERE nro_orden='"+ nro_orden +"' AND consecutivo_rollo='"+nro_rollo+"'";
+            String sql_rollo= "UPDATE " + db_produccion + "D_rollo_galvanizado_f SET recepcionado='SI', nit_recepcionado='" + nit_usuario + "', fecha_recepcion='" + fechaActualString + "', nit_entrega='" + personaLogistica.getNit() + "' WHERE nro_orden='" + nro_orden + "' AND consecutivo_rollo='" + nro_rollo + "'";
 
             try {
                 //Se añade el sql a la lista
-                listTransactionGal.add(sql_rollo);
-            }catch (Exception e){
+                listTransactionTrb1.add(sql_rollo);
+            } catch (Exception e) {
                 Toast.makeText(EscanerInventario.this, e.getMessage(), Toast.LENGTH_SHORT).show();
             }
         }
 
-        if (listTransactionGal.size()>0){
-            //Ejecutamos la consultas que llenan los campos de recepción
-            repeticiones = 0;
-            error = ciclo1();
-            if (error.equals("")){
-                ListarefeRecepcionados = conexion.galvRefeRecepcionados(EscanerInventario.this,fechaActualString, monthActualString, yearActualString);
-                numero_transaccion = Integer.valueOf(Obj_ordenprodLn.mover_consecutivo("TRB1", EscanerInventario.this));
-                listTransaccionBodega = traslado_bodega(ListarefeRecepcionados, calendar);
-                //Ejecutamos la lista de consultas para hacer la TRB1
-                error = ing_prod_ad.ExecuteSqlTransaction(listTransaccionBodega, ConfiguracionBD.obtenerNombreBD(1), EscanerInventario.this);
-                if (error.equals("")){
-                    for(int u=0;u<ListaGalvRollosRecep.size();u++){
-                        String nro_orden = ListaGalvRollosRecep.get(u).getNro_orden();
-                        String nro_rollo = ListaGalvRollosRecep.get(u).getNro_rollo();
-                        String sql_trb1= "UPDATE D_rollo_galvanizado_f SET trb1="+ numero_transaccion +", tipo_transacion='TRB1' WHERE nro_orden='"+ nro_orden +"' AND consecutivo_rollo='"+nro_rollo+"'";
-                        try {
-                            //Se añade el sql a la lista
-                            listTransactionTrb1.add(sql_trb1);
-                        }catch (Exception e){
-                            Toast.makeText(EscanerInventario.this, e.getMessage(), Toast.LENGTH_SHORT).show();
-                        }
-                    }
-                    repeticiones = 0;
-                    ciclo3();
-                }else{
-                    incompleta =  true;
-                    AudioError();
-                    AlertDialog.Builder builder = new AlertDialog.Builder(EscanerInventario.this);
-                    View mView = getLayoutInflater().inflate(R.layout.alertdialog_aceptar,null);
-                    TextView alertMensaje = mView.findViewById(R.id.alertMensaje);
-                    alertMensaje.setText("Hubo un error en el paso 2 de la transacción. \n'" + error + "'\n ¡Vuelve a intentar realizar la transacción!");
-                    Button btnAceptar = mView.findViewById(R.id.btnAceptar);
-                    builder.setView(mView);
-                    AlertDialog alertDialog = builder.create();
-                    btnAceptar.setOnClickListener(v -> {
-                        if (isNetworkAvailable()) {
-                            repeticiones = 0;
-                            reanudarTransacion();
-                            alertDialog.dismiss();
-                        } else {
-                            toastError("Problemas de conexión a Internet");
-                        }
-                    });
-                    alertDialog.setCancelable(false);
-                    alertDialog.show();
-                }
-            }else{
-                incompleta =  true;
-                AudioError();
-                AlertDialog.Builder builder = new AlertDialog.Builder(EscanerInventario.this);
-                View mView = getLayoutInflater().inflate(R.layout.alertdialog_aceptar,null);
-                TextView alertMensaje = mView.findViewById(R.id.alertMensaje);
-                alertMensaje.setText("Hubo un error en el paso 1 de la transacción. \n'" + error + "'\n ¡Vuelve a intentar realizar la transacción!");
-                Button btnAceptar = mView.findViewById(R.id.btnAceptar);
-                btnAceptar.setText("Aceptar");
-                builder.setView(mView);
-                AlertDialog alertDialog = builder.create();
-                btnAceptar.setOnClickListener(v -> alertDialog.dismiss());
-                alertDialog.setCancelable(false);
-                alertDialog.show();
+        numero_transaccion = Integer.valueOf(Obj_ordenprodLn.mover_consecutivo("TRB1", EscanerInventario.this));
+        List<Object> objetos = traslado_bodega(ListarefeRecepcionados, calendar);
+        List<GalvRecepcionadoRollosModelo> galvRecepcionados = new ArrayList<>();
+
+        for (Object obj : objetos) {
+            if (obj instanceof GalvRecepcionadoRollosModelo) {
+                galvRecepcionados.add((GalvRecepcionadoRollosModelo) obj);
             }
         }
-    }
+        listTransactionGal.addAll(galvRecepcionados);
 
-    private String ciclo1() {
-        repeticiones = repeticiones + 1;
-        if(repeticiones<=5){
-            error = ing_prod_ad.ExecuteSqlTransaction(listTransactionGal, ConfiguracionBD.obtenerNombreBD(2), EscanerInventario.this);
-            if(error.equals("")){
-                return error;
-            }else{
-                ciclo1();
+
+        for (int u = 0; u < ListaGalvRollosRecep.size(); u++) {
+            String nro_orden = ListaGalvRollosRecep.get(u).getNro_orden();
+            String nro_rollo= ListaGalvRollosRecep.get(u).getNro_rollo();
+
+            String sql_trb1 = "UPDATE" + db_produccion +" D_rollo_galvanizado_f SET trb1=" + numero_transaccion + " WHERE nro_orden='" + nro_orden + "' AND consecutivo_rollo='" + nro_rollo + "'";
+            try {
+                //Se añade el sql a la lista
+                listTransactionTrb1.add(sql_trb1);
+            } catch (Exception e) {
+                Toast.makeText(EscanerInventario.this, e.getMessage(), Toast.LENGTH_SHORT).show();
             }
-        }else{
-            return error;
         }
-        return error;
-    }
 
-    @SuppressLint("SetTextI18n")
-    private void reanudarTransacion(){
-        if (repeticiones<=4){
-            listReanudarTransa = new ArrayList<>();
-            for(int i=0;i<ListaGalvRollosRecep.size();i++){
-                String nro_orden = ListaGalvRollosRecep.get(i).getNro_orden();
-                String nro_rollo = ListaGalvRollosRecep.get(i).getNro_rollo();
-
-                String sql_rollo= "UPDATE D_rollo_galvanizado_f SET recepcionado=null, nit_recepcionado=null, fecha_recepcion=null, nit_entrega=null WHERE nro_orden='"+ nro_orden +"' AND consecutivo_rollo='"+nro_rollo+"'";
-
-                try {
-                    //Se añade el sql a la lista - esto es un
-                    listReanudarTransa.add(sql_rollo);
-                }catch (Exception e){
-                    Toast.makeText(EscanerInventario.this, e.getMessage(), Toast.LENGTH_SHORT).show();
-                }
-            }
-            error = ing_prod_ad.ExecuteSqlTransaction(listReanudarTransa,ConfiguracionBD.obtenerNombreBD(2),EscanerInventario.this);
-            repeticiones = repeticiones + 1;
-            if (error.equals("")){
-                toastAcierto("Transacción Cancelada correctamente");
-
-                incompleta = false;
-                consultarGalvTerminado();
-            }else{
-                incompleta =  true;
-                reanudarTransacion();
-            }
+        //Ejecutamos la lista de consultas para hacer la TRB1
+        error = ing_prod_ad.ExecuteSqlTransaction(Collections.singletonList(listTransactionGal), ConfiguracionBD.obtenerNombreBD(1), EscanerInventario.this);
+        if(error.equals("")){
+            consultarGalvTerminado();
+            incompleta = false;
+            toastAcierto("Transaccion Realizada con Exito! --" + numero_transaccion);
         }else{
             incompleta =  true;
-            btnTransaGalv.setEnabled(false);
-            btnCancelarTrans.setEnabled(false);
             AudioError();
             AlertDialog.Builder builder = new AlertDialog.Builder(EscanerInventario.this);
             View mView = getLayoutInflater().inflate(R.layout.alertdialog_aceptar,null);
             TextView alertMensaje = mView.findViewById(R.id.alertMensaje);
-            alertMensaje.setText("No se pudo cancelar el paso 1 de la transacción, \n '" + error + "'\n Por favor comunicarse inmediatamente con el área de sistemas, \n para poder continuar con las transacciones, de lo \n contrario no se le permitira continuar");
+            alertMensaje.setText("No se pudo realizar la transacción, \n '" + error + "'\n Por favor volver a intentar realizarla");
             Button btnAceptar = mView.findViewById(R.id.btnAceptar);
             btnAceptar.setText("Aceptar");
             builder.setView(mView);
             AlertDialog alertDialog = builder.create();
             btnAceptar.setOnClickListener(v -> {
-                // Verificar la conectividad antes de intentar enviar el correo
                 if (isNetworkAvailable()) {
-                    StringBuilder mensaje = new StringBuilder(); // Usamos StringBuilder para construir el mensaje
-
-                    for (Object objeto : listReanudarTransa) {
-                        // Convierte el objeto a String
-                        String objetoComoString = objeto.toString();
-
-                        // Agrega el objeto convertido al mensaje
-                        mensaje.append(objetoComoString).append("\n");
-                    }
-
-                    // Muestra el mensaje
-                    String mensajeFinal = mensaje.toString();
                     /////////////////////////////////////////////////////////////
-                    //Correo electronico funciono la transacción
+                    //Correo electronico para notificar error en la transacción
                     correo = conexion.obtenerCorreo(EscanerInventario.this);
                     String email = correo.getCorreo();
                     String pass = correo.getContrasena();
-                    subject = "El paso 1 de una transacción en Control en Piso Galvanizado no se pudo cancelar";
-                    textMessage = "El paso 1 de la Transacción de recepcion de producto terminado del area de Galvanizado no se pudo cancelar correctamente \n" +
+                    subject = "la transaccion #" + numero_transaccion + " de Control en Piso Galvanizado no se pudo realizar";
+                    textMessage = "La Transacción de recepcion de producto terminado del area de Galvanizado #" + numero_transaccion + " no se pudo cancelar correctamente \n" +
                             "Detalles de la recepción: \n" +
-                            mensajeFinal +
                             "Error: '" + error + "'\n" +
                             "Numero de rollos: " + leidos + " \n" +
                             "Nit quien entrega (Producción): " + nit_usuario + " \n" +
@@ -577,126 +498,7 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
 
                     pdialog = ProgressDialog.show(context,"","Sending Mail...", true);
 
-                    RetreiveFeedTask task = new RetreiveFeedTask();
-                    task.execute();
-                    alertDialog.dismiss();
-                } else {
-                    toastError("Problemas de conexión a Internet");
-                }
-            });
-            alertDialog.setCancelable(false);
-            alertDialog.show();
-        }
-    }
-
-    @SuppressLint("SetTextI18n")
-    private void ciclo3() {
-        repeticiones = repeticiones + 1;
-        if(repeticiones<=5){
-            error = ing_prod_ad.ExecuteSqlTransaction(listTransactionTrb1, ConfiguracionBD.obtenerNombreBD(2), EscanerInventario.this);
-            if(error.equals("")){
-                consultarGalvTerminado();
-                incompleta = false;
-                ///////////////////////////////////////////////////////////
-                //Correo electronico funciono la transacción
-                correo = conexion.obtenerCorreo(EscanerInventario.this);
-                String email = correo.getCorreo();
-                String pass = correo.getContrasena();
-                subject = "Transacción Exitosa Control en Piso Galvanizado";
-                textMessage = "La transacción #" + numero_transaccion + " de recepcion de producto terminado del area de Galvanizado se realizó correctamente \n" +
-                        "Detalles de la transacción: \n" +
-                        "Numero de rollos: " + leidos + " \n" +
-                        "Nit quien entrega (Producción): " + nit_usuario + " \n" +
-                        "Nit quien recibe (Logistica): " + personaLogistica.getNit() + " \n" +
-                        "Fecha transacción: " + fechaTransaccion + "";
-
-                // Verificar la conectividad antes de intentar enviar el correo
-                if (isNetworkAvailable()) {
-                    // Resto del código para enviar el correo electrónico
-                    Properties props = new Properties();
-                    props.put("mail.smtp.host", "smtp.gmail.com");
-                    props.put("mail.smtp.socketFactory.port", "465");
-                    props.put("mail.smtp.socketFactory.class","javax.net.ssl.SSLSocketFactory");
-                    props.put("mail.smtp.auth","true");
-                    props.put("mail.smtp.port", "465");
-
-                    session = Session.getDefaultInstance(props, new Authenticator() {
-                        protected PasswordAuthentication getPasswordAuthentication() {
-                            return new PasswordAuthentication(email,pass);
-                        }
-                    });
-
-                    pdialog = ProgressDialog.show(context,"","Sending Mail...", true);
-
-                    RetreiveFeedTask task = new RetreiveFeedTask();
-                    task.execute();
-                } else {
-                    toastError("Problemas de conexión a Internet");
-                }
-                //////////////////////////////////////////////////////////////////////////////////
-                toastAcierto("Transaccion Realizada con Exito! -- " + numero_transaccion);
-            }else{
-                incompleta =  true;
-                ciclo3();
-            }
-        }else{
-            incompleta =  true;
-            btnTransaGalv.setEnabled(false);
-            btnCancelarTrans.setEnabled(false);
-            AudioError();
-            AlertDialog.Builder builder = new AlertDialog.Builder(EscanerInventario.this);
-            View mView = getLayoutInflater().inflate(R.layout.alertdialog_aceptar,null);
-            TextView alertMensaje = mView.findViewById(R.id.alertMensaje);
-            alertMensaje.setText("Hubo un problema en el paso 3 de la transacción #" + numero_transaccion + " de los " + leidos + " Rollos leidos, \n '" + error + "' \n Por favor comunicarse inmediatamente con el área de sistemas, \n para poder continuar con las transacciones, de lo \n contrario no se le permitira continuar");
-            Button btnAceptar = mView.findViewById(R.id.btnAceptar);
-            btnAceptar.setText("Aceptar");
-            builder.setView(mView);
-            AlertDialog alertDialog = builder.create();
-            btnAceptar.setOnClickListener(v -> {
-                // Verificar la conectividad antes de intentar enviar el correo
-                if (isNetworkAvailable()) {
-                    StringBuilder mensaje = new StringBuilder(); // Usamos StringBuilder para construir el mensaje
-
-                    for (Object objeto : listTransactionTrb1) {
-                        // Convierte el objeto a String
-                        String objetoComoString = objeto.toString();
-
-                        // Agrega el objeto convertido al mensaje
-                        mensaje.append(objetoComoString).append("\n");
-                    }
-
-                    // Muestra el mensaje
-                    String mensajeFinal = mensaje.toString();
-                    correo = conexion.obtenerCorreo(EscanerInventario.this);
-                    String email = correo.getCorreo();
-                    String pass = correo.getContrasena();
-                    subject = "Error en el paso 3 de la transacción Control en Piso Galvanizado";
-                    textMessage = "La transacción #" + numero_transaccion + " de recepcion de producto terminado del area de Galvanizado se fué incompleta \n" +
-                            "Detalles de la transacción: \n" +
-                            mensajeFinal +
-                            "Error: '" + error + "'\n" +
-                            "Numero de rollos: " + leidos + " \n" +
-                            "Nit quien entrega (Producción): " + nit_usuario + " \n" +
-                            "Nit quien recibe (Logistica): " + personaLogistica.getNit() + " \n" +
-                            "Fecha transacción: " + fechaTransaccion + "";
-
-                    // Resto del código para enviar el correo electrónico
-                    Properties props = new Properties();
-                    props.put("mail.smtp.host", "smtp.gmail.com");
-                    props.put("mail.smtp.socketFactory.port", "465");
-                    props.put("mail.smtp.socketFactory.class","javax.net.ssl.SSLSocketFactory");
-                    props.put("mail.smtp.auth","true");
-                    props.put("mail.smtp.port", "465");
-
-                    session = Session.getDefaultInstance(props, new Authenticator() {
-                        protected PasswordAuthentication getPasswordAuthentication() {
-                            return new PasswordAuthentication(email,pass);
-                        }
-                    });
-
-                    pdialog = ProgressDialog.show(context,"","Sending Mail...", true);
-
-                    RetreiveFeedTask task = new RetreiveFeedTask();
+                    EscanerInventario.RetreiveFeedTask task = new EscanerInventario.RetreiveFeedTask();
                     task.execute();
                     alertDialog.dismiss();
                 } else {

@@ -1,8 +1,12 @@
 package com.example.handheld;
 
+import static org.apache.poi.sl.draw.geom.GuideIf.Op.val;
+
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
+import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
 import android.media.AudioManager;
 import android.media.SoundPool;
 import android.os.Bundle;
@@ -41,6 +45,7 @@ import com.example.handheld.databinding.ActivityEscanerBinding;
 import com.example.handheld.modelos.DetalleTranModelo;
 import com.example.handheld.modelos.PermisoPersonaModelo;
 import com.example.handheld.modelos.TipotransModelo;
+import com.example.handheld.modelos.ValidarTrasladoModelo;
 import com.journeyapps.barcodescanner.ScanContract;
 import com.journeyapps.barcodescanner.ScanOptions;
 
@@ -64,6 +69,8 @@ public class Trans_MP_Galvanizado extends AppCompatActivity implements AdapterVi
     //Se declaran las Herramientas para el listview
     ListView listviewEscaner;
     ListAdapter EscanerAdapter;
+
+    ValidarTrasladoModelo validarTraslado;
     List<DetalleTranModelo> ListaEscaner = new ArrayList<>();
 
 
@@ -95,7 +102,7 @@ public class Trans_MP_Galvanizado extends AppCompatActivity implements AdapterVi
 
     boolean yaentre = false;
 
-    String consecutivo,cod_orden, detalle,id_rollo,nit_proveedor,error;
+    String consecutivo, cod_orden, detalle, id_rollo, nit_proveedor, error;
 
 
     Integer numero_transaccion;
@@ -114,9 +121,9 @@ public class Trans_MP_Galvanizado extends AppCompatActivity implements AdapterVi
 
     //Metodo que activa el escaner por medio de la camara del movil
     private final ActivityResultLauncher<ScanOptions> barcodeLauncher = registerForActivityResult(new ScanContract(), result -> {
-        if (result.getContents() == null){
+        if (result.getContents() == null) {
             toastError("CANCELADO");
-        }else{
+        } else {
             binding.etCodigo.setText(result.getContents());
             //codigoIngresado();
             closeTecladoMovil();
@@ -186,7 +193,7 @@ public class Trans_MP_Galvanizado extends AppCompatActivity implements AdapterVi
             String barras = etCodigo.getText().toString();
             if (yaentre) {
                 toastError("Rollo en proceso, Terminar la transferencia");
-            }else {
+            } else {
                 if (barras.equals("")) {
                     escanear();
                 } else {
@@ -200,7 +207,7 @@ public class Trans_MP_Galvanizado extends AppCompatActivity implements AdapterVi
         //Se programa el boton de transacción
         btnTransaccion.setOnClickListener(view -> {
             cargando.setVisibility(View.VISIBLE);
-            if (validarFrm()){
+            if (validarFrm()) {
                 try {
                     guardar();
                 } catch (SQLException e) {
@@ -215,12 +222,12 @@ public class Trans_MP_Galvanizado extends AppCompatActivity implements AdapterVi
         //Se programa el boton cancelar
         btnCancelar.setOnClickListener(v -> {
             String proceso = (String) lblCodigo.getText();
-            if(proceso.equals("LEA CODIGO")){
+            if (proceso.equals("LEA CODIGO")) {
                 toastError("No hay ningun rollo en proceso");
-            }else{
-                if(proceso.equals("")){
+            } else {
+                if (proceso.equals("")) {
                     toastError("No hay ningun rollo en proceso");
-                }else{
+                } else {
                     etCodigo.setEnabled(true);
                     leer_nuevo();
                     toastError("Proceso cancelado, Lea codigo de nuevo!");
@@ -232,17 +239,17 @@ public class Trans_MP_Galvanizado extends AppCompatActivity implements AdapterVi
         //Se programa para que al presionar enter en el edit text haga el proceso
         etCodigo.setOnKeyListener((v, keyCode, event) -> {
             if (keyCode == KeyEvent.KEYCODE_ENTER) {
-                if(!yaentre){
-                    if(etCodigo.getText().toString().equals("")){
+                if (!yaentre) {
+                    if (etCodigo.getText().toString().equals("")) {
                         toastError("Por favor escribir o escanear el codigo de barras");
-                    }else{
+                    } else {
                         //Ocultamos el teclado de la pantalla
                         codigoIngresado();
                         yaentre = true;
                         closeTecladoMovil();
                     }
                     return true;
-                }else{
+                } else {
                     //Cargamos de nuevo las varibles y cambiamos "yaentre" a 1 ó 0
                     cargarNuevo();
                 }
@@ -253,9 +260,10 @@ public class Trans_MP_Galvanizado extends AppCompatActivity implements AdapterVi
 
         ingresarCedulas();
     }
+
     private void ingresarCedulas() {
         AlertDialog.Builder builder = new AlertDialog.Builder(Trans_MP_Galvanizado.this);
-        View mView = getLayoutInflater().inflate(R.layout.alertdialog_cedulastranslado,null);
+        View mView = getLayoutInflater().inflate(R.layout.alertdialog_cedulastranslado, null);
         final EditText txtCedulaEntrega = mView.findViewById(R.id.txtCedulaEntrega);
         final EditText txtCedulaRecibe = mView.findViewById(R.id.txtCedulaRecibe);
         Button btnAceptar = mView.findViewById(R.id.btnAceptar);
@@ -264,39 +272,39 @@ public class Trans_MP_Galvanizado extends AppCompatActivity implements AdapterVi
         AlertDialog alertDialog = builder.create();
         btnAceptar.setOnClickListener(v12 -> {
             String CeEntrega = txtCedulaEntrega.getText().toString().trim();
-            String CeRecibe= txtCedulaRecibe.getText().toString().trim();
+            String CeRecibe = txtCedulaRecibe.getText().toString().trim();
 
-            if (CeEntrega.equals("") || CeRecibe.equals("")){
+            if (CeEntrega.equals("") || CeRecibe.equals("")) {
                 toastError("Por favor ingresar ambas cedulas");
-            }else{
-                if (CeEntrega.equals(CeRecibe)){
+            } else {
+                if (CeEntrega.equals(CeRecibe)) {
                     toastError("Ambas cedulas no pueden ser iguales");
-                }else{
-                    personaEntrega = conexion.obtenerPermisoPersonaAlambron(Trans_MP_Galvanizado.this,CeEntrega,"entrega" );
-                    personaRecibe = conexion.obtenerPermisoPersonaAlambron(Trans_MP_Galvanizado.this,CeRecibe,"recibe" );
+                } else {
+                    personaEntrega = conexion.obtenerPermisoPersonaAlambron(Trans_MP_Galvanizado.this, CeEntrega, "entrega");
+                    personaRecibe = conexion.obtenerPermisoPersonaAlambron(Trans_MP_Galvanizado.this, CeRecibe, "recibe");
                     String permisoEntrega = personaEntrega.getPermiso();
                     String permisoRecibe = personaRecibe.getPermiso();
-                    if(permisoEntrega.equals("E")){
-                        if(permisoRecibe.equals("R")){
+                    if (permisoEntrega.equals("E")) {
+                        if (permisoRecibe.equals("R")) {
                             alertDialog.dismiss();
-                        }else{
+                        } else {
                             toastError("La cedula de la persona que recibe no corresponde a un montacarguista");
                         }
-                    }else{
+                    } else {
                         toastError("La cedula de la persona que entrega no corresponde a una de las permitidas");
                     }
                 }
             }
         });
         btnCancelar.setOnClickListener(v -> {
-            Intent i = new Intent(Trans_MP_Galvanizado.this,Pedido_MP_Galvanizado.class);
+            Intent i = new Intent(Trans_MP_Galvanizado.this, Pedido_MP_Galvanizado.class);
             startActivity(i);
         });
         alertDialog.setCancelable(false);
         alertDialog.show();
     }
 
-    public void consultarTipos(){
+    public void consultarTipos() {
         conexion = new Conexion();
 
         tiposLista = conexion.obtenerTipos(getApplication());
@@ -306,11 +314,12 @@ public class Trans_MP_Galvanizado extends AppCompatActivity implements AdapterVi
         spinner.setClickable(false);
         spinner.setAdapter(adapter);
     }
-    private ArrayList<String> obtenerLista(ArrayList<TipotransModelo> tiposLista ){
+
+    private ArrayList<String> obtenerLista(ArrayList<TipotransModelo> tiposLista) {
         listaTipos = new ArrayList<>();
         //listaTipos.add("Seleccione");
 
-        for(int i = 0; i < tiposLista.size(); i++){
+        for (int i = 0; i < tiposLista.size(); i++) {
             listaTipos.add(tiposLista.get(i).getTipo());
         }
         return listaTipos;
@@ -333,66 +342,90 @@ public class Trans_MP_Galvanizado extends AppCompatActivity implements AdapterVi
     //Metodo para ocultar el teclado virtual
     private void closeTecladoMovil() {
         View view = this.getCurrentFocus();
-        if(view != null){
+        if (view != null) {
             InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-            imm.hideSoftInputFromWindow(view.getWindowToken(),0);
+            imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
         }
     }
 
     //METODO PARA CERRAR LA APLICACION
     @SuppressLint("")
-    public void salir(View view){
+    public void salir(View view) {
         finishAffinity();
     }
 
 
     /////////////////////////////////////////////////////////////////////////////////////////////
-    private void codigoIngresado(){
+    private void codigoIngresado() {
         consecutivo = etCodigo.getText().toString();
-        //consecutivo = "444444218-4-3-168";
-        if (validarCodigoBarras(consecutivo)){
+        // consecutivo = "444444218-4-3-168";
+        if (validarCodigoBarras(consecutivo)) {
             cod_orden = obj_gestion_alambronLn.extraerDatoCodigoBarrasTrefilacion("cod_orden", consecutivo);
             detalle = obj_gestion_alambronLn.extraerDatoCodigoBarrasTrefilacion("id_detalle", consecutivo);
             id_rollo = obj_gestion_alambronLn.extraerDatoCodigoBarrasTrefilacion("id_rollo", consecutivo);
-            if(validarRolloRegistrado(cod_orden,detalle,id_rollo)) {
-                String sql_codigo = "SELECT O.prod_final FROM J_rollos_tref R, J_orden_prod_tef O WHERE O.consecutivo =" + cod_orden + " AND R.id_detalle =" + detalle + "  AND id_rollo =" + id_rollo + "and R.cod_orden=O.consecutivo";
-                String sql_peso = "SELECT R.peso FROM J_orden_prod_tef O,J_rollos_tref R WHERE peso IS NOT NULL AND O.consecutivo =" + cod_orden + " AND R.id_detalle = " + detalle + " AND R.id_rollo=" + id_rollo + " and R.cod_orden=O.consecutivo";
-                String peso = conexion.obtenerPesoTrefImport(getApplicationContext(), sql_peso);
-                String codigo = conexion.obtenerCodigoTrefImport(getApplicationContext(), sql_codigo);
-                if (codigo.equals(pcodigo)) {
-                    boolean valid = validarRolloConTransaccion(cod_orden, detalle, id_rollo);  // Si no hay traslado, `valid` será `false`
 
-                    if (valid) {  // Continuar si `valid` es `false`
-                        lblCodigo.setText(codigo);
-                        String sql_descripcion = "SELECT descripcion FROM referencias WHERE codigo = '" + codigo + "'";
-                        lblDescripcion.setText(conexion.obtenerDescripcionCodigo(Trans_MP_Galvanizado.this, sql_descripcion));
-                        txtKilosRollo.setText(peso);
-                        yaentre = true;
-                        // Bloquear el EditText ya que el tiquete fue leído correctamente
-                        etCodigo.setEnabled(false);
-                        toastAcierto("Rollo validado");
+            // Verificar si el tiquete ha sido anulado
+            String sql_verificar_anulado = "SELECT anulado FROM J_det_orden_prod WHERE cod_orden = " + cod_orden + " AND id_detalle = " + detalle;
+            String estadoAnulado = conexion.valorTodo(getApplicationContext(), sql_verificar_anulado);
+
+            if (estadoAnulado != null && !estadoAnulado.equals("")) {  // Si trae información de 'anulado'
+                toastError("El tiquete ha sido anulado.");
+                AudioError();
+                leer_nuevo();
+            } else {
+                // Verificar si la planilla tiene la transacción de entrada
+                String sql_verificar_planilla = "SELECT transaccion_entrada FROM J_det_orden_prod WHERE cod_orden = " + cod_orden + " AND id_detalle = " + detalle;
+                String estadoPlanilla = conexion.valorTodo(getApplicationContext(), sql_verificar_planilla);
+
+                // Si estadoPlanilla es null o vacío, no se permite continuar
+                if (estadoPlanilla == null || estadoPlanilla.equals("")) {
+                    toastError("La planilla del rollo que se intenta pasar no ha sido cerrada.");
+                    AudioError();
+                    leer_nuevo();
+                } else {
+                    // Si tiene algún número en transacción_entrada, se permite continuar
+                    if (validarRolloRegistrado(cod_orden, detalle, id_rollo)) {
+                        String sql_codigo = "SELECT O.prod_final FROM J_rollos_tref R, J_orden_prod_tef O WHERE O.consecutivo =" + cod_orden + " AND R.id_detalle =" + detalle + " AND id_rollo =" + id_rollo + " and R.cod_orden=O.consecutivo";
+                        String sql_peso = "SELECT R.peso FROM J_orden_prod_tef O,J_rollos_tref R WHERE peso IS NOT NULL AND O.consecutivo =" + cod_orden + " AND R.id_detalle = " + detalle + " AND R.id_rollo=" + id_rollo + " and R.cod_orden=O.consecutivo";
+                        String peso = conexion.obtenerPesoTrefImport(getApplicationContext(), sql_peso);
+                        String codigo = conexion.obtenerCodigoTrefImport(getApplicationContext(), sql_codigo);
+
+                        if (codigo.equals(pcodigo)) {
+                            boolean valid = validarRolloConTransaccion(cod_orden, detalle, id_rollo);  // `valid` será `true` si el rollo ya fue trasladado
+                            if (!valid) {  // Continuar solo si `valid` es `false` (no fue trasladado)
+                                lblCodigo.setText(codigo);
+                                String sql_descripcion = "SELECT descripcion FROM referencias WHERE codigo = '" + codigo + "'";
+                                lblDescripcion.setText(conexion.obtenerDescripcionCodigo(Trans_MP_Galvanizado.this, sql_descripcion));
+                                txtKilosRollo.setText(peso);
+                                yaentre = true;
+                                // Bloquear el EditText ya que el tiquete fue leído correctamente
+                                etCodigo.setEnabled(false);
+                                toastAcierto("Rollo validado");
+                            } else {
+                                toastError("El rollo ya fue trasladado");
+                                AudioError();
+                                leer_nuevo();
+                            }
+                        }
                     } else {
-                        toastError("Ya se le hizo una salida al rollo");
+                        toastError("El código de alambrón no pertenece al pedido");
                         AudioError();
                         leer_nuevo();
                     }
                 }
-                }else{
-                    toastError("El código de alambrón no pertenece al pedido");
-                    AudioError();
-                    leer_nuevo();
-                }
-            }else{
-                toastError("El codigo de barras no se encuentra asignado");
-                AudioError();
-                leer_nuevo();
             }
+        } else {
+            toastError("El código de barras no se encuentra asignado");
+            AudioError();
+            leer_nuevo();
         }
+    }
+
 
 
 
     //Metodo que valida que el codigo de barras exista y este bien
-    private boolean validarCodigoBarras(String consecutivo){
+    private boolean validarCodigoBarras(String consecutivo) {
         boolean resp = false;
         String num_consecutivo = obj_gestion_alambronLn.extraerDatoCodigoBarrasTrefilacion("cod_orden", consecutivo);
         String detalle = obj_gestion_alambronLn.extraerDatoCodigoBarrasTrefilacion("id_detalle", consecutivo);
@@ -400,92 +433,90 @@ public class Trans_MP_Galvanizado extends AppCompatActivity implements AdapterVi
 
 
         if (!num_consecutivo.isEmpty() && !detalle.isEmpty() && !id_rollo.isEmpty()) {
-            String sql = "SELECT consecutivo FROM J_rollos_tref WHERE cod_orden =" + num_consecutivo + " AND id_detalle = " + detalle + " AND id_rollo = " + id_rollo ;
+            String sql = "SELECT consecutivo FROM J_rollos_tref WHERE cod_orden =" + num_consecutivo + " AND id_detalle = " + detalle + " AND id_rollo = " + id_rollo;
             String id = conexion.obtenerConsecutivoTrefImport(Trans_MP_Galvanizado.this, sql);
-            if (id.isEmpty()){
+            if (id.isEmpty()) {
                 toastError("Intente leerlo nuevamente,Problemas con el tiquete");
                 leer_nuevo();
 
-            }else{
+            } else {
                 resp = true;
             }
-        }else{
+        } else {
             toastError("Intente leerlo nuevamente,Problemas con el tiquete");
             leer_nuevo();
         }
         return resp;
     }
 
-    private boolean validarRolloRegistrado(String cod_orden, String detalle, String id_rollo){
+    private boolean validarRolloRegistrado(String cod_orden, String detalle, String id_rollo) {
         boolean resp = false;
         String sql = "SELECT (SELECT CASE WHEN (SELECT sum(peso) FROM J_salida_materia_prima_G_transaccion WHERE numero = D.numero AND id_detalle = D.id_detalle ) is null THEN D.cantidad  ELSE (D.cantidad -(SELECT sum(peso)  FROM J_salida_materia_prima_G_transaccion WHERE  numero = D.numero AND id_detalle = D.id_detalle )) END )As pendiente FROM J_salida_materia_prima_G_enc E ,J_salida_materia_prima_G_det D, CORSAN.dbo.referencias R where E.numero=" + pNumero + " AND E.anulado is null AND  R.codigo = D.codigo AND (e.devolver = 'N' OR e.devolver IS NULL ) AND E.numero = D.numero AND id_detalle = D.id_detalle";
         String pendiente = conexion.obtenerPendienteTrefImport(getApplicationContext(), sql);
-        if (!pendiente.isEmpty()){
+        if (!pendiente.isEmpty()) {
             resp = true;
         }
         return resp;
     }
 
     //Metodo que valida que el rollo no tenga ya una salida
+    // Método para validar si un rollo ha sido trasladado
     private boolean validarRolloConTransaccion(String cod_orden, String detalle, String id_rollo) {
         boolean respuesta = false;  // Inicialmente asumimos que no hay traslado
-
         try {
             // Consulta SQL ajustada con comillas simples para valores de tipo String
             String sql = "SELECT traslado FROM J_rollos_tref WHERE cod_orden = '" + cod_orden + "' AND id_detalle = '" + detalle + "' AND id_rollo = '" + id_rollo + "'";
-            String traslado = conexion.obtenerNumTranTrefImport(getApplicationContext(), sql);
+            String traslado = conexion.obtenerNumTranGalv(getApplicationContext(), sql);
 
-            // Si se encuentra un traslado, la respuesta será 'true'
-            if (!traslado.isEmpty()) {
-                respuesta = true;
+            // Si traslado no es nulo y no está vacío, se asume que ya fue trasladado
+            if (traslado != null && !traslado.isEmpty()) {
+                respuesta = true;  // Ya fue trasladado
             }
         } catch (Exception e) {
             Log.e("Trans_MP_Galvanizado", "Error al validar rollo con transacción", e);
             Toast.makeText(Trans_MP_Galvanizado.this, "Error al validar rollo: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            return false;  // Retornamos false en caso de error
         }
 
-        // Condición especial para el traductor de bodega de 11 a 2
-        if (bod_origen == 2 && bod_destino == 11) {
-            respuesta = !respuesta;  // Invertimos la lógica si hay traslado
-        }
 
-        return respuesta;  // Retornamos 'true' si se encontró traslado, 'false
 
+        return respuesta;  // Retornamos la respuesta final
     }
 
 
-        private boolean validarFrm(){
-        if (!lblCodigo.getText().toString().isEmpty() && !lblCodigo.getText().toString().equals("LEA CODIGO")){
-            if (!txtKilosRollo.getText().toString().isEmpty()){
-                if (!spinner.getSelectedItem().equals("Seleccione")){
-                    if (conexion.existeCodigo(Trans_MP_Galvanizado.this, lblCodigo.getText().toString())){
+
+    private boolean validarFrm() {
+        if (!lblCodigo.getText().toString().isEmpty() && !lblCodigo.getText().toString().equals("LEA CODIGO")) {
+            if (!txtKilosRollo.getText().toString().isEmpty()) {
+                if (!spinner.getSelectedItem().equals("Seleccione")) {
+                    if (conexion.existeCodigo(Trans_MP_Galvanizado.this, lblCodigo.getText().toString())) {
                         if (Double.parseDouble(txtKilosRollo.getText().toString()) > 0) {
-                            if (conexion.existeTipoTransaccion(Trans_MP_Galvanizado.this,spinner.getSelectedItem().toString())){
-                                if (!etCodigo.getText().equals("")){
-                                    if (validarCodigoBarras(consecutivo)){
+                            if (conexion.existeTipoTransaccion(Trans_MP_Galvanizado.this, spinner.getSelectedItem().toString())) {
+                                if (!etCodigo.getText().equals("")) {
+                                    if (validarCodigoBarras(consecutivo)) {
                                         return true;
-                                    }else{
+                                    } else {
                                         toastError("Verifique, El código de barras no se encuentra asignado!");
                                     }
-                                }else{
+                                } else {
                                     toastError("Verifique,No se leyo ningun código de barras!");
                                 }
-                            }else{
+                            } else {
                                 toastError("Verifique, No existe el tipo de transacción!");
                             }
-                        }else{
+                        } else {
                             toastError("Verifique, Los kilos no pueden ser negativos ó iguales a (0)");
                         }
-                    }else{
+                    } else {
                         toastError("El código ingresado no existe,verifique");
                     }
-                }else{
+                } else {
                     toastError("Verifique, Seleccione un tipo de transacción");
                 }
-            }else{
+            } else {
                 toastError("Verifique, faltan los KILOS");
             }
-        }else{
+        } else {
             toastError("Verifique, falta el CÓDIGO");
         }
         return false;
@@ -499,25 +530,25 @@ public class Trans_MP_Galvanizado extends AppCompatActivity implements AdapterVi
         String peso = txtKilosRollo.getText().toString().trim();
         String codigo = lblCodigo.getText().toString().trim();
         String bodega = objTraslado_bodLn.obtenerBodegaXcodigo(codigo);
-        String stock = conexion.consultarStock(Trans_MP_Galvanizado.this,codigo,bodega);
+        String stock = conexion.consultarStock(Trans_MP_Galvanizado.this, codigo, bodega);
         String consecutivo_materia_prima = obj_gestion_alambronLn.extraerDatoCodigoBarrasTrefilacion("num_consecutivo", consecutivo);
         String id_detalle = obj_gestion_alambronLn.extraerDatoCodigoBarrasTrefilacion("id_detalle", consecutivo);
         String id_rollo = obj_gestion_alambronLn.extraerDatoCodigoBarrasTrefilacion("id_rollo", consecutivo);
         String sql_costo_unit = "SELECT costo_unitario FROM referencias WHERE codigo ='" + codigo + "'";
 
-        Double costo_unit = Double.parseDouble(conexion.obtenerCostoUnitTref(Trans_MP_Galvanizado.this,sql_costo_unit));
+        Double costo_unit = Double.parseDouble(conexion.obtenerCostoUnitTref(Trans_MP_Galvanizado.this, sql_costo_unit));
 
         try {
-            realizar_transaccion(codigo, peso,consecutivo_materia_prima, id_detalle, id_rollo, tipo, costo_unit,stock);
+            realizar_transaccion(codigo, peso, consecutivo_materia_prima, id_detalle, id_rollo, tipo, costo_unit, stock);
             etCodigo.requestFocus();
-        }catch (Exception e){
+        } catch (Exception e) {
             leer_nuevo();
             toastError(e.getMessage());
         }
     }
 
     @SuppressLint("SetTextI18n")
-    public Boolean realizar_transaccion(String codigo, String peso, String consecutivo_materia_prima, String id_detalle, String id_rollo,String tipo,Double costo_unit,String Stock ) throws SQLException {
+    public Boolean realizar_transaccion(String codigo, String peso, String consecutivo_materia_prima, String id_detalle, String id_rollo, String tipo, Double costo_unit, String Stock) throws SQLException {
         cargando.setVisibility(View.VISIBLE);
         boolean resp = true;
         listTransaccion_prodGalv = new ArrayList<>();
@@ -528,8 +559,7 @@ public class Trans_MP_Galvanizado extends AppCompatActivity implements AdapterVi
         String sql_anulado;
         String sql_devuelto;
         listTransaccion_corsan = traslado_bodega(codigo, peso, tipo, costo_unit);
-        sql_solicitud = "UPDATE J_rollos_tref SET destino = 'G', traslado=" + pNumero + " where id_detalle = " + detalle + " AND id_rollo= " + id_rollo +" and cod_orden ="+ cod_orden;
-
+        sql_solicitud = "UPDATE J_rollos_tref SET destino = 'G', traslado=" + pNumero + " where id_detalle = " + detalle + " AND id_rollo= " + id_rollo + " and cod_orden =" + cod_orden;
 
 
         // Obtén la fecha y hora actual
@@ -546,27 +576,27 @@ public class Trans_MP_Galvanizado extends AppCompatActivity implements AdapterVi
         try {
             //Se añade el sql a la lista
             listTransaccion_prodGalv.add(sql_solicitud);
-        }catch (Exception e){
+        } catch (Exception e) {
             Toast.makeText(Trans_MP_Galvanizado.this, e.getMessage(), Toast.LENGTH_SHORT).show();
         }
 
 
         repeticiones = 0;
         error = transaccion();
-        if (error.equals("")){
+        if (error.equals("")) {
             repeticiones = 0;
             error = tabla_produccion();
-            if (error.equals("")){
-                addRollo(consecutivo_materia_prima, id_detalle, id_rollo, tipo, peso,costo_unit);
+            if (error.equals("")) {
+                addRollo(consecutivo_materia_prima, id_detalle, id_rollo, tipo, peso, costo_unit);
                 etCodigo.setEnabled(true);
                 leer_nuevo();
                 contar_movimientos();
                 cargando.setVisibility(View.INVISIBLE);
-                toastAcierto("Transaccion Realizada con Exito! - "+ tipo +": " + numero_transaccion);
-            }else{
+                toastAcierto("Transaccion Realizada con Exito! - " + tipo + ": " + numero_transaccion);
+            } else {
                 AudioError();
                 AlertDialog.Builder builder = new AlertDialog.Builder(Trans_MP_Galvanizado.this);
-                View mView = getLayoutInflater().inflate(R.layout.alertdialog_aceptar,null);
+                View mView = getLayoutInflater().inflate(R.layout.alertdialog_aceptar, null);
                 TextView alertMensaje = mView.findViewById(R.id.alertMensaje);
                 alertMensaje.setText(error);
                 Button btnAceptar = mView.findViewById(R.id.btnAceptar);
@@ -581,10 +611,10 @@ public class Trans_MP_Galvanizado extends AppCompatActivity implements AdapterVi
                 resp = false;
             }
 
-        }else{
+        } else {
             AudioError();
             AlertDialog.Builder builder = new AlertDialog.Builder(Trans_MP_Galvanizado.this);
-            View mView = getLayoutInflater().inflate(R.layout.alertdialog_aceptar,null);
+            View mView = getLayoutInflater().inflate(R.layout.alertdialog_aceptar, null);
             TextView alertMensaje = mView.findViewById(R.id.alertMensaje);
             alertMensaje.setText(error);
             Button btnAceptar = mView.findViewById(R.id.btnAceptar);
@@ -598,23 +628,23 @@ public class Trans_MP_Galvanizado extends AppCompatActivity implements AdapterVi
             leer_nuevo();
             resp = false;
         }
-        return  resp;
+        return resp;
     }
 
     private String transaccion() {
         repeticiones = repeticiones + 1;
-        if(repeticiones<=5){
+        if (repeticiones <= 5) {
             cargando.setVisibility(View.VISIBLE);
             // quitar mensaje guardado ya que esto no funciono muy bien en el programa
             //mensajeCargando.setText("Intento transacción " + repeticiones + "/5");
             error = ing_prod_ad.ExecuteSqlTransaction(listTransaccion_corsan, ConfiguracionBD.obtenerNombreBD(1), Trans_MP_Galvanizado.this);
-            if(error.equals("")){
+            if (error.equals("")) {
                 mensajeCargando.setText("");
                 return error;
-            }else{
+            } else {
                 transaccion();
             }
-        }else{
+        } else {
             cargando.setVisibility(View.INVISIBLE);
             return error;
         }
@@ -624,17 +654,17 @@ public class Trans_MP_Galvanizado extends AppCompatActivity implements AdapterVi
     private String tabla_produccion() {
         cargando.setVisibility(View.VISIBLE);
         repeticiones = repeticiones + 1;
-        if(repeticiones<=5){
+        if (repeticiones <= 5) {
             //Quitar este mensaje ya que no funciono muy bien en el programa
             //mensajeCargando.setText("Intento producción " + repeticiones + "/5");
             error = ing_prod_ad.ExecuteSqlTransaction(listTransaccion_prodGalv, ConfiguracionBD.obtenerNombreBD(2), Trans_MP_Galvanizado.this);
-            if(error.equals("")){
+            if (error.equals("")) {
                 mensajeCargando.setText("");
                 return error;
-            }else{
+            } else {
                 transaccion();
             }
-        }else{
+        } else {
             cargando.setVisibility(View.INVISIBLE);
             mensajeCargando.setText("");
             return error;
@@ -642,7 +672,7 @@ public class Trans_MP_Galvanizado extends AppCompatActivity implements AdapterVi
         return error;
     }
 
-    private List<Object> traslado_bodega(String codigo, String cantidad, String tipo, Double costo_unit){
+    private List<Object> traslado_bodega(String codigo, String cantidad, String tipo, Double costo_unit) {
         List<Object> listSql;
 
         Calendar calendar = Calendar.getInstance();
@@ -653,11 +683,11 @@ public class Trans_MP_Galvanizado extends AppCompatActivity implements AdapterVi
         String usuario = personaEntrega.getNit();
         String notas = "MOVIL fecha:" + fecha + " usuario:" + usuario;
         numero_transaccion = Integer.valueOf(Obj_ordenprodLn.mover_consecutivoTref(tipo, Trans_MP_Galvanizado.this));
-        listSql = objTraslado_bodLn.listaTransaccionDatable_traslado_bodega(numero_transaccion, codigo, bod_origen, bod_destino, calendar, notas, usuario, Double.valueOf(cantidad), tipo, modelo, costo_unit,Trans_MP_Galvanizado.this);
+        listSql = objTraslado_bodLn.listaTransaccionDatable_traslado_bodega(numero_transaccion, codigo, bod_origen, bod_destino, calendar, notas, usuario, Double.valueOf(cantidad), tipo, modelo, costo_unit, Trans_MP_Galvanizado.this);
         return listSql;
     }
 
-    public void addRollo(String consecutivo_materia_prima, String id_detalle, String id_rollo, String tipo, String peso, Double costo_unit){
+    public void addRollo(String consecutivo_materia_prima, String id_detalle, String id_rollo, String tipo, String peso, Double costo_unit) {
         DetalleTranModelo escanerModelo;
 
         String sql_codigo = "select O.prod_final FROM  J_orden_prod_tef O, J_rollos_tref R WHERE O.consecutivo = " + consecutivo_materia_prima + " AND R.id_detalle  =" + id_detalle + " AND R.id_rollo =" + id_rollo + "AND R.cod_orden=O.consecutivo";
@@ -681,27 +711,26 @@ public class Trans_MP_Galvanizado extends AppCompatActivity implements AdapterVi
         addrollotrans();
     }
 
-    public void addrollotrans(){
+    public void addrollotrans() {
 
-        EscanerAdapter = new listescanerAdapter(Trans_MP_Galvanizado.this,R.layout.item_row_escaner,ListaEscaner);
+        EscanerAdapter = new listescanerAdapter(Trans_MP_Galvanizado.this, R.layout.item_row_escaner, ListaEscaner);
         listviewEscaner.setAdapter(EscanerAdapter);
     }
-
 
 
     /////////////////////////////////////////////////////////////////////////////////////////////
     //Metodo que borra el codigo del EditText y cambia la variable "yaentre"
     private void cargarNuevo() {
-        if (!yaentre){
+        if (!yaentre) {
             yaentre = true;
-        }else{
+        } else {
             yaentre = false;
             etCodigo.requestFocus();
         }
     }
 
     @SuppressLint("SetTextI18n")
-    private void leer_nuevo(){
+    private void leer_nuevo() {
         etCodigo.setText("");
         lblCodigo.setText("LEA CODIGO");
         lblDescripcion.setText("LEA CODIGO");
@@ -719,7 +748,7 @@ public class Trans_MP_Galvanizado extends AppCompatActivity implements AdapterVi
 
 
     //METODO DE TOAST PERSONALIZADO : ERROR
-    public void toastError (String msg){
+    public void toastError(String msg) {
         LayoutInflater layoutInflater = getLayoutInflater();
         View view = layoutInflater.inflate(R.layout.custom_toast_per_no_encon, findViewById(R.id.ll_custom_toast_per_no_encon));
         TextView txtMensaje = view.findViewById(R.id.txtMensajeToast1);
@@ -733,7 +762,7 @@ public class Trans_MP_Galvanizado extends AppCompatActivity implements AdapterVi
     }
 
     //METODO DE TOAST PERSONALIZADO : ACIERTO
-    public void toastAcierto (String msg){
+    public void toastAcierto(String msg) {
         LayoutInflater layoutInflater = getLayoutInflater();
         View view = layoutInflater.inflate(R.layout.custom_toast_acierto, findViewById(R.id.ll_custom_toast_acierto));
         @SuppressLint({"MissingInflatedId", "LocalSuppress"})
@@ -749,13 +778,14 @@ public class Trans_MP_Galvanizado extends AppCompatActivity implements AdapterVi
 
     /////////////////////////////////////////////////////////////////////////////////////////////
     //Metodo que reproduce sonido y hace vibrar el dispositivo
-    public void AudioError () {
+    public void AudioError() {
         sp.play(sonido_de_Reproduccion, 100, 100, 1, 0, 0);
         vibrator.vibrate(2000);
     }
 
     @Override
-    public void onItemClick (AdapterView < ? > adapterView, View view,int i, long l){
+    public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
 
     }
+
 }

@@ -1,0 +1,391 @@
+[33mcommit 46783da83e07e2442daf66d8a7320812ba2835fd[m[33m ([m[1;36mHEAD -> [m[1;32mmain[m[33m)[m
+Author: David Gutierrez <Dgutierrez977@misena.edu.co>
+Date:   Thu Aug 22 08:55:38 2024 -0500
+
+    Codigo de listas,consultas y mejoras terminado en el handheld
+
+[33mcommit 51a18c0f2fb29d20a0422692107ea8b766a972f6[m[33m ([m[1;31morigin/main[m[33m)[m
+Author: David Gutierrez <Dgutierrez977@misena.edu.co>
+Date:   Tue Aug 13 11:34:48 2024 -0500
+
+    Prueba commit
+
+[33mcommit 9f9f38bda146cca980051bf9acb3fe7fb4a9f846[m
+Author: David Gutierrez <Dgutierrez977@misena.edu.co>
+Date:   Tue Aug 13 11:04:46 2024 -0500
+
+    Subiendo la aplicación completa mejoras de la aplicacion
+
+[33mcommit 9c406abd91f9ef6fd24697a508e2d3fbf09a7597[m
+Author: Juan David Ruiz <juandavidruiz307@gmail.com>
+Date:   Tue Jul 23 11:33:09 2024 -0500
+
+    Se hacen los modulos de consumo Scal,Scae,Sar,Sav
+
+[33mcommit ccd8a1a3cafe9eaaccfd9b83182727b5ec6bd99a[m
+Author: Juan David Ruiz <juandavidruiz307@gmail.com>
+Date:   Wed Apr 10 17:26:26 2024 -0500
+
+    10-04-2024 Se realiza commit para desarrollo de Fede
+
+[33mcommit ce38282e932e405dd2c6da60d200d9ac2d8e406f[m
+Author: Juan David Ruiz <juandavidruiz307@gmail.com>
+Date:   Mon Apr 1 17:58:53 2024 -0500
+
+    01-04-2024 Se realiza el rechazo de los rollos en el modulo de recepcion de producto terminado de recocido
+
+[33mcommit 8e1f02004965b5408e761e7e6fde438b842711e7[m
+Author: Juan David Ruiz <juandavidruiz307@gmail.com>
+Date:   Wed Jan 24 08:19:03 2024 -0500
+
+    24-01-2024 Se entrega el modulo de devolución de alambrón y se inician pruebas
+
+[33mcommit 5ebb8de59c053dd0c7e7c75522ac8466f5485d34[m
+Author: Juan David Ruiz <juandavidruiz307@gmail.com>
+Date:   Wed Nov 15 10:54:02 2023 -0500
+
+    15-11-2023 SE AGREGA LA CLASE PARA CAMBIAR DE BASES DE DATOS
+
+[33mcommit 0b7d34cfeba3b7e5d629349a46f886af99a91dbc[m
+Author: Juan David Ruiz <juandavidruiz307@gmail.com>
+Date:   Tue Nov 7 08:23:12 2023 -0500
+
+    07-11-2023 SE REALIZA COMMIT PARA UNIR CODIGO CON LO DE FEDE
+
+[33mcommit 641f927e79fee5d4308c3ebdd8169871c5eeb278[m
+Author: Juan David Ruiz <juandavidruiz307@gmail.com>
+Date:   Wed Nov 1 17:28:46 2023 -0500
+
+    01-11-2023 SE REALIZA COMMIT PARA REVISION POR PARTE DE FEDERICO
+
+[33mcommit b14da59ab425ba38869a29e892bfbec0566a0b48[m
+Author: Juan David Ruiz <juandavidruiz307@gmail.com>
+Date:   Mon Oct 30 09:20:46 2023 -0500
+
+    28-10-2023 SE HACE COMMIT PARA LA UNION DE CODIGO CON FEDE PARA EL MODULO DE VALERIA
+
+[33mcommit 8fa66527e56a94c3f1b2b652a68fa95f416a8586[m
+Author: Juan David Ruiz <juandavidruiz307@gmail.com>
+Date:   Thu Oct 26 15:55:59 2023 -0500
+
+    26-10-2023 SE AGREGA A GALVANIZADO LOS CORREOS ELECTRONICOS SI FALLA LA ANULACION DEL PASO 1 Y ERROR EN EL PASO 3 DE LA TRANSACCION
+
+[33mcommit 18815d8931a564240b5870b956fd69d349f59c35[m
+Author: Juan David Ruiz <juandavidruiz307@gmail.com>
+Date:   Wed Oct 25 10:41:15 2023 -0500
+
+    25-10-2023 AJUSTES EN LOS MENSAJES DE ERRORES EN RECEPCION GALVANIZADO
+
+[33mcommit a206e50d3939d55c2d8b73747ce4b9c4af940fe3[m
+Author: Juan David Ruiz <juandavidruiz307@gmail.com>
+Date:   Fri Oct 20 16:29:35 2023 -0500
+
+    20-10-2023 UNIFICACION DE CODIGO DECARGUE ALAMBRON Y TREFILACION CALIDAD
+
+[33mcommit f71060f62e4a81388852875630b3dfaf94d043f3[m
+Merge: 6670cce 9fc1dfe
+Author: MarshalLeeK <99676083+MarshalLeeK@users.noreply.github.com>
+Date:   Thu Oct 5 19:20:23 2023 -0500
+
+    Merge remote-tracking branch 'origin/main'
+
+[33mcommit 6670ccebfa0ba1b225761cba433576441fd42ff7[m
+Author: MarshalLeeK <99676083+MarshalLeeK@users.noreply.github.com>
+Date:   Thu Oct 5 19:20:13 2023 -0500
+
+    Se realiza modificacion en modulo de descargue alambron para solucionar cantidades en documentos_lin
+
+[33mcommit 9fc1dfe49abaeb7ad88b1e457684462355628fda[m
+Author: Juan David Ruiz <juandavidruiz307@gmail.com>
+Date:   Thu Oct 5 19:09:45 2023 -0500
+
+    Juan David - Actualizacion 5-10-2023 mensaje stock
+
+[33mcommit 1e7c172f7da0362a7be495cade30650de10e6f10[m
+Author: Juan David Ruiz <juandavidruiz307@gmail.com>
+Date:   Thu Oct 5 12:13:07 2023 -0500
+
+    Juan David - Actualizacion 5-10-2023
+
+[33mcommit d6b5703ad923e29906785bfa96fc8092f38c79c4[m
+Author: frederick23141 <federicotoro23141@gmail.com>
+Date:   Tue Oct 3 15:54:21 2023 -0500
+
+    se agrega el modulo de revision calidad_galvanizado
+
+[33mcommit 412015d7bef6f1f650c3df4eb46584b1ca2b0cff[m
+Author: frederick23141 <federicotoro23141@gmail.com>
+Date:   Tue Oct 3 15:29:20 2023 -0500
+
+    se agrega icono para probar comit
+
+[33mcommit 0e360e644b27c12a1fd6a23248872762f004d9ea[m
+Author: David Ruiz <PRACTICANTE1.TI@dissql.com.co>
+Date:   Mon Oct 2 08:11:57 2023 -0500
+
+    Actualizacion 2-10-2023}
+
+[33mcommit 4b64e2092bb76f8e259c5f52bf0adcb1ee4469b7[m
+Author: David Ruiz <PRACTICANTE1.TI@dissql.com.co>
+Date:   Thu Sep 28 11:45:35 2023 -0500
+
+    Se agregan los permisos en el traslado de alambron
+
+[33mcommit f8df2bf0ed50bdb8b6cca6e07d1240ffefbacad1[m
+Author: David Ruiz <PRACTICANTE1.TI@dissql.com.co>
+Date:   Tue Sep 26 07:40:59 2023 -0500
+
+    Se hace entrega del modulo de traslado de alambron
+
+[33mcommit ea67c04ebeb4a409fe6533946a85b3c870b06f41[m
+Author: David Ruiz <PRACTICANTE1.TI@dissql.com.co>
+Date:   Tue Aug 15 08:06:49 2023 -0500
+
+    Cambios de mensajes y pruebas alambron
+
+[33mcommit 7a4599d640c7611c5a1feedcfbab8266eb23f749[m
+Author: David Ruiz <PRACTICANTE1.TI@dissql.com.co>
+Date:   Fri Aug 11 14:52:56 2023 -0500
+
+    Se organiza el lector de alambron traslado
+
+[33mcommit bce7bcb69f0b1d95278d0825b133528983012920[m
+Author: David Ruiz <PRACTICANTE1.TI@dissql.com.co>
+Date:   Wed Aug 2 11:58:35 2023 -0500
+
+    Verificacion de commit en github
+
+[33mcommit 7488e161c2f7cf995610a354a1400b5afe151c68[m[33m ([m[1;31morigin/Mejora[m[33m)[m
+Merge: b9de857 b5f1bbd
+Author: frederick23141 <federicotoro23141@gmail.com>
+Date:   Thu Jul 27 09:30:43 2023 -0500
+
+    Merge remote-tracking branch 'origin/main'
+
+[33mcommit b9de8575550de6f33f5a8e982e249a746334db4a[m
+Author: David Ruiz <practicante1.ti@dissql.com.co>
+Date:   Thu Jul 27 08:47:57 2023 -0500
+
+    Se programa el modulo de calidad de trefilacion, inician pruebas
+
+[33mcommit b5f1bbd6c8c6a9b3149963c824cc4bb948579bd0[m
+Author: David Ruiz <PRACTICANTE1.TI@dissql.com.co>
+Date:   Thu Jul 27 08:47:57 2023 -0500
+
+    Se programa el modulo de calidad de trefilacion, inician pruebas
+
+[33mcommit e97345cb76c475b9914027150423f8aeaca80e57[m
+Author: David Ruiz <PRACTICANTE1.TI@dissql.com.co>
+Date:   Fri Jun 30 15:59:16 2023 -0500
+
+    Se agrega el progressbar y se prueba el limite de tiempo
+
+[33mcommit faa7bf08e86ad85598ff60e8f969e1e0b36603a7[m
+Author: David Ruiz <PRACTICANTE1.TI@dissql.com.co>
+Date:   Thu Jun 29 13:04:07 2023 -0500
+
+    Temporizador para transaccion
+
+[33mcommit 8b33349302e8a5cfbca6540ca0484f910b4d7e42[m
+Author: MarshalLeeK <99676083+MarshalLeeK@users.noreply.github.com>
+Date:   Fri Jun 16 15:16:52 2023 -0500
+
+    Se agregan las conexiones para la consulta de bodegas en el control de inventarios
+
+[33mcommit 91b638656a656d10bf5953c16695a014dc974495[m
+Author: MarshalLeeK <99676083+MarshalLeeK@users.noreply.github.com>
+Date:   Fri Jun 9 16:02:57 2023 -0500
+
+    Se agregan las bodegas al Spinner de Control de inventarios, se crea la clase BodegasModelo
+
+[33mcommit 828162f2ca495e2af9e022c5f02d9ce8544b8450[m
+Author: MarshalLeeK <99676083+MarshalLeeK@users.noreply.github.com>
+Date:   Thu Jun 8 13:21:40 2023 -0500
+
+    Se agrega el activity Registro rollos para inventario
+
+[33mcommit 373dc20b7853350e297cff293afa6b2adfc6c8c2[m
+Author: MarshalLeeK <99676083+MarshalLeeK@users.noreply.github.com>
+Date:   Wed Jun 7 15:25:58 2023 -0500
+
+    Se agregan las imagenes al activity control inventario
+
+[33mcommit 7aee9bd3c15fa43b3d3f84db27bcf90af378aaa1[m
+Author: MarshalLeeK <99676083+MarshalLeeK@users.noreply.github.com>
+Date:   Wed Jun 7 15:07:58 2023 -0500
+
+    Se agrega activity_control_inventarios
+
+[33mcommit 35ce8fbe4bcff494036d709539d90498dc719a46[m
+Author: MarshalLeeK <99676083+MarshalLeeK@users.noreply.github.com>
+Date:   Wed Jun 7 14:43:22 2023 -0500
+
+    Se agrega activity_control_inventarios
+
+[33mcommit 1bc0cba56634d4e9cda905acbdc89d939127cef1[m
+Author: MarshalLeeK <99676083+MarshalLeeK@users.noreply.github.com>
+Date:   Wed Jun 7 12:29:30 2023 -0500
+
+    Se quitan los comentarios para validar el ingreso en cada metodo
+
+[33mcommit f9f4eea97f51209b4bfc260a0aa13d885bd1ef56[m
+Author: MarshalLeeK <99676083+MarshalLeeK@users.noreply.github.com>
+Date:   Tue Jun 6 16:14:27 2023 -0500
+
+    Se quitan los comentarios para validar el ingreso en cada metodo
+
+[33mcommit 5981e74b1a713c9e567264012798ec7406f386f5[m
+Author: MarshalLeeK <99676083+MarshalLeeK@users.noreply.github.com>
+Date:   Wed May 31 16:19:03 2023 -0500
+
+    Se agregan cambios en la validacion de requisiciones pendientes, resolviendo error provocado por el contador de rollos leidos
+
+[33mcommit 13f9882edaf4348c5dfb2a3d597832cd895771a3[m
+Author: MarshalLeeK <99676083+MarshalLeeK@users.noreply.github.com>
+Date:   Wed May 31 13:05:19 2023 -0500
+
+    Se agrega validacion para requisiciones donde no se termino la transaccion de descargue de alambron
+
+[33mcommit ca44a1625a969aded301f16bdd6d292172387b11[m
+Author: MarshalLeeK <99676083+MarshalLeeK@users.noreply.github.com>
+Date:   Wed May 31 11:00:27 2023 -0500
+
+    Se agrega el Descargue de alambron y sus dependencias al aplicativo
+
+[33mcommit d75c1710c1238ac78bd03f7707abbccc0a68318c[m
+Author: MarshalLeeK <99676083+MarshalLeeK@users.noreply.github.com>
+Date:   Wed May 31 10:59:55 2023 -0500
+
+    Se agrega el Descargue de alambron y sus dependencias al aplicativo
+
+[33mcommit cb75ee0a2ac23afe98204cf5c525dd7f76a79ad6[m
+Author: David Ruiz <PRACTICANTE1.TI@dissql.com.co>
+Date:   Wed May 31 10:31:20 2023 -0500
+
+    Se cambia la bodega de origen a la nueva bodega de piso
+
+[33mcommit 52328059a981bc00e24ec03eb274f89437efd1c9[m
+Author: David Ruiz <PRACTICANTE1.TI@dissql.com.co>
+Date:   Mon May 29 10:13:47 2023 -0500
+
+    Commit actualizado para unir ambos modulos
+
+[33mcommit b5ee2760e4b5b590f22ba1c33ee1343ed268e70f[m
+Author: David Ruiz <PRACTICANTE1.TI@dissql.com.co>
+Date:   Mon May 29 10:12:37 2023 -0500
+
+    Commit actualizado para unir ambos codigo
+
+[33mcommit 0eb7544de2fe2d3143f2a19cf0dca9e1d7e8d727[m
+Author: David Ruiz <PRACTICANTE1.TI@dissql.com.co>
+Date:   Thu May 11 09:46:12 2023 -0500
+
+    Recepcion de puntilleria modificado con acero
+
+[33mcommit 7a7545e66ad28872c8662e80f5a7a7218439bd08[m
+Author: David Ruiz <PRACTICANTE1.TI@dissql.com.co>
+Date:   Thu May 11 09:42:23 2023 -0500
+
+    Avances en empaque de puntilleria frente al acero
+
+[33mcommit b37ed3e8b9908e45d42563083d91dd15513d18c0[m
+Author: David Ruiz <PRACTICANTE1.TI@dissql.com.co>
+Date:   Thu May 11 08:29:44 2023 -0500
+
+    Cambios en la recepción de puntilleria con el acero
+
+[33mcommit cee6c5a103742c2812ba85b8887f45254a739ff7[m
+Author: Jdruiz7 <jdruiz78@misena.edu.co>
+Date:   Tue Apr 25 16:52:06 2023 -0500
+
+    Funciona correctamente recepcion galvanizado
+
+[33mcommit 8e85d66adf4d4c4e7ea72b7600270549f405b2c8[m
+Author: Jdruiz7 <jdruiz78@misena.edu.co>
+Date:   Fri Apr 21 17:28:39 2023 -0500
+
+    Se cambian y modifican algunas lineas de codigo eliminando codigo que no se necesita
+
+[33mcommit 093b3a18df07e8a24656a7367b9ffe042fa1dbd4[m
+Author: Jdruiz7 <jdruiz78@misena.edu.co>
+Date:   Fri Apr 21 12:17:26 2023 -0500
+
+    Se le agrega el campo para la segunda cedula en galvanizado
+
+[33mcommit 782b1f2d36833dceec4c3593cf1c55b703834cbf[m
+Author: Jdruiz7 <jdruiz78@misena.edu.co>
+Date:   Tue Apr 18 08:08:15 2023 -0500
+
+    Se muestra la terminacion del modulo de puntilleria, pero se piden unos cambios en galvanizado
+
+[33mcommit c30edf83bde50399c23aaf672b2e4720e68a0caf[m
+Author: Jdruiz7 <jdruiz78@misena.edu.co>
+Date:   Thu Apr 13 08:40:00 2023 -0500
+
+    Se avanza en la creacion de la recepcion de puntilleria
+
+[33mcommit a6baad0ec66503b9ebb21bc6a35a0dd427443e46[m
+Author: Jdruiz7 <jdruiz78@misena.edu.co>
+Date:   Wed Apr 5 15:10:06 2023 -0500
+
+    Se termina el modelo de ingreso de cajas de empaque y se inicia la programacion de la recepcion
+
+[33mcommit b1e558f5a1229898a35eb2f17693386d65818009[m
+Author: Jdruiz7 <jdruiz78@misena.edu.co>
+Date:   Fri Mar 31 11:03:35 2023 -0500
+
+    Se termina el codigo de galvanizado agregando el sonido de incorrecto
+
+[33mcommit d0f85ebeaf2ba11a07c47450bdfbd5999ba890fb[m
+Author: Jdruiz7 <jdruiz78@misena.edu.co>
+Date:   Wed Mar 29 17:29:36 2023 -0500
+
+    Se termina el codigo para la recepcion de galvanizado y se inician pruebas
+
+[33mcommit 71b0024bc9e63738382d5bd198c6f90e33b1c627[m
+Author: Jdruiz7 <jdruiz78@misena.edu.co>
+Date:   Mon Mar 27 18:46:08 2023 -0500
+
+    Ya se programo la lista del producto terminado de galvanizado
+
+[33mcommit 1e45a1739c61277e09487068257a5fad9c63cc49[m
+Author: Jdruiz7 <jdruiz78@misena.edu.co>
+Date:   Thu Mar 23 15:03:53 2023 -0500
+
+    23-03-2023 Ya se realizaron los diseños para el inventario de galvanizado y se esta programando el codigo
+
+[33mcommit 0d705ec1ae38d204820a19f2c7decb5c84e603be[m
+Author: Jdruiz7 <jdruiz78@misena.edu.co>
+Date:   Thu Mar 2 14:11:14 2023 -0500
+
+    Inicio semana de prueba con el montacarga
+
+[33mcommit 2012d369ef95ef0bf6040889cba391d3ecde894d[m
+Author: Jdruiz7 <jdruiz78@misena.edu.co>
+Date:   Wed Mar 1 08:09:10 2023 -0500
+
+    Se soluciona con un suiche el problema del doble ingreso de tiquete
+
+[33mcommit 5e428b5a90fe20ffc4ad3a154c38f37e7ef29150[m
+Author: Jdruiz7 <jdruiz78@misena.edu.co>
+Date:   Fri Feb 24 08:39:34 2023 -0500
+
+    Nuevos avances 24-02-2023
+
+[33mcommit 37169eba4de07b2c0d74963c86f1b8c70eebf54f[m
+Author: Jdruiz7 <jdruiz78@misena.edu.co>
+Date:   Thu Feb 2 18:00:56 2023 -0500
+
+    Ultima entrega
+
+[33mcommit f4b13a72a4ff8d41db2b4ca69767e7cfb53d2179[m
+Author: Jdruiz7 <jdruiz78@misena.edu.co>
+Date:   Wed Feb 1 10:54:42 2023 -0500
+
+    avances en el proyecto
+
+[33mcommit e26ff6e1b7972b8a058e075cd3e4335fa368e74a[m
+Author: David Ruiz <PRACTICANTE1.TI@dissql.com.co>
+Date:   Fri Jan 27 17:55:34 2023 -0500
+
+    Se agrega el Proyecto

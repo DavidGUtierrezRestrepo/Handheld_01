@@ -538,20 +538,20 @@ public class RevisionTerminadoRecocido extends AppCompatActivity {
             numero_revision = conexion.obtenerIdRevision(RevisionTerminadoRecocido.this, obtenerId );
             for(int i=0;i<ListaRecoRollosRecep.size();i++){
                 String cod_orden = ListaRecoRollosRecep.get(i).getCod_orden();
-                String id_detalle = ListaRecoRollosRecep.get(i).getId_detalle();
-                String id_rollo = ListaRecoRollosRecep.get(i).getId_rollo();
+            String id_detalle = ListaRecoRollosRecep.get(i).getId_detalle();
+            String id_rollo = ListaRecoRollosRecep.get(i).getId_rollo();
 
-                String sql_rollo= "UPDATE JB_rollos_rec SET id_revision="+ numero_revision +" WHERE cod_orden_rec='"+ cod_orden +"' AND id_detalle_rec='"+id_detalle+"' AND id_rollo_rec='"+id_rollo+"'";
+            String sql_rollo= "UPDATE JB_rollos_rec SET id_revision="+ numero_revision +" WHERE cod_orden_rec='"+ cod_orden +"' AND id_detalle_rec='"+id_detalle+"' AND id_rollo_rec='"+id_rollo+"'";
 
-                try {
-                    //Se añade el sql a la lista
-                    listRevisionReco.add(sql_rollo);
-                }catch (Exception e){
-                    Toast.makeText(RevisionTerminadoRecocido.this, e.getMessage(), Toast.LENGTH_SHORT).show();
-                }
+            try {
+                //Se añade el sql a la lista
+                listRevisionReco.add(sql_rollo);
+            }catch (Exception e){
+                Toast.makeText(RevisionTerminadoRecocido.this, e.getMessage(), Toast.LENGTH_SHORT).show();
             }
+        }
 
-            if (listRevisionReco.size()>0){
+        if (listRevisionReco.size()>0){
                 //Ejecutamos la consultas que llenan los campos de recepción
                 repeticiones = 0;
                 error = produccion1();

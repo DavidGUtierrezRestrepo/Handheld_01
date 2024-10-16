@@ -152,7 +152,7 @@ public class EscanerTrasladoMateriaPrimaPuntilleria extends AppCompatActivity im
         pcodigo = getIntent().getStringExtra("codigo");
         pPendiente = getIntent().getStringExtra("pendiente");
         pDescripcion = getIntent().getStringExtra("descripcion");
-        //Recibimos los datos traidos desed el primer activity
+        //Recibimos los datos traidos desde el primer activity
         nit_usuario = getIntent().getStringExtra("nit_usuario");
         bod_origen = getIntent().getIntExtra("bod_origen", 0);
         bod_destino = getIntent().getIntExtra("bod_destino", 0);
@@ -502,15 +502,15 @@ public class EscanerTrasladoMateriaPrimaPuntilleria extends AppCompatActivity im
         }else{
             sql = "SELECT transaccion_entrada FROM J_det_orden_prod WHERE cod_orden = " + consecutivo_materia_prima + " AND id_detalle = " + id_detalle;
             val = conexion.valorTodo(EscanerTrasladoMateriaPrimaPuntilleria.this,sql);
-            if (!val.equals("")){
-                if (!(validarTraslado.getAnular() == null)){
+            if (val != null && !val.equals("")) { //Se hizo un cambio en esta seccion del codigo para que se reconozcan los null
+                if (validarTraslado.getAnular() != null) {
                     toastError("El rollo ha sido anulado");
                     AudioError();
                     leer_nuevo();
-                }else{
+                } else {
                     resp = true;
                 }
-            }else{
+            } else {
                 toastError("La planilla del rollo que se intenta pasar no ha sido cerrada");
                 AudioError();
                 leer_nuevo();
@@ -560,7 +560,7 @@ public class EscanerTrasladoMateriaPrimaPuntilleria extends AppCompatActivity im
                 if (validacion.getDestino().equals("A")){
                     toastError("El rollo ya pertenece a PUAS");
                 }else{
-                    toastError("El rollo ya pertenece a GIANTKILLER");
+                    toastError("El rollo ya pertenece a ");
                 }
             }else{
                 toastError("El rollo ya fue trasladado");

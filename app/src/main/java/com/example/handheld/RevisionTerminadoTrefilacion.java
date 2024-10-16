@@ -985,19 +985,44 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
                 toastError("Rollo no encontrado");
                 AudioError();
                 cargarNuevo();
-            } else if (revisionRollo.getEstado().equals("A")) {
+            } else if (revisionRollo.getEstado().equals("A") && revisionRollo.getId_recepcion() != null) {
                 AudioError();
                 cargarNuevo();
                 AlertDialog.Builder builder = new AlertDialog.Builder(RevisionTerminadoTrefilacion.this);
-                View mView = getLayoutInflater().inflate(R.layout.alertdialog_aceptar,null);
-                TextView alertMensaje = mView.findViewById(R.id.alertMensaje);
-                alertMensaje.setText("Rollo ya Autorizado \n Fecha: " + revisionRollo.getFecha_hora());
-                Button btnAceptar = mView.findViewById(R.id.btnAceptar);
+                View mView = getLayoutInflater().inflate(R.layout.alertdialog_anular,null);
+                @SuppressLint({"MissingInflatedId", "LocalSuppress"}) TextView alertMensaje = mView.findViewById(R.id.alertMensaje);
+                alertMensaje.setText("Rollo ya Autorizado \n Fecha: " + revisionRollo.getFecha_hora() + " \n Ya fue recepcionado por logistica");
+                @SuppressLint({"MissingInflatedId", "LocalSuppress"}) Button btnAceptar = mView.findViewById(R.id.btnAceptar);
+                @SuppressLint({"MissingInflatedId", "LocalSuppress"}) Button btnAnular = mView.findViewById(R.id.btnAnular);
                 btnAceptar.setText("Aceptar");
                 builder.setView(mView);
                 AlertDialog alertDialog = builder.create();
                 btnAceptar.setOnClickListener(v -> {
                     alertDialog.dismiss();
+                });
+                btnAnular.setOnClickListener(v -> {
+                    toastError("No se puede anular porque logistica ya recepcionó");
+                });
+                alertDialog.setCancelable(false);
+                alertDialog.show();
+            } else if (revisionRollo.getEstado().equals("A") && revisionRollo.getId_recepcion() == null) {
+                AudioError();
+                cargarNuevo();
+                AlertDialog.Builder builder = new AlertDialog.Builder(RevisionTerminadoTrefilacion.this);
+                View mView = getLayoutInflater().inflate(R.layout.alertdialog_anular,null);
+                @SuppressLint({"MissingInflatedId", "LocalSuppress"}) TextView alertMensaje = mView.findViewById(R.id.alertMensaje);
+                alertMensaje.setText("Rollo ya Autorizado \n Fecha: " + revisionRollo.getFecha_hora());
+                @SuppressLint({"MissingInflatedId", "LocalSuppress"}) Button btnAceptar = mView.findViewById(R.id.btnAceptar);
+                @SuppressLint({"MissingInflatedId", "LocalSuppress"}) Button btnAnular = mView.findViewById(R.id.btnAnular);
+                btnAceptar.setText("Aceptar");
+                builder.setView(mView);
+                AlertDialog alertDialog = builder.create();
+                btnAceptar.setOnClickListener(v -> {
+                    alertDialog.dismiss();
+                });
+                btnAnular.setOnClickListener(v -> {
+                    alertDialog.dismiss();
+                    alertDialogEliminar(cod_orden,id_detalle,id_rollo);
                 });
                 alertDialog.setCancelable(false);
                 alertDialog.show();
@@ -1017,8 +1042,68 @@ public class RevisionTerminadoTrefilacion extends AppCompatActivity{
                 });
                 alertDialog.setCancelable(false);
                 alertDialog.show();
+            } else if (revisionRollo.getEstado().isEmpty()){
+                toastError("Actualiza el modulo, \n para encontrar el rollo");
+                AudioError();
+                cargarNuevo();
             }
         }
+    }
+
+
+
+    //Alert dialog Transacción
+    @SuppressLint("SetTextI18n")
+    private void alertDialogEliminar(String cod_orden,String id_detalle,String id_rollo){
+        AlertDialog.Builder builder = new AlertDialog.Builder(RevisionTerminadoTrefilacion.this);
+        View mView = getLayoutInflater().inflate(R.layout.alertdialog_eliminar,null);
+        @SuppressLint({"MissingInflatedId", "LocalSuppress"}) TextView txtMrechazo = mView.findViewById(R.id.txtMrechazo);
+        txtMrechazo.setText("¿Desea anular la revision de calidad del rollo seleccionado?");
+        @SuppressLint({"MissingInflatedId", "LocalSuppress"}) TextView textView6 = mView.findViewById(R.id.textView6);
+        textView6.setText("Ingrese la cedula persona calidad");
+        @SuppressLint({"MissingInflatedId", "LocalSuppress"}) EditText txtCedulaLogistica = mView.findViewById(R.id.txtCedulaLogistica);
+        txtCedulaLogistica.setHint("Cedula Calidad");
+        Button btnAceptar = mView.findViewById(R.id.btnAceptar);
+        Button btnCancelar = mView.findViewById(R.id.btnCancelar);
+        builder.setView(mView);
+        AlertDialog alertDialog = builder.create();
+        btnAceptar.setOnClickListener(v12 -> {
+            if(isNetworkAvailable()){
+                String CeLog = txtCedulaLogistica.getText().toString().trim();
+                if (CeLog.equals("")){
+                    toastError("Ingresar la cedula de la persona de calidad");
+                }else{
+                    //Verificamos el numero de documentos de la persona en la base da datos
+                    personaCalidad = conexion.obtenerPermisoPersona(RevisionTerminadoTrefilacion.this,CeLog,"mod_revision_calidad_recocido" );
+                    permiso = personaCalidad.getNit();
+                    //Verificamos que la persona sea de calidad
+                    if (!permiso.equals("")){
+                        Integer ejecutar = 0;
+
+                        String sql = "UPDATE J_rollos_tref set id_revision=null where cod_orden='" + cod_orden + "' and id_detalle='" + id_detalle + "' and id_rollo='" + id_rollo + "'";
+
+                        ejecutar = Obj_ordenprodLn.realizarUpdateProduccion(sql, RevisionTerminadoTrefilacion.this);
+
+                        if (ejecutar.equals(1)){
+                            toastAcierto("Se anulo la revision de calidad del rollo correctamente");
+                            alertDialog.dismiss();
+                        }else{
+                            toastError("Problemas para rechazar rollo, vuelve a intentarlo");
+                            alertDialog.dismiss();
+                        }
+                    }else{
+                        txtCedulaLogistica.setText("");
+                        AudioError();
+                        toastError("La cedula ingresada no tiene permiso para hacer revisiones de calidad!");
+                    }
+                }
+            }else{
+                toastError("Problemas de conexión a Internet");
+            }
+        });
+        btnCancelar.setOnClickListener(v1 -> alertDialog.dismiss());
+        alertDialog.setCancelable(false);
+        alertDialog.show();
     }
 
     /////////////////////////////////////////////////////////////////////////////////////////////
