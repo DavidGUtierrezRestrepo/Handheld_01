@@ -379,7 +379,7 @@ public class RecepcionTerminadoTrefilacion extends AppCompatActivity implements 
     @SuppressLint("SetTextI18n")
     private void realizarTransaccion() {
         StringBuilder stringConstructor = new StringBuilder();
-        stringConstructor.append("AND ((R.cod_orden_rec=" + ListaTrefiRollosRecep.get(0).getCod_orden() + " and R.id_detalle_rec=" + ListaTrefiRollosRecep.get(0).getId_detalle() + " and R.id_rollo_rec=" + ListaTrefiRollosRecep.get(0).getId_rollo() + ")");
+        stringConstructor.append("AND ((R.cod_orden=" + ListaTrefiRollosRecep.get(0).getCod_orden() + " and R.id_detalle=" + ListaTrefiRollosRecep.get(0).getId_detalle() + " and R.id_rollo=" + ListaTrefiRollosRecep.get(0).getId_rollo() + ")");
         if (ListaTrefiRollosRecep.size() > 1) {
             for (int j = 1; j < ListaTrefiRollosRecep.size(); j++) {
                 stringConstructor.append(" OR (R.cod_orden_rec=" + ListaTrefiRollosRecep.get(j).getCod_orden() + " and R.id_detalle_rec=" + ListaTrefiRollosRecep.get(j).getId_detalle() + " and R.id_rollo_rec= " + ListaTrefiRollosRecep.get(j).getId_rollo() + ")");

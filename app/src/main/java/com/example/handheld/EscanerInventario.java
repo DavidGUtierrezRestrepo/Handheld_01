@@ -39,17 +39,13 @@ import com.example.handheld.conexionDB.ConfiguracionBD;
 import com.example.handheld.modelos.CorreoModelo;
 import com.example.handheld.modelos.GalvRecepcionModelo;
 import com.example.handheld.modelos.GalvRecepcionadoRollosModelo;
-import com.example.handheld.modelos.PermisoPersonaModelo;
 import com.example.handheld.modelos.PersonaModelo;
 import com.example.handheld.modelos.RolloGalvTransa;
-import com.example.handheld.modelos.TrefiRecepcionadoRollosModelo;
 
 import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.Collection;
-import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 
@@ -71,7 +67,7 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
     Button btnTransaGalv, btnCancelarTrans;
 
     //se declaran las variables donde estaran los datos que vienen de la anterior clase
-    String nit_usuario, CeLog;
+    String nit_usuario;
 
     //Se declaran los elementos necesarios para el list view
     ListView listviewGalvTerminado;
@@ -87,13 +83,10 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
     int yaentre = 0, leidos;
     String consecutivo, error, fechaTransaccion, nro_orden,nro_rollo,db_produccion;
     Integer numero_transaccion, repeticiones;
-
-    String permiso = "";
     String centro = "";
 
     Boolean incompleta = false;
     PersonaModelo personaLogistica;
-    PermisoPersonaModelo personaProduccion;
     CorreoModelo correo;
     ObjTraslado_bodLn objTraslado_bodLn = new ObjTraslado_bodLn();
     Gestion_alambronLn obj_gestion_alambronLn = new Gestion_alambronLn();
@@ -102,7 +95,7 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
 
     //Lista para relacionar rollos con la transacción.
     List<Object> listTransactionTrb1 = new ArrayList<>(); //Lista donde agregamos las consultas que agrearan el campo trb1
-    List<GalvRecepcionadoRollosModelo> listTransactionGal=new ArrayList<>();
+    List<Object> listTransactionGal;
     List<Object> listReanudarTransa;
 
     //Se inicializa los varibles para el sonido de error
@@ -156,8 +149,18 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
         context = this;
 
         rec = new String[] {
-                "auxiliar3.TI@corsan.com.co"
+                "auxiliar3.TI@corsan.com.co",
+                "isabel.gomez@corsan.com.co",
+                "auditoria@corsan.com.co"
         };
+
+        /////////////////////////////////////////////////////////////////////////////////////////////
+        //Llamamos al metodo para consultar si hay alguna transaccion incompleta
+        consultarTransIncompleta();
+
+        /////////////////////////////////////////////////////////////////////////////////////////////
+        //Se establece el foco en el edit text
+        codigoGalva.requestFocus();
 
         /////////////////////////////////////////////////////////////////////////////////////////////
         //Se programa para que al presionar (enter) en el EditText inicie el proceso
@@ -222,85 +225,6 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
                 }
             }
         });
-
-        ingresarCedulaProduccion();
-    }
-
-    @SuppressLint("SetTextI18n")
-    private void ingresarCedulaProduccion() {
-        conexion = new Conexion();
-        AlertDialog.Builder builder = new AlertDialog.Builder(EscanerInventario.this);
-        View mView = getLayoutInflater().inflate(R.layout.alertdialog_cedularecepciona,null);
-        final EditText txtCedulaProduccion = mView.findViewById(R.id.txtCedulaLogistica);
-        txtCedulaProduccion.setHint("Cedula Producción");
-        TextView textMensaje = mView.findViewById(R.id.textView6);
-        textMensaje.setText("Ingrese la cedula persona producción");
-        TextView txtMrollos = mView.findViewById(R.id.txtMrollos);
-        txtMrollos.setVisibility(View.GONE);
-        Button btnAceptar = mView.findViewById(R.id.btnAceptar);
-        Button btnCancelar = mView.findViewById(R.id.btnCancelar);
-        builder.setView(mView);
-        AlertDialog alertDialog = builder.create();
-        btnAceptar.setOnClickListener(v12 -> {
-            if (isNetworkAvailable()) {
-                String CeProdu = txtCedulaProduccion.getText().toString().trim();
-                if (CeProdu.equals("")){
-                    AudioError();
-                    toastError("Ingresar la cedula de la persona que entrega producción");
-                }else{
-                    //Verificamos el numero de documentos de la persona en la base da datos
-                    personaProduccion = conexion.obtenerPermisoPersonaGalvanizado(EscanerInventario.this, CeProdu, "entrega");
-                    permiso = personaProduccion.getPermiso();
-
-                    //Verificamos que la persona sea de logistica
-                    if (permiso.equals("E")){
-                        Handler handler = new Handler(Looper.getMainLooper());
-                        new Thread(() -> {
-                            try {
-                                runOnUiThread(() -> {
-                                    // Código a ejecutar cuando el permiso es "E"
-                                    nit_usuario = CeProdu;
-
-                                    // Llamamos al metodo para consultar los rollos de galvanizados listos para recoger
-                                    consultarTransIncompleta();
-
-                                    alertDialog.dismiss();
-
-                                    //Se establece el foco en el edit text
-                                    codigoGalva.requestFocus();
-
-                                    closeTecladoMovil();
-                                });
-                            } catch (Exception e) {
-                                handler.post(() -> {
-                                    AudioError();
-                                    toastError(e.getMessage());
-                                });
-                            }
-                        }).start();
-                        closeTecladoMovil();
-                    }else{
-                        if (permiso == null){
-                            txtCedulaProduccion.setText("");
-                            AudioError();
-                            toastError("Persona no encontrada");
-                        }else{
-                            txtCedulaProduccion.setText("");
-                            AudioError();
-                            toastError("La cedula ingresada no pertenece a producción!");
-                        }
-                    }
-                }
-            } else {
-                toastError("Problemas de conexión a Internet");
-            }
-        });
-        btnCancelar.setOnClickListener(v -> {
-            alertDialog.dismiss();
-            finish();
-        });
-        alertDialog.setCancelable(false);
-        alertDialog.show();
     }
 
     @SuppressLint("SetTextI18n")
@@ -317,7 +241,7 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
         AlertDialog alertDialog = builder.create();
         btnAceptar.setOnClickListener(v12 -> {
             if (isNetworkAvailable()) {
-                CeLog = txtCedulaLogistica.getText().toString().trim();
+                String CeLog = txtCedulaLogistica.getText().toString().trim();
                 if (CeLog.equals("")){
                     AudioError();
                     toastError("Ingresar la cedula de la persona que recepciona");
@@ -379,10 +303,10 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
     @SuppressLint("SetTextI18n")
     private void realizarTransaccion() {
         StringBuilder stringConstructor = new StringBuilder();
-        stringConstructor.append("AND ((R.nro_orden=" +   listTransactionGal.get(0).getNro_orden() + " and R.nro_rollo=" +   listTransactionGal.get(0).getNro_rollo() + ")");
-        if (  listTransactionGal.size() > 1) {
-            for (int j = 1; j <   listTransactionGal.size(); j++) {
-                stringConstructor.append(" OR (R.nro_orden=" +   listTransactionGal.get(j).getNro_orden() + " and R.nro_rollo=" +   listTransactionGal.get(j).getNro_rollo() + ")");
+        stringConstructor.append("AND ((R.nro_orden=" + ListaGalvRollosRecep.get(0).getNro_orden() + " and R.consecutivo_rollo=" + ListaGalvRollosRecep.get(0).getNro_rollo() +  ")");
+        if (ListaGalvRollosRecep.size() > 1) {
+            for (int j = 1; j < ListaGalvRollosRecep.size(); j++) {
+                stringConstructor.append(" OR (R.nro_orden=" + ListaGalvRollosRecep.get(j).getNro_orden() + " and R.consecutivo_rollo=" + ListaGalvRollosRecep.get(j).getNro_rollo() + ")");
             }
         }
         stringConstructor.append(")");
@@ -411,46 +335,37 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
 
         //se adicionan los campos recepcionado, nit_recepcionado y fecha_recepcionado a la tabla
         for (int i = 0; i < ListaGalvRollosRecep.size(); i++) {
-            String nro_orden = ListaGalvRollosRecep.get(i).getNro_orden();
+            String nro_orden= ListaGalvRollosRecep.get(i).getNro_orden();
             String nro_rollo = ListaGalvRollosRecep.get(i).getNro_rollo();
 
-            String sql_rollo= "UPDATE " + db_produccion + "D_rollo_galvanizado_f SET recepcionado='SI', nit_recepcionado='" + nit_usuario + "', fecha_recepcion='" + fechaActualString + "', nit_entrega='" + personaLogistica.getNit() + "' WHERE nro_orden='" + nro_orden + "' AND consecutivo_rollo='" + nro_rollo + "'";
+
+            String sql_rollo ="UPDATE " + db_produccion + "D_rollo_galvanizado_f SET recepcionado='SI', nit_recepcionado='"+ nit_usuario +"', fecha_recepcion='"+ fechaActualString +"', nit_entrega='"+ personaLogistica.getNit() +"' WHERE nro_orden='"+ nro_orden +"' AND consecutivo_rollo='"+nro_rollo+"'";
 
             try {
                 //Se añade el sql a la lista
-                listTransactionTrb1.add(sql_rollo);
+                listTransactionGal.add(sql_rollo);
             } catch (Exception e) {
                 Toast.makeText(EscanerInventario.this, e.getMessage(), Toast.LENGTH_SHORT).show();
             }
         }
 
         numero_transaccion = Integer.valueOf(Obj_ordenprodLn.mover_consecutivo("TRB1", EscanerInventario.this));
-        List<Object> objetos = traslado_bodega(ListarefeRecepcionados, calendar);
-        List<GalvRecepcionadoRollosModelo> galvRecepcionados = new ArrayList<>();
+        listTransactionGal.addAll(traslado_bodega(ListarefeRecepcionados, calendar));
 
-        for (Object obj : objetos) {
-            if (obj instanceof GalvRecepcionadoRollosModelo) {
-                galvRecepcionados.add((GalvRecepcionadoRollosModelo) obj);
-            }
-        }
-        listTransactionGal.addAll(galvRecepcionados);
-
-
-        for (int u = 0; u < ListaGalvRollosRecep.size(); u++) {
-            String nro_orden = ListaGalvRollosRecep.get(u).getNro_orden();
-            String nro_rollo= ListaGalvRollosRecep.get(u).getNro_rollo();
-
-            String sql_trb1 = "UPDATE" + db_produccion +" D_rollo_galvanizado_f SET trb1=" + numero_transaccion + " WHERE nro_orden='" + nro_orden + "' AND consecutivo_rollo='" + nro_rollo + "'";
+        for (int i = 0; i < ListaGalvRollosRecep.size(); i++) {
+            String nro_orden= ListaGalvRollosRecep.get(i).getNro_orden();
+            String nro_rollo = ListaGalvRollosRecep.get(i).getNro_rollo();
+            String sql_trb1 ="UPDATE " + db_produccion + "D_rollo_galvanizado_f SET trb1="+ numero_transaccion +", tipo_transacion='TRB1' WHERE nro_orden='"+ nro_orden +"' AND consecutivo_rollo='"+nro_rollo+"'";
             try {
                 //Se añade el sql a la lista
-                listTransactionTrb1.add(sql_trb1);
+                listTransactionGal.add(sql_trb1);
             } catch (Exception e) {
                 Toast.makeText(EscanerInventario.this, e.getMessage(), Toast.LENGTH_SHORT).show();
             }
         }
 
         //Ejecutamos la lista de consultas para hacer la TRB1
-        error = ing_prod_ad.ExecuteSqlTransaction(Collections.singletonList(listTransactionGal), ConfiguracionBD.obtenerNombreBD(1), EscanerInventario.this);
+        error = ing_prod_ad.ExecuteSqlTransaction(listTransactionGal, ConfiguracionBD.obtenerNombreBD( 1), EscanerInventario.this);
         if(error.equals("")){
             consultarGalvTerminado();
             incompleta = false;
@@ -473,8 +388,8 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
                     correo = conexion.obtenerCorreo(EscanerInventario.this);
                     String email = correo.getCorreo();
                     String pass = correo.getContrasena();
-                    subject = "la transaccion #" + numero_transaccion + " de Control en Piso Galvanizado no se pudo realizar";
-                    textMessage = "La Transacción de recepcion de producto terminado del area de Galvanizado #" + numero_transaccion + " no se pudo cancelar correctamente \n" +
+                    subject = "la transaccion #" + numero_transaccion + " de Control en Piso Trefilación no se pudo realizar";
+                    textMessage = "La Transacción de recepcion de producto terminado del area de Trefilación #" + numero_transaccion + " no se pudo cancelar correctamente \n" +
                             "Detalles de la recepción: \n" +
                             "Error: '" + error + "'\n" +
                             "Numero de rollos: " + leidos + " \n" +
@@ -498,7 +413,7 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
 
                     pdialog = ProgressDialog.show(context,"","Sending Mail...", true);
 
-                    EscanerInventario.RetreiveFeedTask task = new EscanerInventario.RetreiveFeedTask();
+                    RetreiveFeedTask task = new RetreiveFeedTask();
                     task.execute();
                     alertDialog.dismiss();
                 } else {
@@ -560,9 +475,8 @@ public class EscanerInventario extends AppCompatActivity implements AdapterView.
         @SuppressLint("SimpleDateFormat")
         SimpleDateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss a");
         String fecha = dateFormat.format(calendar.getTime());
-        String nombre_usuario = conexion.obtenerNombrePersona(EscanerInventario.this,CeLog);
-        String usuario = CeLog;
-        String notas = "MOVIL fecha: " + fecha + " usuario: " + nombre_usuario;
+        String usuario = nit_usuario;
+        String notas = "MOVIL fecha:" + fecha + " usuario:" + usuario;
 
         listSql = objTraslado_bodLn.listaTrasladoBodegaGalv(ListarefeRecepcionados,numero_transaccion, 17, 3, calendar, notas, usuario, "TRB1", "30",EscanerInventario.this);
         return listSql;

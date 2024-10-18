@@ -2618,16 +2618,20 @@ public class Conexion {
 
     /////////////////////////////////////////////////////////////////////////////////////////////////
     //
-    public List<GalvRecepcionadoRollosModelo> galvRefeRecepcionados(Context context, String fecha_recepcion, String month, String year) {
+    public List<GalvRecepcionadoRollosModelo> galvRefeRecepcionados(Context context, String month, String year, String complemento) {
         List<GalvRecepcionadoRollosModelo> refeRecepcionados = new ArrayList<>();
         GalvRecepcionadoRollosModelo modelo;
 
         try {
             Statement st = conexionBD(ConfiguracionBD.obtenerNombreBD(2), context).createStatement();
-            ResultSet rs = st.executeQuery("select sum(R.peso) as peso, (SELECT p.promedio from corsan.dbo.v_promedio p where codigo = O.final_galv and P.ano = " + year + " and P.mes = " + month + ")  as promedio, (select costo_unitario from CORSAN.dbo.referencias R where codigo = O.final_galv) as costo_unitario , O.final_galv " +
-                    "from D_rollo_galvanizado_f R inner join D_orden_pro_galv_enc O on O.consecutivo_orden_G = R.nro_orden " +
-                    "where R.recepcionado is not null and R.fecha_recepcion = '" + fecha_recepcion + "' and R.no_conforme is null and O.final_galv like '33%' " +
-                    "group by O.final_galv");
+            ResultSet rs = st.executeQuery("SELECT SUM(R.peso) AS peso, " +
+                    "(SELECT p.promedio FROM corsan.dbo.v_promedio p WHERE p.codigo = O.final_galv AND p.ano = " + year + " AND p.mes = " + month + ") AS promedio, " +
+                    "(SELECT costo_unitario FROM CORSAN.dbo.referencias R WHERE R.codigo = O.final_galv) AS costo_unitario, " +
+                    "O.final_galv " +
+                    "FROM D_rollo_galvanizado_f R " +
+                    "INNER JOIN D_orden_pro_galv_enc O ON O.consecutivo_orden_G = R.nro_orden " +
+                    "WHERE R.no_conforme IS NULL AND O.final_galv LIKE '33%' " + complemento + " " +
+                    "GROUP BY O.final_galv");
             while (rs.next()) {
                 modelo = new GalvRecepcionadoRollosModelo();
                 modelo.setPeso(rs.getDouble("peso"));

@@ -1,7 +1,6 @@
 package com.example.handheld.ClasesOperativas;
 
 import android.content.Context;
-import android.widget.Toast;
 
 import java.sql.Connection;
 import java.sql.DriverManager;

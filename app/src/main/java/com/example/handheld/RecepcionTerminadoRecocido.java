@@ -487,96 +487,232 @@ public class RecepcionTerminadoRecocido extends AppCompatActivity implements Ada
     //Una TRB1 en el sistema de bodega 2 a bodega 3 con los rollos leidos
     @SuppressLint("SetTextI18n")
     private void realizarTransaccion() {
-        StringBuilder stringConstructor = new StringBuilder();
-        stringConstructor.append("AND ((R.cod_orden=" + ListaRecoRollosRecep.get(0).getCod_orden() + " and R.id_detalle=" + ListaRecoRollosRecep.get(0).getId_detalle() + " and R.id_rollo=" + ListaRecoRollosRecep.get(0).getId_rollo() + ")");
-        if (ListaRecoRollosRecep.size() > 1) {
-            for (int j = 1; j < ListaRecoRollosRecep.size(); j++) {
-                stringConstructor.append(" OR (R.cod_orden=" + ListaRecoRollosRecep.get(j).getCod_orden() + " and R.id_detalle=" + ListaRecoRollosRecep.get(j).getId_detalle() + " and R.id_rollo= " + ListaRecoRollosRecep.get(j).getId_rollo() + ")");
-            }
-        }
-        stringConstructor.append(")");
-        String complementoSql = stringConstructor.toString();
-
         //Creamos una lista para almacenar todas las consultas que se realizaran en la base de datos
         listTransactionReco = new ArrayList<>();
+        //Creamos una lista para almacenar todas las consultas que se realizaran en la base de datos
+        List<Object> listTransaccionBodega;
 
-        // Obtén la fecha y hora actual
-        Date fechaActual = new Date();
-        Calendar calendar = Calendar.getInstance();
+        if (paso.equals(0)){
+            // Obtén la fecha y hora actual
+            Date fechaActual = new Date();
+            calendar = Calendar.getInstance();
 
-        // Define el formato de la fecha y hora que deseas obtener
-        @SuppressLint("SimpleDateFormat") SimpleDateFormat formatoFecha = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        @SuppressLint("SimpleDateFormat") SimpleDateFormat formatoFechaTransaccion = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss a");
-        @SuppressLint("SimpleDateFormat") SimpleDateFormat formatoMonth = new SimpleDateFormat("MM");
-        @SuppressLint("SimpleDateFormat") SimpleDateFormat formatoYear = new SimpleDateFormat("yyyy");
+            // Define el formato de la fecha y hora que deseas obtener
+            @SuppressLint("SimpleDateFormat") SimpleDateFormat formatoFecha = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+            @SuppressLint("SimpleDateFormat") SimpleDateFormat formatoFechaTransaccion = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss a");
+            @SuppressLint("SimpleDateFormat") SimpleDateFormat formatoMonth = new SimpleDateFormat("MM");
+            @SuppressLint("SimpleDateFormat") SimpleDateFormat formatoYear = new SimpleDateFormat("yyyy");
 
-        // Convierte la fecha actual en un String con el formato definido
-        String fechaActualString = formatoFecha.format(fechaActual);
-        fechaTransaccion = formatoFechaTransaccion.format(fechaActual);
-        String monthActualString = formatoMonth.format(fechaActual);
-        String yearActualString = formatoYear.format(fechaActual);
+            // Convierte la fecha actual en un String con el formato definido
+            fechaActualString = formatoFecha.format(fechaActual);
+            fechaTransaccion = formatoFechaTransaccion.format(fechaActual);
+            monthActualString = formatoMonth.format(fechaActual);
+            yearActualString = formatoYear.format(fechaActual);
 
-        ListarefeRecepcionados = conexion.recoRefeRecepcionados(RecepcionTerminadoRecocido.this, monthActualString, yearActualString, complementoSql);
-
-        //se adicionan los campos recepcionado, nit_recepcionado y fecha_recepcionado a la tabla
-        for (int i = 0; i < ListaRecoRollosRecep.size(); i++) {
-            String cod_orden_rec = ListaRecoRollosRecep.get(i).getCod_orden();
-            String id_detalle_rec = ListaRecoRollosRecep.get(i).getId_detalle();
-            String id_rollo_rec = ListaRecoRollosRecep.get(i).getId_rollo();
-
-            String sql_rollo = "UPDATE " + db_produccion + "  jd_detalle_recepcion_recocido SET  id_recepcionado='" + nit_usuario + "', fecha_recepcion='" + fechaActualString + "', nit_entrega='" + personaLogistica.getNit() + "' WHERE cod_orden_rec='" + cod_orden_rec + "' AND id_detalle_rec='" + id_detalle_rec + "' AND id_rollo_rec='" + id_rollo_rec + "'";
+            String sql_registroRecepcion = "INSERT INTO jd_detalle_recepcion_recocido(nit_prod_entrega,nit_log_recibe,fecha_recepcion)VALUES('" + nit_usuario + "','" + personaLogistica.getNit() + "','" + fechaActualString + "')";
 
             try {
-                //Se añade el sql a la lista
-                listTransactionReco.add(sql_rollo);
+                //Se ejecuta el sql_revision en la base de datos
+                paso = ObjOperacionesDB.ejecutarInsertJjprgproduccion(sql_registroRecepcion, RecepcionTerminadoRecocido.this);
             } catch (Exception e) {
-                Toast.makeText(RecepcionTerminadoRecocido.this, e.getMessage(), Toast.LENGTH_SHORT).show();
+                incompleta =  true;
+                AudioError();
+                AlertDialog.Builder builder = new AlertDialog.Builder(RecepcionTerminadoRecocido.this);
+                View mView = getLayoutInflater().inflate(R.layout.alertdialog_aceptar,null);
+                TextView alertMensaje = mView.findViewById(R.id.alertMensaje);
+                alertMensaje.setText("Hubo un error en el paso 1 de la recepción. \n'" + error + "'\n ¡Vuelve a intentar realizar la transacción!");
+                Button btnAceptar = mView.findViewById(R.id.btnAceptar);
+                btnAceptar.setText("Aceptar");
+                builder.setView(mView);
+                AlertDialog alertDialog = builder.create();
+                btnAceptar.setOnClickListener(v -> alertDialog.dismiss());
+                alertDialog.setCancelable(false);
+                alertDialog.show();
             }
         }
 
-        numero_transaccion = Integer.valueOf(Obj_ordenprodLn.mover_consecutivo("TRB1", RecepcionTerminadoRecocido.this));
-        listTransactionReco.addAll(traslado_bodega(ListarefeRecepcionados, calendar));
+        if (paso.equals(1)){
+            String obtenerId = "select id_recepcion from jd_detalle_recepcion_recocido where fecha_recepcion='" + fechaActualString + "'";
+            numero_recepcion = conexion.obtenerIdRecepcion(RecepcionTerminadoRecocido.this, obtenerId );
+            //se adicionan los campos recepcionado, nit_recepcionado y fecha_recepcionado a la tabla
+            for(int i=0;i<ListaRecoRollosRecep.size();i++){
+                String cod_orden_rec = ListaRecoRollosRecep.get(i).getCod_orden();
+                String id_detalle_rec = ListaRecoRollosRecep.get(i).getId_detalle();
+                String id_rollo_rec = ListaRecoRollosRecep.get(i).getId_rollo();
 
-        for (int u = 0; u < ListaRecoRollosRecep.size(); u++) {
-            String cod_orden_rec = ListaRecoRollosRecep.get(u).getCod_orden();
-            String id_detalle_rec = ListaRecoRollosRecep.get(u).getId_detalle();
-            String id_rollo_rec = ListaRecoRollosRecep.get(u).getId_rollo();
-            String sql_trb1 = "UPDATE " + db_produccion + "jd_detalle_recepcion_recocido SET trb1=" + numero_transaccion + " WHERE cod_orden_rec='" + cod_orden_rec + "' AND id_detalle_rec='" + id_detalle_rec + "' AND id_rollo_rec='" + id_rollo_rec + "'";
-            try {
-                //Se añade el sql a la lista
-                listTransactionReco.add(sql_trb1);
-            } catch (Exception e) {
-                Toast.makeText(RecepcionTerminadoRecocido.this, e.getMessage(), Toast.LENGTH_SHORT).show();
+                String sql_rollo= "UPDATE JB_rollos_rec SET id_recepcion='"+ numero_recepcion +"' WHERE cod_orden_rec='"+ cod_orden_rec +"' AND id_detalle_rec='"+ id_detalle_rec +"' AND id_rollo_rec='"+ id_rollo_rec +"'";
+
+                try {
+                    //Se añade el sql a la lista
+                    listTransactionReco.add(sql_rollo);
+                }catch (Exception e){
+                    Toast.makeText(RecepcionTerminadoRecocido.this, e.getMessage(), Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            if (listTransactionReco.size()>0){
+                //Ejecutamos la consultas que llenan los campos de recepción
+                repeticiones = 0;
+                error = ciclo1();
+                if (error.equals("")){
+                    paso = 2;
+                }else{
+                    incompleta =  true;
+                    AudioError();
+                    AlertDialog.Builder builder = new AlertDialog.Builder(RecepcionTerminadoRecocido.this);
+                    View mView = getLayoutInflater().inflate(R.layout.alertdialog_aceptar,null);
+                    TextView alertMensaje = mView.findViewById(R.id.alertMensaje);
+                    alertMensaje.setText("Hubo un error en el paso 2 de la transacción. \n'" + error + "'\n ¡Vuelve a intentar realizar la transacción!");
+                    Button btnAceptar = mView.findViewById(R.id.btnAceptar);
+                    btnAceptar.setText("Aceptar");
+                    builder.setView(mView);
+                    AlertDialog alertDialog = builder.create();
+                    btnAceptar.setOnClickListener(v -> alertDialog.dismiss());
+                    alertDialog.setCancelable(false);
+                    alertDialog.show();
+                }
             }
         }
 
-        //Ejecutamos la lista de consultas para hacer la TRB1
-        error = ing_prod_ad.ExecuteSqlTransaction(listTransactionReco, ConfiguracionBD.obtenerNombreBD(1), RecepcionTerminadoRecocido.this);
-        if(error.equals("")){
-            consultarRecoTerminado();
-            incompleta = false;
-            toastAcierto("Transaccion Realizada con Exito! --" + numero_transaccion);
+        if (paso.equals(2)){
+            ListarefeRecepcionados = conexion.recoRefeRecepcionados(RecepcionTerminadoRecocido.this,fechaActualString, monthActualString, yearActualString);
+            numero_transaccion = Integer.valueOf(Obj_ordenprodLn.mover_consecutivo("TRB1", RecepcionTerminadoRecocido.this));
+            listTransaccionBodega = traslado_bodega(ListarefeRecepcionados, calendar);
+            //Ejecutamos la lista de consultas para hacer la TRB1
+            error = ing_prod_ad.ExecuteSqlTransaction(listTransaccionBodega, ConfiguracionBD.obtenerNombreBD(1), RecepcionTerminadoRecocido.this);
+            if (error.equals("")){
+                paso = 3;
+            }else{
+                incompleta =  true;
+                AudioError();
+                AlertDialog.Builder builder = new AlertDialog.Builder(RecepcionTerminadoRecocido.this);
+                View mView = getLayoutInflater().inflate(R.layout.alertdialog_aceptar,null);
+                TextView alertMensaje = mView.findViewById(R.id.alertMensaje);
+                alertMensaje.setText("Hubo un error en el paso 3 de la transacción. \n'" + error + "'\n ¡Vuelve a intentar realizar la transacción!");
+                Button btnAceptar = mView.findViewById(R.id.btnAceptar);
+                builder.setView(mView);
+                AlertDialog alertDialog = builder.create();
+                btnAceptar.setOnClickListener(v -> {
+                    if (isNetworkAvailable()) {
+                        repeticiones = 0;
+                        reanudarTransacion();
+                        alertDialog.dismiss();
+                    } else {
+                        toastError("Problemas de conexión a Internet");
+                    }
+                });
+                alertDialog.setCancelable(false);
+                alertDialog.show();
+            }
+        }
+
+        if (paso.equals(3)){
+            String sql_trb1= "UPDATE jd_detalle_recepcion_recocido SET trb1="+ numero_transaccion +" WHERE id_recepcion='"+ numero_recepcion +"'";
+            try {
+                //Se añade el sql a la lista
+                listTransactionTrb1.add(sql_trb1);
+            }catch (Exception e){
+                Toast.makeText(RecepcionTerminadoRecocido.this, e.getMessage(), Toast.LENGTH_SHORT).show();
+            }
+            repeticiones = 0;
+            ciclo3();
+        }
+    }
+
+    private String ciclo1(){
+        repeticiones = repeticiones + 1;
+        if(repeticiones<=5){
+            error = ing_prod_ad.ExecuteSqlTransaction(listTransactionReco, ConfiguracionBD.obtenerNombreBD(2), RecepcionTerminadoRecocido.this);
+            if(error.equals("")){
+                return error;
+            }else{
+                ciclo1();
+            }
+        }else{
+            return error;
+        }
+        return error;
+    }
+
+    //Esta funcion cancela una transaccion cuando esta quedo a medias
+    @SuppressLint("SetTextI18n")
+    private void reanudarTransacion(){
+        if (repeticiones<=4){
+            listReanudarTransa = new ArrayList<>();
+
+            Integer id_recepcion = conexion.obtenerIdRecepcion(RecepcionTerminadoRecocido.this,"select id_recepcion from jd_detalle_recepcion_recocido where fecha_recepcion = '" + fechaActualString + "'");
+
+            String sqlAnularRecepcion = "update jd_detalle_recepcion_recocido set trb1 = 0 where id_recepcion= " + id_recepcion.toString() + "";
+
+            try {
+                //Se añade el sql a la lista - esto es un
+                listReanudarTransa.add(sqlAnularRecepcion);
+            } catch (Exception e) {
+                Toast.makeText(RecepcionTerminadoRecocido.this, e.getMessage(), Toast.LENGTH_SHORT).show();
+            }
+
+            for(int i=0;i<ListaRecoRollosRecep.size();i++) {
+                String cod_orden = ListaRecoRollosRecep.get(i).getCod_orden();
+                String id_detalle = ListaRecoRollosRecep.get(i).getId_detalle();
+                String id_rollo = ListaRecoRollosRecep.get(i).getId_rollo();
+
+                String sql_rollo = "UPDATE JB_rollos_rec SET id_recepcion=null WHERE cod_orden_rec='" + cod_orden + "' AND id_detalle_rec='" + id_detalle + "' AND id_rollo_rec='" + id_rollo + "'";
+
+                try {
+                    //Se añade el sql a la lista - esto es un
+                    listReanudarTransa.add(sql_rollo);
+                } catch (Exception e) {
+                    Toast.makeText(RecepcionTerminadoRecocido.this, e.getMessage(), Toast.LENGTH_SHORT).show();
+                }
+            }
+            error = ing_prod_ad.ExecuteSqlTransaction(listReanudarTransa,ConfiguracionBD.obtenerNombreBD(2),RecepcionTerminadoRecocido.this);
+            repeticiones = repeticiones + 1;
+            if (error.equals("")){
+                toastAcierto("Transacción Cancelada correctamente");
+
+                incompleta = false;
+                consultarRecoTerminado();
+            }else{
+                incompleta =  true;
+                reanudarTransacion();
+            }
         }else{
             incompleta =  true;
+            btnTransaReco.setEnabled(false);
+            btnCancelarTrans.setEnabled(false);
             AudioError();
             AlertDialog.Builder builder = new AlertDialog.Builder(RecepcionTerminadoRecocido.this);
             View mView = getLayoutInflater().inflate(R.layout.alertdialog_aceptar,null);
             TextView alertMensaje = mView.findViewById(R.id.alertMensaje);
-            alertMensaje.setText("No se pudo realizar la transacción, \n '" + error + "'\n Por favor volver a intentar realizarla");
+            alertMensaje.setText("No se pudo cancelar el paso 3 de la transacción, \n '" + error + "'\n Por favor comunicarse inmediatamente con el área de sistemas, \n para poder continuar con las transacciones, de lo \n contrario no se le permitira continuar");
             Button btnAceptar = mView.findViewById(R.id.btnAceptar);
             btnAceptar.setText("Aceptar");
             builder.setView(mView);
             AlertDialog alertDialog = builder.create();
             btnAceptar.setOnClickListener(v -> {
+                // Verificar la conectividad antes de intentar enviar el correo para evitar que no se envien
                 if (isNetworkAvailable()) {
+                    StringBuilder mensaje = new StringBuilder(); // Usamos StringBuilder para construir el mensaje
+
+                    for (Object objeto : listReanudarTransa) {
+                        // Convierte el objeto a String
+                        String objetoComoString = objeto.toString();
+
+                        // Agrega el objeto convertido al mensaje
+                        mensaje.append(objetoComoString).append("\n");
+                    }
+
+                    // Muestra el mensaje
+                    String mensajeFinal = mensaje.toString();
                     /////////////////////////////////////////////////////////////
                     //Correo electronico para notificar error en la transacción
                     correo = conexion.obtenerCorreo(RecepcionTerminadoRecocido.this);
                     String email = correo.getCorreo();
                     String pass = correo.getContrasena();
-                    subject = "la transaccion #" + numero_transaccion + " de Control en Piso Trefilación no se pudo realizar";
-                    textMessage = "La Transacción de recepcion de producto terminado del area de Trefilación #" + numero_transaccion + " no se pudo cancelar correctamente \n" +
+                    subject = "El paso 1 de una transacción en Control en Piso Recocido no se pudo cancelar";
+                    textMessage = "El paso 1 de la Transacción de recepcion de producto terminado del area de Recocido no se pudo cancelar correctamente \n" +
                             "Detalles de la recepción: \n" +
+                            mensajeFinal +
                             "Error: '" + error + "'\n" +
                             "Numero de rollos: " + leidos + " \n" +
                             "Nit quien entrega (Producción): " + nit_usuario + " \n" +
@@ -599,7 +735,92 @@ public class RecepcionTerminadoRecocido extends AppCompatActivity implements Ada
 
                     pdialog = ProgressDialog.show(context,"","Sending Mail...", true);
 
-                    RetreiveFeedTask task = new RetreiveFeedTask();
+                    RecepcionTerminadoRecocido.RetreiveFeedTask task = new RecepcionTerminadoRecocido.RetreiveFeedTask();
+                    task.execute();
+                    alertDialog.dismiss();
+                } else {
+                    toastError("Problemas de conexión a Internet");
+                }
+            });
+            alertDialog.setCancelable(false);
+            alertDialog.show();
+        }
+    }
+
+    @SuppressLint("SetTextI18n")
+    private void ciclo3(){
+        repeticiones = repeticiones + 1;
+        if(repeticiones<=5){
+            error = ing_prod_ad.ExecuteSqlTransaction(listTransactionTrb1, ConfiguracionBD.obtenerNombreBD(2), RecepcionTerminadoRecocido.this);
+            if(error.equals("")){
+                consultarRecoTerminado();
+                incompleta = false;
+                paso = 0;
+                bloqueado = false;
+                toastAcierto("Transaccion Realizada con Exito! --" + numero_transaccion);
+
+            }else{
+                incompleta = true;
+                ciclo3();
+            }
+        }else{
+            incompleta = true;
+            btnTransaReco.setEnabled(false);
+            btnCancelarTrans.setEnabled(false);
+            AudioError();
+            AlertDialog.Builder builder = new AlertDialog.Builder(RecepcionTerminadoRecocido.this);
+            View mView = getLayoutInflater().inflate(R.layout.alertdialog_aceptar,null);
+            TextView alertMensaje = mView.findViewById(R.id.alertMensaje);
+            alertMensaje.setText("Hubo un problema en el paso 4 de la transacción #" + numero_transaccion + " de los " + leidos + " Rollos leidos, \n '" + error + "' \n Por favor comunicarse inmediatamente con el área de sistemas, \n para poder continuar con las transacciones, de lo \n contrario no se le permitira continuar");
+            Button btnAceptar = mView.findViewById(R.id.btnAceptar);
+            btnAceptar.setText("Aceptar");
+            builder.setView(mView);
+            AlertDialog alertDialog = builder.create();
+            btnAceptar.setOnClickListener(v -> {
+                // Verificar la conectividad antes de intentar enviar el correo
+                if (isNetworkAvailable()) {
+                    StringBuilder mensaje = new StringBuilder(); // Usamos StringBuilder para construir el mensaje
+
+                    for (Object objeto : listTransactionTrb1) {
+                        // Convierte el objeto a String
+                        String objetoComoString = objeto.toString();
+
+                        // Agrega el objeto convertido al mensaje
+                        mensaje.append(objetoComoString).append("\n");
+                    }
+
+                    // Muestra el mensaje
+                    String mensajeFinal = mensaje.toString();
+                    correo = conexion.obtenerCorreo(RecepcionTerminadoRecocido.this);
+                    String email = correo.getCorreo();
+                    String pass = correo.getContrasena();
+                    subject = "Error en el paso 4 de la transacción Control en Piso Recocido";
+                    textMessage = "La transacción #" + numero_transaccion + " de recepcion de producto terminado del area de Recocido se fué incompleta \n" +
+                            "Detalles de la transacción: \n" +
+                            mensajeFinal +
+                            "Error: '" + error + "'\n" +
+                            "Numero de rollos: " + leidos + " \n" +
+                            "Nit quien entrega (Producción): " + nit_usuario + " \n" +
+                            "Nit quien recibe (Logistica): " + personaLogistica.getNit() + " \n" +
+                            "Fecha transacción: " + fechaTransaccion + "";
+
+                    // Resto del código para enviar el correo electrónico
+                    Properties props = new Properties();
+                    props.put("mail.smtp.host", "smtp.gmail.com");
+                    props.put("mail.smtp.socketFactory.port", "465");
+                    props.put("mail.smtp.socketFactory.class","javax.net.ssl.SSLSocketFactory");
+                    props.put("mail.smtp.auth","true");
+                    props.put("mail.smtp.port", "465");
+
+                    session = Session.getDefaultInstance(props, new Authenticator() {
+                        protected PasswordAuthentication getPasswordAuthentication() {
+                            return new PasswordAuthentication(email,pass);
+                        }
+                    });
+
+                    pdialog = ProgressDialog.show(context,"","Sending Mail...", true);
+
+                    RecepcionTerminadoRecocido.RetreiveFeedTask task = new RecepcionTerminadoRecocido.RetreiveFeedTask();
                     task.execute();
                     alertDialog.dismiss();
                 } else {
